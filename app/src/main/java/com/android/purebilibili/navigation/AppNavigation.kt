@@ -2535,6 +2535,10 @@ fun AppNavigation(
                     navController.popBackStack()
                     navController.navigate(ScreenRoutes.Live.createRoute(roomId, "", "")) 
                 },
+                onDynamicClick = { dynamicId ->
+                    navController.popBackStack()
+                    navController.navigate(ScreenRoutes.DynamicDetail.createRoute(dynamicId))
+                },
                 onBangumiClick = { seasonId, epId ->
                     navController.popBackStack()
                     if (seasonId > 0) {

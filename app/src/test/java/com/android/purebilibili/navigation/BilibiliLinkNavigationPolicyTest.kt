@@ -34,6 +34,15 @@ class BilibiliLinkNavigationPolicyTest {
     }
 
     @Test
+    fun `dynamic link resolves to native target`() {
+        val action = resolveBilibiliLinkNavigationAction("https://t.bilibili.com/1199344045210468386")
+
+        val native = assertIs<BilibiliLinkNavigationAction.NativeTarget>(action)
+        val target = assertIs<BilibiliNavigationTarget.Dynamic>(native.target)
+        assertEquals("1199344045210468386", target.dynamicId)
+    }
+
+    @Test
     fun `external link remains external`() {
         val action = resolveBilibiliLinkNavigationAction("https://example.com/demo")
 

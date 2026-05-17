@@ -27,6 +27,11 @@ internal fun resolveWebViewNavigationAction(
             return WebViewNavigationAction.Block
         }
 
+        val target = BilibiliNavigationTargetParser.parse(urlString)
+        if (target is BilibiliNavigationTarget.Dynamic) {
+            return WebViewNavigationAction.DispatchTarget(target)
+        }
+
         val convertedUrl = convertDeepLinkToWebUrl(urlString)
         return if (convertedUrl != null) {
             WebViewNavigationAction.LoadInWebView(convertedUrl)
