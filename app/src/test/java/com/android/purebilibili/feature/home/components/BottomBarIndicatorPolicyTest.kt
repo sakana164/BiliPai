@@ -267,7 +267,10 @@ class BottomBarIndicatorPolicyTest {
         assertTrue(transparentLight.alpha > 0.3f)
         assertTrue(transparentLight.red > 0.9f)
         assertTrue(transparentLight.green > 0.9f)
-        assertTrue(transparentDark.alpha > 0.25f)
+        assertTrue(transparentDark.alpha > 0.33f)
+        assertTrue(transparentDark.red > 0.85f)
+        assertTrue(transparentDark.green > 0.85f)
+        assertTrue(transparentDark.blue > 0.85f)
         assertEquals(0f, tuned.alpha, 0.001f)
     }
 
@@ -288,7 +291,7 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
-    fun `transparent glass selected item keeps theme color over indicator backdrop`() {
+    fun `transparent glass selected item keeps theme color over gray-white capsule`() {
         val unselected = Color(0xFF1F1F1F)
         val theme = Color(0xFF00A88F)
         val color = resolveBottomBarTransparentGlassContentColor(
@@ -302,6 +305,27 @@ class BottomBarIndicatorPolicyTest {
         assertTrue(color.green > color.red)
         assertTrue(color.green > color.blue)
         assertTrue(color.green >= theme.green * 0.72f)
+    }
+
+    @Test
+    fun `transparent glass capsule tint stays gray-white instead of theme colored`() {
+        val darkTint = resolveBottomBarTransparentGlassCapsuleTint(
+            darkTheme = true,
+            verticalProgress = 1f
+        )
+        val lightTint = resolveBottomBarTransparentGlassCapsuleTint(
+            darkTheme = false,
+            verticalProgress = 1f
+        )
+
+        assertTrue(darkTint.alpha > 0.3f)
+        assertTrue(darkTint.red > 0.85f)
+        assertTrue(darkTint.green > 0.85f)
+        assertTrue(darkTint.blue > 0.85f)
+        assertTrue(lightTint.alpha > 0.3f)
+        assertTrue(lightTint.red > 0.9f)
+        assertTrue(lightTint.green > 0.9f)
+        assertTrue(lightTint.blue > 0.9f)
     }
 
     @Test

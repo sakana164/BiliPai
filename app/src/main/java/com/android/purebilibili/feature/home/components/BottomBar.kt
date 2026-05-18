@@ -636,11 +636,12 @@ internal fun resolveBottomBarIndicatorReadabilitySurfaceColor(
     if (progress <= BottomBarTransientAlphaThreshold) {
         return Color.Transparent
     }
-    return if (darkTheme) {
-        Color.Black.copy(alpha = lerp(0.24f, 0.42f, progress))
+    val grayWhite = if (darkTheme) {
+        Color(0xFFE7ECF2)
     } else {
-        Color.White.copy(alpha = lerp(0.28f, 0.52f, progress))
+        Color(0xFFF2F4F7)
     }
+    return grayWhite.copy(alpha = lerp(0.34f, 0.62f, progress))
 }
 
 internal fun shouldComposeBottomBarDockContent(
@@ -801,7 +802,8 @@ internal fun Modifier.kernelSuFloatingDockSurface(
                     ).nagramLiquidGlass(
                         radius = 28.dp,
                         refractIndex = 1.5f,
-                        refractIntensity = 0.75f,
+                        refractIntensity = 1.05f,
+                        thickness = 16.dp,
                         foregroundColor = Color.Transparent,
                         capsuleProvider = capsuleProvider
                     )
@@ -902,6 +904,19 @@ internal fun resolveBottomBarTransparentGlassContentColor(
         stop = selectedColor,
         fraction = themeWeight.coerceIn(0f, 1f)
     )
+}
+
+internal fun resolveBottomBarTransparentGlassCapsuleTint(
+    darkTheme: Boolean,
+    verticalProgress: Float
+): Color {
+    val progress = verticalProgress.coerceIn(0f, 1f)
+    val base = if (darkTheme) {
+        Color(0xFFE7ECF2)
+    } else {
+        Color(0xFFF2F4F7)
+    }
+    return base.copy(alpha = lerp(0.16f, 0.34f, progress))
 }
 
 internal fun resolveBottomBarGlassExportContentColor(
@@ -3064,8 +3079,12 @@ private fun KernelSuAlignedBottomBar(
                                         layerHeightPx = layerSize.height,
                                         indicatorWidthPx = itemWidthPx,
                                         indicatorHeightPx = with(density) { 56.dp.toPx() },
-                                        thicknessPx = with(density) { 11.dp.toPx() },
-                                        refractIntensity = 0.8f
+                                        thicknessPx = with(density) { 17.dp.toPx() },
+                                        refractIntensity = 1.18f,
+                                        foregroundColor = resolveBottomBarTransparentGlassCapsuleTint(
+                                            darkTheme = isDarkTheme,
+                                            verticalProgress = verticalGlassProfile.progress
+                                        )
                                     )
                                 } else {
                                     null

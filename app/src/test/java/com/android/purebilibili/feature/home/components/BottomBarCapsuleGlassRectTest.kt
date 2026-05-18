@@ -1,5 +1,6 @@
 package com.android.purebilibili.feature.home.components
 
+import androidx.compose.ui.graphics.Color
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -62,5 +63,21 @@ class BottomBarCapsuleGlassRectTest {
 
         assertEquals(9f, rect.thickness)
         assertEquals(0.42f, rect.refractIntensity)
+    }
+
+    @Test
+    fun `foreground tint passes through for gray-white liquid capsule`() {
+        val tint = Color(0x55E7ECF2)
+        val rect = resolveBottomBarCapsuleGlassRect(
+            indicatorCenterXPx = 100f,
+            layerHeightPx = 160f,
+            indicatorWidthPx = 180f,
+            indicatorHeightPx = 112f,
+            thicknessPx = 9f,
+            refractIntensity = 0.42f,
+            foregroundColor = tint
+        )
+
+        assertEquals(tint, rect.foregroundColor)
     }
 }
