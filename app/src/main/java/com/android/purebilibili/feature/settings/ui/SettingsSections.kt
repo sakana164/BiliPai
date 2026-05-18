@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.purebilibili.core.ui.rememberAppCollectionIcon
@@ -430,7 +431,6 @@ internal fun SettingsRootCategoryContent(
                 AboutSection(
                     versionName = state.versionName,
                     easterEggEnabled = state.easterEggEnabled,
-                    onDisclaimerClick = actions.onDisclaimerClick,
                     onLicenseClick = actions.onLicenseClick,
                     onGithubClick = actions.onGithubClick,
                     onVerificationClick = actions.onVerificationClick,
@@ -535,15 +535,45 @@ fun ReleaseChannelPinnedCard(
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onGithubClick) {
-                    Text("GitHub")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onGithubClick,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 10.dp)
+                ) {
+                    Text(
+                        text = "GitHub",
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
+                    )
                 }
-                OutlinedButton(onClick = onTelegramClick) {
-                    Text("Telegram")
+                OutlinedButton(
+                    onClick = onTelegramClick,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 10.dp)
+                ) {
+                    Text(
+                        text = "Telegram",
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
+                    )
                 }
-                TextButton(onClick = onDisclaimerClick) {
-                    Text("完整声明")
+                TextButton(
+                    onClick = onDisclaimerClick,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 10.dp)
+                ) {
+                    Text(
+                        text = "完整声明",
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
+                    )
                 }
             }
         }
@@ -1059,7 +1089,6 @@ fun DeveloperSection(
 fun AboutSection(
     versionName: String,
     easterEggEnabled: Boolean,
-    onDisclaimerClick: () -> Unit,
     onLicenseClick: () -> Unit,
     onGithubClick: () -> Unit,
     onVerificationClick: () -> Unit,
@@ -1088,7 +1117,6 @@ fun AboutSection(
     val uiPreset = LocalUiPreset.current
     val autoCheckTint = rememberSettingsEntryTint(SettingsEntryTintRole.PRIMARY, iOSBlue, uiPreset)
     val easterEggTint = rememberSettingsEntryTint(SettingsEntryTintRole.TERTIARY, iOSYellow, uiPreset)
-    val disclaimerVisual = rememberSettingsEntryVisual(SettingsSearchTarget.DISCLAIMER, uiPreset)
     val licensesVisual = rememberSettingsEntryVisual(SettingsSearchTarget.OPEN_SOURCE_LICENSES, uiPreset)
     val openSourceHomeVisual = rememberSettingsEntryVisual(SettingsSearchTarget.OPEN_SOURCE_HOME, uiPreset)
     val checkUpdateVisual = rememberSettingsEntryVisual(SettingsSearchTarget.CHECK_UPDATE, uiPreset)
@@ -1175,15 +1203,6 @@ fun AboutSection(
     }
 
     SettingsCardGroup {
-        SettingClickableItem(
-            icon = disclaimerVisual.icon,
-            iconPainter = disclaimerVisual.iconResId?.let { painterResource(id = it) },
-            title = "发布渠道声明",
-            value = "仅 GitHub / Telegram",
-            onClick = onDisclaimerClick,
-            iconTint = disclaimerVisual.iconTint
-        )
-        SettingsDivider(startIndent = 66.dp)
         SettingClickableItem(
             icon = licensesVisual.icon,
             iconPainter = licensesVisual.iconResId?.let { painterResource(id = it) },
