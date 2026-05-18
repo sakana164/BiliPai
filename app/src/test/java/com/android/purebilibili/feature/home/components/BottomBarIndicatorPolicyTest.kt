@@ -272,12 +272,14 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
-    fun `transparent glass preset keeps indicator lens like tuned preset`() {
-        assertTrue(
+    fun `transparent glass preset drops indicator lens in favor of dual-rect capsule`() {
+        // 通透玻璃改由双矩形着色器的滑动胶囊矩形折射，指示器不再叠加 lens。
+        assertFalse(
             shouldUseBottomBarIndicatorLens(
                 preset = BottomBarLiquidGlassPreset.BACKDROP_NATIVE
             )
         )
+        // BiliPai 调校仍保留旧的指示器 lens 折射。
         assertTrue(
             shouldUseBottomBarIndicatorLens(
                 preset = BottomBarLiquidGlassPreset.BILIPAI_TUNED
@@ -682,7 +684,7 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
-    fun `transparent glass surface uses nagramx style low alpha lightweight refraction`() {
+    fun `transparent glass surface renders as a material with light blur and visible highlight`() {
         val idle = resolveBottomBarBackdropNativeSurfaceSpec(
             blurRadiusDp = 18f,
             verticalProgress = 0f
@@ -692,16 +694,19 @@ class BottomBarIndicatorPolicyTest {
             verticalProgress = 1f
         )
 
-        assertEquals(0f, idle.blurRadiusDp, 0.001f)
-        assertEquals(0f, scrolled.blurRadiusDp, 0.001f)
-        assertEquals(13f, idle.refractionHeightDp, 0.001f)
-        assertEquals(13f, scrolled.refractionHeightDp, 0.001f)
-        assertEquals(34f, idle.refractionAmountDp, 0.001f)
-        assertEquals(34f, scrolled.refractionAmountDp, 0.001f)
+        // 轻度模糊：底栏是有体量的玻璃材质，不是透明窗口。
+        assertEquals(10f, idle.blurRadiusDp, 0.001f)
+        assertEquals(10f, scrolled.blurRadiusDp, 0.001f)
+        // 折射交给双矩形着色器，面板不再用 AndroidLiquidGlass lens。
+        assertEquals(0f, idle.refractionHeightDp, 0.001f)
+        assertEquals(0f, scrolled.refractionHeightDp, 0.001f)
+        assertEquals(0f, idle.refractionAmountDp, 0.001f)
+        assertEquals(0f, scrolled.refractionAmountDp, 0.001f)
         assertEquals(0.48f, idle.surfaceAlphaMultiplier, 0.001f)
         assertEquals(0.48f, scrolled.surfaceAlphaMultiplier, 0.001f)
-        assertEquals(0.04f, idle.highlightAlpha, 0.001f)
-        assertEquals(0.04f, scrolled.highlightAlpha, 0.001f)
+        // 明亮的玻璃高光边——iOS26 液态玻璃的标志特征。
+        assertEquals(0.8f, idle.highlightAlpha, 0.001f)
+        assertEquals(0.8f, scrolled.highlightAlpha, 0.001f)
         assertEquals(0.045f, idle.shadowAlpha, 0.001f)
         assertEquals(0.045f, scrolled.shadowAlpha, 0.001f)
         assertFalse(scrolled.chromaticAberration)

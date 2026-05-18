@@ -108,7 +108,7 @@ class BottomBarMiuixPolicyTest {
     }
 
     @Test
-    fun `transparent glass preset keeps lightweight library effect chain`() {
+    fun `transparent glass preset renders panel as glass material`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
         val transparentPresetSource = source
             .substringAfter("BottomBarLiquidGlassPreset.BACKDROP_NATIVE -> drawBackdrop(")
@@ -117,11 +117,14 @@ class BottomBarMiuixPolicyTest {
         assertTrue(source.contains("BottomBarLiquidGlassPreset.BACKDROP_NATIVE"))
         assertTrue(source.contains("resolveBottomBarBackdropNativeSurfaceSpec("))
         assertTrue(source.contains("surfaceAlphaMultiplier = 0.48f"))
-        assertTrue(source.contains("highlightAlpha = 0.04f"))
+        // 明亮的玻璃高光边。
+        assertTrue(source.contains("highlightAlpha = 0.8f"))
         assertTrue(source.contains("shadowAlpha = 0.045f"))
-        assertFalse(transparentPresetSource.contains("vibrancy()"))
-        assertFalse(transparentPresetSource.contains("blur("))
-        assertTrue(transparentPresetSource.contains("lens("))
+        // 面板渲染成玻璃材质：轻度模糊 + vibrancy。
+        assertTrue(transparentPresetSource.contains("vibrancy()"))
+        assertTrue(transparentPresetSource.contains("blur("))
+        // 折射交给双矩形着色器，面板不再叠加 AndroidLiquidGlass lens。
+        assertFalse(transparentPresetSource.contains("lens("))
         val indicatorSource = source
             .substringAfter("val indicatorBackdrop = if (shouldUseBottomBarCombinedIndicatorBackdrop(liquidGlassPreset))")
             .substringBefore("if (!effectiveSearchExpanded)")
