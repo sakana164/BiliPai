@@ -604,7 +604,10 @@ internal fun shouldUseBottomBarCombinedIndicatorBackdrop(
 internal fun shouldRenderBottomBarForegroundAboveIndicator(
     preset: BottomBarLiquidGlassPreset
 ): Boolean {
-    return false
+    return when (preset) {
+        BottomBarLiquidGlassPreset.BILIPAI_TUNED -> false
+        BottomBarLiquidGlassPreset.BACKDROP_NATIVE -> true
+    }
 }
 
 internal fun shouldUseBottomBarIndicatorLens(
@@ -613,6 +616,25 @@ internal fun shouldUseBottomBarIndicatorLens(
     return when (preset) {
         BottomBarLiquidGlassPreset.BILIPAI_TUNED,
         BottomBarLiquidGlassPreset.BACKDROP_NATIVE -> true
+    }
+}
+
+internal fun resolveBottomBarIndicatorReadabilitySurfaceColor(
+    preset: BottomBarLiquidGlassPreset,
+    darkTheme: Boolean,
+    indicatorProgress: Float
+): Color {
+    if (preset != BottomBarLiquidGlassPreset.BACKDROP_NATIVE) {
+        return Color.Transparent
+    }
+    val progress = indicatorProgress.coerceIn(0f, 1f)
+    if (progress <= BottomBarTransientAlphaThreshold) {
+        return Color.Transparent
+    }
+    return if (darkTheme) {
+        Color.Black.copy(alpha = lerp(0.24f, 0.42f, progress))
+    } else {
+        Color.White.copy(alpha = lerp(0.28f, 0.52f, progress))
     }
 }
 
@@ -2854,6 +2876,11 @@ private fun KernelSuAlignedBottomBar(
             val indicatorHighlightAlpha = resolveBottomBarLiquidGlassHighlightAlpha(
                 effectiveIndicatorProgress
             )
+            val indicatorReadabilitySurfaceColor = resolveBottomBarIndicatorReadabilitySurfaceColor(
+                preset = liquidGlassPreset,
+                darkTheme = isDarkTheme,
+                indicatorProgress = effectiveIndicatorProgress
+            )
             val indicatorGlowAlpha = resolveBottomBarIndicatorGlowAlpha(
                 glassEnabled = glassEnabled,
                 pressProgress = dampedDragState.pressProgress
@@ -3267,6 +3294,9 @@ private fun KernelSuAlignedBottomBar(
                                             )
                                         },
                                         onDrawSurface = {
+                                            if (indicatorReadabilitySurfaceColor.alpha > 0f) {
+                                                drawRect(indicatorReadabilitySurfaceColor)
+                                            }
                                         },
                                         shadow = {
                                             Shadow(

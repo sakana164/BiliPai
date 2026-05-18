@@ -233,8 +233,8 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
-    fun `transparent glass preset keeps foreground below indicator like tuned preset`() {
-        assertFalse(
+    fun `transparent glass preset keeps themed foreground above indicator`() {
+        assertTrue(
             shouldRenderBottomBarForegroundAboveIndicator(
                 preset = BottomBarLiquidGlassPreset.BACKDROP_NATIVE
             )
@@ -244,6 +244,31 @@ class BottomBarIndicatorPolicyTest {
                 preset = BottomBarLiquidGlassPreset.BILIPAI_TUNED
             )
         )
+    }
+
+    @Test
+    fun `transparent glass indicator adds readability surface without changing tuned preset`() {
+        val transparentLight = resolveBottomBarIndicatorReadabilitySurfaceColor(
+            preset = BottomBarLiquidGlassPreset.BACKDROP_NATIVE,
+            darkTheme = false,
+            indicatorProgress = 1f
+        )
+        val transparentDark = resolveBottomBarIndicatorReadabilitySurfaceColor(
+            preset = BottomBarLiquidGlassPreset.BACKDROP_NATIVE,
+            darkTheme = true,
+            indicatorProgress = 1f
+        )
+        val tuned = resolveBottomBarIndicatorReadabilitySurfaceColor(
+            preset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+            darkTheme = false,
+            indicatorProgress = 1f
+        )
+
+        assertTrue(transparentLight.alpha > 0.3f)
+        assertTrue(transparentLight.red > 0.9f)
+        assertTrue(transparentLight.green > 0.9f)
+        assertTrue(transparentDark.alpha > 0.25f)
+        assertEquals(0f, tuned.alpha, 0.001f)
     }
 
     @Test
