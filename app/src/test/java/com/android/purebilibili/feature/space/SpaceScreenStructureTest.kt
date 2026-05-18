@@ -32,6 +32,16 @@ class SpaceScreenStructureTest {
         assertTrue(source.contains("SpaceArchiveListItemRow("))
     }
 
+    @Test
+    fun `contribution screen uses compact toolbar instead of separate tab and action rows`() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/space/SpaceScreen.kt")
+
+        assertTrue(source.contains("SpaceContributionToolbar("))
+        assertFalse(source.contains("SpaceContributionTabRow("))
+        assertFalse(source.contains("SpaceContributionVideoActions("))
+        assertTrue(source.contains("resolveSpaceContributionToolbarSpec("))
+    }
+
     private fun loadSource(path: String): String {
         val normalizedPath = path.removePrefix("app/")
         val sourceFile = listOf(

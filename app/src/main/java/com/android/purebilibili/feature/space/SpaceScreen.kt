@@ -54,7 +54,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -1078,11 +1077,20 @@ private fun SpaceContent(
             SpaceMainTab.CONTRIBUTION -> {
                 if (displayedContributionTabs.isNotEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        SpaceContributionTabRow(
+                        SpaceContributionToolbar(
                             tabs = displayedContributionTabs,
                             selectedTabId = state.selectedContributionTabId,
                             selectedSubTab = state.selectedSubTab,
-                            onSelect = onContributionTabSelected
+                            totalVideos = state.totalVideos,
+                            currentOrder = state.sortOrder,
+                            layoutMode = contributionVideoLayoutMode,
+                            onSelect = onContributionTabSelected,
+                            onPlayAllClick = playAllSpaceVideos,
+                            onOrderClick = onSortOrderSelected,
+                            onLayoutModeClick = {
+                                contributionVideoLayoutMode =
+                                    toggleSpaceContributionVideoLayoutMode(contributionVideoLayoutMode)
+                            }
                         )
                     }
                 }
@@ -1104,20 +1112,6 @@ private fun SpaceContent(
 
                 when (selectedContributionTab.subTab) {
                     SpaceSubTab.VIDEO, SpaceSubTab.CHARGING_VIDEO -> {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            SpaceContributionVideoActions(
-                                totalVideos = state.totalVideos,
-                                currentOrder = state.sortOrder,
-                                layoutMode = contributionVideoLayoutMode,
-                                onPlayAllClick = playAllSpaceVideos,
-                                onOrderClick = onSortOrderSelected,
-                                onLayoutModeClick = {
-                                    contributionVideoLayoutMode =
-                                        toggleSpaceContributionVideoLayoutMode(contributionVideoLayoutMode)
-                                }
-                            )
-                        }
-
                         if (state.videos.isEmpty() && !state.isLoadingMore) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 SpaceSectionEmptyState(
@@ -1955,33 +1949,87 @@ private fun SpaceMainTabRow(
 }
 
 @Composable
-private fun SpaceContributionTabRow(
+private fun SpaceContributionToolbar(
     tabs: List<SpaceContributionTab>,
     selectedTabId: String,
     selectedSubTab: SpaceSubTab,
-    onSelect: (String) -> Unit
+    totalVideos: Int,
+    currentOrder: VideoSortOrder,
+    layoutMode: SpaceContributionVideoLayoutMode,
+    onSelect: (String) -> Unit,
+    onPlayAllClick: () -> Unit,
+    onOrderClick: (VideoSortOrder) -> Unit,
+    onLayoutModeClick: () -> Unit
 ) {
-    val spec = remember(tabs, selectedTabId, selectedSubTab) {
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp)
+    ) {
+        val toolbarSpec = remember(maxWidth, selectedSubTab, tabs.size) {
+            resolveSpaceContributionToolbarSpec(
+                widthDp = maxWidth.value.toInt(),
+                selectedSubTab = selectedSubTab,
+                tabCount = tabs.size
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = toolbarSpec.horizontalPaddingDp.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SpaceContributionCompactTabs(
+                tabs = tabs,
+                selectedTabId = selectedTabId,
+                selectedSubTab = selectedSubTab,
+                toolbarSpec = toolbarSpec,
+                onSelect = onSelect,
+                modifier = Modifier.weight(1f, fill = true)
+            )
+
+            if (toolbarSpec.showVideoActions) {
+                SpaceContributionVideoToolbarActions(
+                    totalVideos = totalVideos,
+                    currentOrder = currentOrder,
+                    layoutMode = layoutMode,
+                    spec = toolbarSpec,
+                    onPlayAllClick = onPlayAllClick,
+                    onOrderClick = onOrderClick,
+                    onLayoutModeClick = onLayoutModeClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpaceContributionCompactTabs(
+    tabs: List<SpaceContributionTab>,
+    selectedTabId: String,
+    selectedSubTab: SpaceSubTab,
+    toolbarSpec: SpaceContributionToolbarSpec,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tabSpec = remember(tabs, selectedTabId, selectedSubTab) {
         resolveSpaceContributionTabChromeSpec(
             tabs = tabs,
             selectedTabId = selectedTabId,
             selectedSubTab = selectedSubTab
         )
     }
-    val safeSelectedIndex = spec.selectedIndex.coerceIn(0, (tabs.size - 1).coerceAtLeast(0))
+    val safeSelectedIndex = tabSpec.selectedIndex.coerceIn(0, (tabs.size - 1).coerceAtLeast(0))
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = spec.horizontalPaddingDp.dp, vertical = 6.dp)
-    ) {
+    BoxWithConstraints(modifier = modifier.height(toolbarSpec.tabHeightDp.dp)) {
         val viewportWidth = maxWidth
 
-        LaunchedEffect(spec.scrollable, safeSelectedIndex, spec.itemWidthDp, viewportWidth) {
-            val itemWidthDp = spec.itemWidthDp ?: return@LaunchedEffect
-            if (!spec.scrollable) return@LaunchedEffect
+        LaunchedEffect(tabSpec.scrollable, safeSelectedIndex, tabSpec.itemWidthDp, viewportWidth) {
+            val itemWidthDp = tabSpec.itemWidthDp ?: return@LaunchedEffect
+            if (!tabSpec.scrollable) return@LaunchedEffect
             val target = with(density) {
                 resolveSpaceContributionTabCenteredScrollOffsetPx(
                     selectedIndex = safeSelectedIndex,
@@ -1995,7 +2043,7 @@ private fun SpaceContributionTabRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (spec.scrollable) Modifier.horizontalScroll(scrollState) else Modifier)
+                .then(if (tabSpec.scrollable) Modifier.horizontalScroll(scrollState) else Modifier)
         ) {
             BottomBarLiquidSegmentedControl(
                 items = tabs.map { it.title },
@@ -2003,27 +2051,26 @@ private fun SpaceContributionTabRow(
                 onSelected = { index ->
                     tabs.getOrNull(index)?.let { onSelect(it.id) }
                 },
-                modifier = if (spec.scrollable) {
-                    Modifier
-                } else {
-                    Modifier.align(Alignment.Center)
-                },
-                itemWidth = spec.itemWidthDp?.dp,
-                height = spec.heightDp.dp,
-                indicatorHeight = spec.indicatorHeightDp.dp,
-                labelFontSize = 14.sp,
-                liquidGlassEffectsEnabled = spec.liquidGlassEffectsEnabled,
-                dragSelectionEnabled = spec.dragSelectionEnabled
+                modifier = Modifier.fillMaxWidth(),
+                itemWidth = if (tabSpec.scrollable) tabSpec.itemWidthDp?.dp else null,
+                height = toolbarSpec.tabHeightDp.dp,
+                indicatorHeight = toolbarSpec.tabIndicatorHeightDp.dp,
+                labelFontSize = 13.sp,
+                containerHorizontalPadding = 3.dp,
+                containerVerticalPadding = 3.dp,
+                liquidGlassEffectsEnabled = tabSpec.liquidGlassEffectsEnabled,
+                dragSelectionEnabled = tabSpec.dragSelectionEnabled
             )
         }
     }
 }
 
 @Composable
-private fun SpaceContributionVideoActions(
+private fun SpaceContributionVideoToolbarActions(
     totalVideos: Int,
     currentOrder: VideoSortOrder,
     layoutMode: SpaceContributionVideoLayoutMode,
+    spec: SpaceContributionToolbarSpec,
     onPlayAllClick: () -> Unit,
     onOrderClick: (VideoSortOrder) -> Unit,
     onLayoutModeClick: () -> Unit
@@ -2032,42 +2079,54 @@ private fun SpaceContributionVideoActions(
     val isSingleColumn = layoutMode == SpaceContributionVideoLayoutMode.SINGLE_COLUMN
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Text(
-            text = "共${totalVideos}视频",
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Normal,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        OutlinedButton(
-            onClick = onPlayAllClick,
-            shape = RoundedCornerShape(999.dp),
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.PlayCircleOutline,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
+        if (spec.showTotalText) {
+            Text(
+                text = "共${totalVideos}视频",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("播放全部", fontSize = 14.sp)
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        if (spec.showPlayAllText) {
+            TextButton(
+                onClick = onPlayAllClick,
+                modifier = Modifier.height(40.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PlayCircleOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(17.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "播放",
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        } else {
+            IconButton(
+                onClick = onPlayAllClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PlayCircleOutline,
+                    contentDescription = "播放全部",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
         IconButton(
             onClick = onLayoutModeClick,
-            modifier = Modifier.size(48.dp)
+            modifier = Modifier.size(40.dp)
         ) {
             Icon(
                 imageVector = if (isSingleColumn) Icons.Outlined.GridView else Icons.Outlined.ViewAgenda,
@@ -2077,18 +2136,38 @@ private fun SpaceContributionVideoActions(
         }
 
         Box {
-            TextButton(onClick = { menuExpanded = true }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Sort,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = currentOrder.displayName,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            if (spec.showSortText) {
+                TextButton(
+                    onClick = { menuExpanded = true },
+                    modifier = Modifier.height(40.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(17.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = resolveSpaceVideoSortCompactLabel(currentOrder),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+            } else {
+                IconButton(
+                    onClick = { menuExpanded = true },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                        contentDescription = resolveSpaceVideoSortCompactLabel(currentOrder),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             DropdownMenu(
