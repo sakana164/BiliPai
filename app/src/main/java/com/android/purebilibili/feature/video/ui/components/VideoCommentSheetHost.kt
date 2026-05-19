@@ -176,6 +176,14 @@ internal fun resolveVideoCommentSheetDragStartOffset(
     return max(renderedOffsetPx, targetOffsetPx).coerceAtLeast(0f)
 }
 
+internal fun resolveVideoCommentSheetPresentationProgress(
+    hostVisibilityProgress: Float,
+    dragVisibilityProgress: Float
+): Float {
+    return hostVisibilityProgress.coerceIn(0f, 1f) *
+        dragVisibilityProgress.coerceIn(0f, 1f)
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun VideoCommentSheetHost(
@@ -244,16 +252,28 @@ fun VideoCommentSheetHost(
     var isDraggingSheet by remember { mutableStateOf(false) }
     var sheetDragTargetOffsetPx by remember { mutableStateOf(0f) }
     var mainSheetMeasuredHeightPx by remember { mutableStateOf(0f) }
+    val hostVisibilityProgress by animateFloatAsState(
+        targetValue = if (hostVisible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = if (hostVisible) {
+                motionSpec.contentEnterFadeDurationMillis
+            } else {
+                motionSpec.contentExitFadeDurationMillis
+            }
+        ),
+        label = "video_comment_host_visibility_progress"
+    )
     val sheetDragOffsetPx by animateFloatAsState(
         targetValue = sheetDragTargetOffsetPx,
         animationSpec = tween(durationMillis = if (isDraggingSheet) 0 else 180),
         label = "video_comment_main_sheet_offset"
     )
     val latestSheetDragOffsetPx = rememberUpdatedState(sheetDragOffsetPx)
-    val mainSheetVisibilityProgress = remember(
+    val sheetDragVisibilityProgress = remember(
         hostContent,
         mainSheetVisible,
         sheetDragOffsetPx,
+        hostVisibilityProgress,
         mainSheetMeasuredHeightPx
     ) {
         when {
@@ -263,8 +283,18 @@ fun VideoCommentSheetHost(
                     sheetHeightPx = mainSheetMeasuredHeightPx
                 )
             hostContent == VideoCommentSheetHostContent.THREAD_DETAIL -> 1f
+            hostContent == VideoCommentSheetHostContent.HIDDEN && hostVisibilityProgress > 0f -> 1f
             else -> 0f
         }
+    }
+    val mainSheetVisibilityProgress = remember(
+        hostVisibilityProgress,
+        sheetDragVisibilityProgress
+    ) {
+        resolveVideoCommentSheetPresentationProgress(
+            hostVisibilityProgress = hostVisibilityProgress,
+            dragVisibilityProgress = sheetDragVisibilityProgress
+        )
     }
 
     LaunchedEffect(mainSheetVisible, hostContent, mainSheetVisibilityProgress) {

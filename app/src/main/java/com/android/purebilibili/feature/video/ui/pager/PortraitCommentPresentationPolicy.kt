@@ -3,6 +3,7 @@ package com.android.purebilibili.feature.video.ui.pager
 internal fun shouldUseEmbeddedVideoSubReplyPresentation(): Boolean = true
 
 private const val FULLSCREEN_VIDEO_SUB_REPLY_SHEET_HEIGHT_FRACTION = 1f
+private const val MAIN_COMMENT_SHEET_HEIGHT_FRACTION = 0.60f
 
 internal fun shouldShowDetachedVideoSubReplySheet(
     useEmbeddedPresentation: Boolean
@@ -19,7 +20,14 @@ internal fun resolvePortraitCommentHostMainSheetVisible(
     subReplyVisible: Boolean
 ): Boolean = commentSheetVisible || subReplyVisible
 
-private const val PORTRAIT_COMMENT_SHEET_PLAYER_SCALE = 0.58f
+internal data class PortraitCommentPlayerTransform(
+    val progress: Float,
+    val scale: Float,
+    val translationYPx: Float,
+    val visibleHeightFraction: Float,
+    val overlayAlpha: Float,
+    val playerGesturesEnabled: Boolean
+)
 
 internal fun resolvePortraitCommentExpandedPlayerScale(
     commentSheetVisible: Boolean
@@ -32,8 +40,32 @@ internal fun resolvePortraitCommentExpandedPlayerScale(
 internal fun resolvePortraitCommentExpandedPlayerScale(
     commentVisibilityProgress: Float
 ): Float {
-    val clampedProgress = commentVisibilityProgress.coerceIn(0f, 1f)
-    return 1f - ((1f - PORTRAIT_COMMENT_SHEET_PLAYER_SCALE) * clampedProgress)
+    return resolvePortraitCommentPlayerTransform(
+        commentVisibilityProgress = commentVisibilityProgress
+    ).scale
+}
+
+internal fun resolvePortraitCommentPlayerTransform(
+    commentVisibilityProgress: Float,
+    containerHeightPx: Int = 1,
+    commentSheetHeightFraction: Float = MAIN_COMMENT_SHEET_HEIGHT_FRACTION
+): PortraitCommentPlayerTransform {
+    val progress = if (containerHeightPx > 0) {
+        commentVisibilityProgress.coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val sheetFraction = commentSheetHeightFraction.coerceIn(0f, 1f)
+    val visibleHeightFraction = (1f - sheetFraction * progress).coerceIn(0f, 1f)
+
+    return PortraitCommentPlayerTransform(
+        progress = progress,
+        scale = visibleHeightFraction,
+        translationYPx = 0f,
+        visibleHeightFraction = visibleHeightFraction,
+        overlayAlpha = (1f - progress).coerceIn(0f, 1f),
+        playerGesturesEnabled = progress <= 0.001f
+    )
 }
 
 internal fun resolvePortraitCommentVisibilityProgress(

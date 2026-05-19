@@ -62,7 +62,6 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -74,6 +73,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -1205,13 +1205,13 @@ private fun VideoPageItem(
     var detailSheetUpOnlyMode by remember { mutableStateOf(false) }
     var isOverlayVisible by remember { mutableStateOf(true) }
     var commentSheetVisibilityProgress by remember { mutableFloatStateOf(0f) }
-    val commentExpandedPlayerScale by animateFloatAsState(
-        targetValue = resolvePortraitCommentExpandedPlayerScale(
-            commentVisibilityProgress = commentSheetVisibilityProgress
-        ),
-        animationSpec = tween(durationMillis = 260),
-        label = "portrait_comment_player_scale"
-    )
+    var portraitPageHeightPx by remember { mutableIntStateOf(0) }
+    val commentExpansionTransform = remember(commentSheetVisibilityProgress, portraitPageHeightPx) {
+        resolvePortraitCommentPlayerTransform(
+            commentVisibilityProgress = commentSheetVisibilityProgress,
+            containerHeightPx = portraitPageHeightPx
+        )
+    }
 
     // 进度状态 (从播放器获取)
     var progressState by remember(bvid, initialDuration, initialProgressPositionMs) {
@@ -1353,8 +1353,11 @@ private fun VideoPageItem(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(isCurrentPage, bvid) {
-                if (!isCurrentPage) return@pointerInput
+            .onSizeChanged { size ->
+                portraitPageHeightPx = size.height
+            }
+            .pointerInput(isCurrentPage, bvid, commentExpansionTransform.playerGesturesEnabled) {
+                if (!isCurrentPage || !commentExpansionTransform.playerGesturesEnabled) return@pointerInput
 
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false)
@@ -1407,16 +1410,27 @@ private fun VideoPageItem(
                     }
                 }
             }
-            .pointerInput(longPressSpeed, currentAudioQuality, isCurrentPage) {
+            .pointerInput(
+                longPressSpeed,
+                currentAudioQuality,
+                isCurrentPage,
+                commentExpansionTransform.playerGesturesEnabled
+            ) {
                 detectTapGestures(
                     onTap = {
-                        if (!shouldHandlePortraitTapGesture(scale = scale)) {
+                        if (
+                            !commentExpansionTransform.playerGesturesEnabled ||
+                            !shouldHandlePortraitTapGesture(scale = scale)
+                        ) {
                             return@detectTapGestures
                         }
                         isOverlayVisible = !isOverlayVisible
                     },
                     onDoubleTap = {
-                        if (!shouldHandlePortraitTapGesture(scale = scale)) {
+                        if (
+                            !commentExpansionTransform.playerGesturesEnabled ||
+                            !shouldHandlePortraitTapGesture(scale = scale)
+                        ) {
                             return@detectTapGestures
                         }
                         if (isCurrentPage) {
@@ -1424,7 +1438,10 @@ private fun VideoPageItem(
                         }
                     },
                     onLongPress = {
-                        if (!shouldHandlePortraitLongPressGesture(scale = scale)) {
+                        if (
+                            !commentExpansionTransform.playerGesturesEnabled ||
+                            !shouldHandlePortraitLongPressGesture(scale = scale)
+                        ) {
                             return@detectTapGestures
                         }
                         if (!isCurrentPage) return@detectTapGestures
@@ -1449,11 +1466,17 @@ private fun VideoPageItem(
                 )
             }
             // 进度调整手势
-            .pointerInput(progressState.duration, scale, isCurrentPage) {
+            .pointerInput(
+                progressState.duration,
+                scale,
+                isCurrentPage,
+                commentExpansionTransform.playerGesturesEnabled
+            ) {
                 detectHorizontalDragGestures(
                     onDragStart = { 
                         if (
                             isCurrentPage &&
+                            commentExpansionTransform.playerGesturesEnabled &&
                             progressState.duration > 0 &&
                             shouldHandlePortraitSeekGesture(scale = scale)
                         ) {
@@ -1483,8 +1506,9 @@ private fun VideoPageItem(
         val mediaLayerModifier = Modifier
             .fillMaxSize()
             .graphicsLayer {
-                scaleX = commentExpandedPlayerScale
-                scaleY = commentExpandedPlayerScale
+                scaleX = commentExpansionTransform.scale
+                scaleY = commentExpansionTransform.scale
+                translationY = commentExpansionTransform.translationYPx
                 transformOrigin = TransformOrigin(0.5f, 0f)
             }
         val danmakuSurfaceMode = resolvePortraitDanmakuSurfaceMode(currentVideoAspect)
@@ -2089,7 +2113,8 @@ private fun VideoPageItem(
                 onRotateToLandscape()
             },
             
-            showControls = isOverlayVisible && !showCommentSheet && !showDetailSheet
+            showControls = isOverlayVisible && !showDetailSheet,
+            commentExpansionProgress = commentSheetVisibilityProgress
         )
 
         if (showSpeedMenu && isCurrentPage) {

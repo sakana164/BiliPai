@@ -7,6 +7,7 @@ import com.android.purebilibili.data.model.response.ViewInfo
 import androidx.media3.common.Player
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.android.purebilibili.feature.video.viewmodel.PlayerUiState
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -341,5 +342,22 @@ class PortraitVideoPagerPolicyTest {
                 )
             )
         )
+    }
+
+    @Test
+    fun portraitCommentExpansion_usesSharedProgressInsteadOfSecondaryScaleTween() {
+        val source = File("src/main/java/com/android/purebilibili/feature/video/ui/pager/PortraitVideoPager.kt").readText()
+
+        assertFalse(source.contains("portrait_comment_player_scale"))
+        assertFalse(source.contains("commentExpandedPlayerScale by animateFloatAsState"))
+        assertTrue(source.contains("resolvePortraitCommentPlayerTransform("))
+        assertTrue(source.contains("commentExpansionTransform.scale"))
+    }
+
+    @Test
+    fun portraitOverlay_receivesCommentExpansionProgress() {
+        val source = File("src/main/java/com/android/purebilibili/feature/video/ui/pager/PortraitVideoPager.kt").readText()
+
+        assertTrue(source.contains("commentExpansionProgress = commentSheetVisibilityProgress"))
     }
 }

@@ -204,4 +204,29 @@ class VideoCommentSheetHostPolicyTest {
             )
         )
     }
+
+    @Test
+    fun `sheet presentation progress combines host animation and drag progress`() {
+        assertEquals(
+            0.5f,
+            resolveVideoCommentSheetPresentationProgress(
+                hostVisibilityProgress = 0.5f,
+                dragVisibilityProgress = 1f
+            )
+        )
+        assertEquals(
+            0.5f,
+            resolveVideoCommentSheetPresentationProgress(
+                hostVisibilityProgress = 1f,
+                dragVisibilityProgress = 0.5f
+            )
+        )
+        assertEquals(
+            0f,
+            resolveVideoCommentSheetPresentationProgress(
+                hostVisibilityProgress = -1f,
+                dragVisibilityProgress = 1f
+            )
+        )
+    }
 }

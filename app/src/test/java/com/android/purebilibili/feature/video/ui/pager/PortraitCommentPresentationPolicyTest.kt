@@ -40,12 +40,73 @@ class PortraitCommentPresentationPolicyTest {
 
     @Test
     fun `portrait player shrinks while comment sheet is expanded`() {
-        assertEquals(0.58f, resolvePortraitCommentExpandedPlayerScale(commentSheetVisible = true))
+        assertEquals(0.4f, resolvePortraitCommentExpandedPlayerScale(commentSheetVisible = true), 0.001f)
         assertEquals(1f, resolvePortraitCommentExpandedPlayerScale(commentSheetVisible = false))
         assertTrue(
             abs(
-                resolvePortraitCommentExpandedPlayerScale(commentVisibilityProgress = 0.5f) - 0.79f
+                resolvePortraitCommentExpandedPlayerScale(commentVisibilityProgress = 0.5f) - 0.7f
             ) < 0.001f
+        )
+    }
+
+    @Test
+    fun `portrait comment transform aligns player bottom to sheet top`() {
+        val collapsed = resolvePortraitCommentPlayerTransform(
+            commentVisibilityProgress = 0f,
+            containerHeightPx = 1000
+        )
+        assertEquals(1f, collapsed.scale, 0.001f)
+        assertEquals(0f, collapsed.translationYPx)
+        assertEquals(1f, collapsed.visibleHeightFraction, 0.001f)
+        assertEquals(1f, collapsed.overlayAlpha, 0.001f)
+        assertTrue(collapsed.playerGesturesEnabled)
+
+        val half = resolvePortraitCommentPlayerTransform(
+            commentVisibilityProgress = 0.5f,
+            containerHeightPx = 1000
+        )
+        assertEquals(0.7f, half.scale, 0.001f)
+        assertEquals(0f, half.translationYPx)
+        assertEquals(0.7f, half.visibleHeightFraction, 0.001f)
+        assertEquals(0.5f, half.overlayAlpha, 0.001f)
+        assertFalse(half.playerGesturesEnabled)
+
+        val expanded = resolvePortraitCommentPlayerTransform(
+            commentVisibilityProgress = 1f,
+            containerHeightPx = 1000
+        )
+        assertEquals(0.4f, expanded.scale, 0.001f)
+        assertEquals(0f, expanded.translationYPx)
+        assertEquals(0.4f, expanded.visibleHeightFraction, 0.001f)
+        assertEquals(0f, expanded.overlayAlpha)
+        assertFalse(expanded.playerGesturesEnabled)
+    }
+
+    @Test
+    fun `portrait comment transform clamps unsafe inputs`() {
+        assertEquals(
+            1f,
+            resolvePortraitCommentPlayerTransform(
+                commentVisibilityProgress = -1f,
+                containerHeightPx = 1000
+            ).scale,
+            0.001f
+        )
+        assertEquals(
+            0.4f,
+            resolvePortraitCommentPlayerTransform(
+                commentVisibilityProgress = 2f,
+                containerHeightPx = 1000
+            ).scale,
+            0.001f
+        )
+        assertEquals(
+            1f,
+            resolvePortraitCommentPlayerTransform(
+                commentVisibilityProgress = 1f,
+                containerHeightPx = 0
+            ).scale,
+            0.001f
         )
     }
 
