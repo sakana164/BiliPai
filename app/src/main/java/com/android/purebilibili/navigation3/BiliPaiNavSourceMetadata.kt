@@ -9,3 +9,17 @@ internal data class BiliPaiNavSourceMetadata(
     val sharedTransitionReady: Boolean
         get() = clickedBoundsRecorded && cardFullyVisible
 }
+
+internal fun resolveBiliPaiNavSourceMetadata(
+    sourceKey: String? = null,
+    sourceRoute: String? = null,
+    clickedBoundsRecorded: Boolean,
+    cardFullyVisible: Boolean
+): BiliPaiNavSourceMetadata {
+    return BiliPaiNavSourceMetadata(
+        sourceKey = sourceKey,
+        sourceRoute = sourceRoute?.substringBefore("?"),
+        clickedBoundsRecorded = clickedBoundsRecorded,
+        cardFullyVisible = cardFullyVisible
+    )
+}

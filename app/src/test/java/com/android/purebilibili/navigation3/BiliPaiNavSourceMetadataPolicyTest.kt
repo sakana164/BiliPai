@@ -40,4 +40,18 @@ class BiliPaiNavSourceMetadataPolicyTest {
             ).sharedTransitionReady
         )
     }
+
+    @Test
+    fun resolverNormalizesSourceRouteAndKeepsSharedReadyInputsTogether() {
+        val metadata = resolveBiliPaiNavSourceMetadata(
+            sourceKey = "home:BV1",
+            sourceRoute = "home?from=tab",
+            clickedBoundsRecorded = true,
+            cardFullyVisible = true
+        )
+
+        assertEquals("home", metadata.sourceRoute)
+        assertEquals("home:BV1", metadata.sourceKey)
+        assertTrue(metadata.sharedTransitionReady)
+    }
 }

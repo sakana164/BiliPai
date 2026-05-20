@@ -31,8 +31,18 @@ class AppNavigationNavigation3BridgeStructureTest {
 
         assertTrue(source.contains("BiliPaiReturnSessionState"))
         assertTrue(source.contains("navigation3ReturnSession"))
-        assertTrue(source.contains("BiliPaiNavSourceMetadata"))
+        assertTrue(source.contains("resolveBiliPaiNavSourceMetadata"))
         assertTrue(source.contains("navigation3ReturnSession.markReturning"))
+    }
+
+    @Test
+    fun appNavigationHasControlledNavDisplayMainChainEntryPoint() {
+        val source = appNavigationSource()
+
+        assertTrue(source.contains("shouldUseBiliPaiNavDisplayMainChain()"))
+        assertTrue(source.contains("BiliPaiNavDisplayHost("))
+        assertTrue(source.contains("sharedTransitionScope = LocalSharedTransitionScope.current"))
+        assertTrue(source.contains("else NavHost("))
     }
 
     private fun appNavigationSource(): String {

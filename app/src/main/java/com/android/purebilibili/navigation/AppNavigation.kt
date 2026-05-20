@@ -123,16 +123,18 @@ import com.android.purebilibili.core.store.resolveEffectiveHomeSettings
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.util.NetworkUtils
 import com.android.purebilibili.navigation3.BiliPaiNavKey
+import com.android.purebilibili.navigation3.BiliPaiNavDisplayHost
 import com.android.purebilibili.navigation3.BiliPaiNavRouteTransition
-import com.android.purebilibili.navigation3.BiliPaiNavSourceMetadata
 import com.android.purebilibili.navigation3.BiliPaiReturnSessionState
 import com.android.purebilibili.navigation3.legacyRouteToBiliPaiNavKey
 import com.android.purebilibili.navigation3.popBiliPaiNavKey
 import com.android.purebilibili.navigation3.pushBiliPaiNavKey
 import com.android.purebilibili.navigation3.resolveBiliPaiNavMotionDecision
 import com.android.purebilibili.navigation3.resolveBiliPaiNavMotionMode
+import com.android.purebilibili.navigation3.resolveBiliPaiNavSourceMetadata
 import com.android.purebilibili.navigation3.resolveInitialBiliPaiBackStack
 import com.android.purebilibili.navigation3.shouldInterceptSystemBackForNavigation3
+import com.android.purebilibili.navigation3.shouldUseBiliPaiNavDisplayMainChain
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier // 确保 Modifier 被导入
 import androidx.compose.foundation.layout.Box // 确保 Box 被导入
@@ -822,16 +824,25 @@ fun AppNavigation(
                 hasPreviousBackStackEntry = hasPreviousBackStackEntry
             )
         }
+        val navigation3MotionMode = remember(predictiveBackAnimationEnabled, cardTransitionEnabled) {
+            resolveBiliPaiNavMotionMode(
+                predictiveBackAnimationEnabled = predictiveBackAnimationEnabled,
+                cardTransitionEnabled = cardTransitionEnabled
+            )
+        }
+        fun currentNavigation3SourceMetadata() = resolveBiliPaiNavSourceMetadata(
+            sourceRoute = navigation3ReturnSession.lastVideoSourceRoute,
+            clickedBoundsRecorded = CardPositionManager.lastClickedCardBounds != null,
+            cardFullyVisible = CardPositionManager.isCardFullyVisible
+        )
+        val navigation3SourceMetadata = currentNavigation3SourceMetadata()
         val shouldInterceptSystemBack = remember(
             predictiveBackAnimationEnabled,
             cardTransitionEnabled,
             systemBackAction
         ) {
             shouldInterceptSystemBackForNavigation3(
-                mode = resolveBiliPaiNavMotionMode(
-                    predictiveBackAnimationEnabled = predictiveBackAnimationEnabled,
-                    cardTransitionEnabled = cardTransitionEnabled
-                ),
+                mode = navigation3MotionMode,
                 appBackActionRequiresInterception =
                     systemBackAction == AppSystemBackAction.RETURN_TO_HOME_TAB ||
                         (!predictiveBackAnimationEnabled && systemBackAction == AppSystemBackAction.NAVIGATE_UP)
@@ -1104,7 +1115,16 @@ fun AppNavigation(
                         slideExitRight(navMotionSpec)
                     }
                 }
-                NavHost(
+                if (shouldUseBiliPaiNavDisplayMainChain()) {
+                    BiliPaiNavDisplayHost(
+                        backStack = navigation3BackStack,
+                        motionMode = navigation3MotionMode,
+                        sourceMetadata = navigation3SourceMetadata,
+                        onBack = { performSystemBackAction() },
+                        modifier = Modifier.fillMaxSize(),
+                        sharedTransitionScope = LocalSharedTransitionScope.current
+                    ) { _ -> }
+                } else NavHost(
             navController = navController,
             startDestination = startDestination
         ) {
@@ -1146,12 +1166,7 @@ fun AppNavigation(
             popEnterTransition = { 
                 val fromRoute = initialState.destination.route
                 val fromSettings = fromRoute == ScreenRoutes.Settings.route
-                val navigation3SourceMetadata = BiliPaiNavSourceMetadata(
-                    sourceRoute = navigation3ReturnSession.lastVideoSourceRoute,
-                    clickedBoundsRecorded = CardPositionManager.lastClickedCardBounds != null,
-                    cardFullyVisible = CardPositionManager.isCardFullyVisible
-                )
-                val sharedTransitionReady = navigation3SourceMetadata.sharedTransitionReady
+                val sharedTransitionReady = currentNavigation3SourceMetadata().sharedTransitionReady
                 val navigation3MotionDecision = resolveBiliPaiNavMotionDecision(
                     fromKey = legacyRouteToBiliPaiNavKey(fromRoute),
                     toKey = BiliPaiNavKey.Home,
@@ -1600,12 +1615,7 @@ fun AppNavigation(
             enterTransition = {
                 val fromRoute = initialState.destination.route
                 val targetRoute = targetState.destination.route
-                val navigation3SourceMetadata = BiliPaiNavSourceMetadata(
-                    sourceRoute = navigation3ReturnSession.lastVideoSourceRoute,
-                    clickedBoundsRecorded = CardPositionManager.lastClickedCardBounds != null,
-                    cardFullyVisible = CardPositionManager.isCardFullyVisible
-                )
-                val sharedTransitionReady = navigation3SourceMetadata.sharedTransitionReady
+                val sharedTransitionReady = currentNavigation3SourceMetadata().sharedTransitionReady
                 when (
                     resolveVideoPushEnterAction(
                         cardTransitionEnabled = cardTransitionEnabled,
@@ -1672,12 +1682,7 @@ fun AppNavigation(
             popExitTransition = { 
                 val fromRoute = initialState.destination.route
                 val targetRoute = targetState.destination.route
-                val navigation3SourceMetadata = BiliPaiNavSourceMetadata(
-                    sourceRoute = navigation3ReturnSession.lastVideoSourceRoute,
-                    clickedBoundsRecorded = CardPositionManager.lastClickedCardBounds != null,
-                    cardFullyVisible = CardPositionManager.isCardFullyVisible
-                )
-                val sharedTransitionReady = navigation3SourceMetadata.sharedTransitionReady
+                val sharedTransitionReady = currentNavigation3SourceMetadata().sharedTransitionReady
                 val navigation3MotionDecision = resolveBiliPaiNavMotionDecision(
                     fromKey = legacyRouteToBiliPaiNavKey(fromRoute),
                     toKey = legacyRouteToBiliPaiNavKey(targetRoute),
