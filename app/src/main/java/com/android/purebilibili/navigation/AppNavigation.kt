@@ -1658,6 +1658,37 @@ fun AppNavigation(
                                     }
                                 )
                             }
+                        BiliPaiNavEntryContentRole.LOGIN -> LoginScreen(
+                                onClose = { performSystemBackAction() },
+                                onLoginSuccess = {
+                                    performSystemBackAction()
+                                    homeViewModel.refresh()
+                                }
+                            )
+                        BiliPaiNavEntryContentRole.STORY -> com.android.purebilibili.feature.story.StoryScreen(
+                                isActive = true,
+                                onBack = { performSystemBackAction() },
+                                onVideoClick = { bvid, cid, _ -> navigateToVideoInNavigation3(bvid, cid, "") },
+                                onUserClick = { mid -> pushNavigation3Route(ScreenRoutes.Space.createRoute(mid)) },
+                                onSearchClick = { pushNavigation3Key(BiliPaiNavKey.Search) }
+                            )
+                        BiliPaiNavEntryContentRole.PARTITION -> com.android.purebilibili.feature.partition.PartitionScreen(
+                                onBack = { performSystemBackAction() },
+                                onPartitionClick = { id, name ->
+                                    pushNavigation3Key(BiliPaiNavKey.Category(tid = id, name = name))
+                                }
+                            )
+                        BiliPaiNavEntryContentRole.CATEGORY -> {
+                                val categoryKey = key as BiliPaiNavKey.Category
+                                com.android.purebilibili.feature.category.CategoryScreen(
+                                    tid = categoryKey.tid,
+                                    name = categoryKey.name,
+                                    onBack = { performSystemBackAction() },
+                                    onVideoClick = { bvid, cid, cover ->
+                                        navigateToVideoInNavigation3(bvid, cid, cover)
+                                    }
+                                )
+                            }
                         BiliPaiNavEntryContentRole.DEFERRED_LEGACY_ROUTE -> {
                             LaunchedEffect(key) {
                                 val targetRoute = key.toLegacyRoute()

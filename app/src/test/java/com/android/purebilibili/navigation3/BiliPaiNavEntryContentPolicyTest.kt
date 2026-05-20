@@ -15,6 +15,9 @@ class BiliPaiNavEntryContentPolicyTest {
         assertEquals(BiliPaiNavEntryContentRole.HISTORY, resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.History))
         assertEquals(BiliPaiNavEntryContentRole.FAVORITE, resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.Favorite))
         assertEquals(BiliPaiNavEntryContentRole.WATCH_LATER, resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.WatchLater))
+        assertEquals(BiliPaiNavEntryContentRole.LOGIN, resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.Login))
+        assertEquals(BiliPaiNavEntryContentRole.STORY, resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.Story))
+        assertEquals(BiliPaiNavEntryContentRole.PARTITION, resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.Partition))
     }
 
     @Test
@@ -27,10 +30,7 @@ class BiliPaiNavEntryContentPolicyTest {
 
     @Test
     fun remainingDetailKeysStayDeferredUntilTheirLegacyRouteBodiesAreExtracted() {
-        assertEquals(
-            BiliPaiNavEntryContentRole.DEFERRED_LEGACY_ROUTE,
-            resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.ArticleDetail(articleId = 1L))
-        )
+        assertEquals(BiliPaiNavEntryContentRole.CATEGORY, resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.Category(1)))
         assertEquals(
             BiliPaiNavEntryContentRole.DEFERRED_LEGACY_ROUTE,
             resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.Live(roomId = 1L))

@@ -10,6 +10,10 @@ internal enum class BiliPaiNavEntryContentRole {
     HISTORY,
     FAVORITE,
     WATCH_LATER,
+    LOGIN,
+    STORY,
+    PARTITION,
+    CATEGORY,
     DEFERRED_LEGACY_ROUTE
 }
 
@@ -24,6 +28,10 @@ internal fun resolveBiliPaiNavEntryContentRole(key: BiliPaiNavKey): BiliPaiNavEn
         BiliPaiNavKey.History -> BiliPaiNavEntryContentRole.HISTORY
         BiliPaiNavKey.Favorite -> BiliPaiNavEntryContentRole.FAVORITE
         BiliPaiNavKey.WatchLater -> BiliPaiNavEntryContentRole.WATCH_LATER
+        BiliPaiNavKey.Login -> BiliPaiNavEntryContentRole.LOGIN
+        BiliPaiNavKey.Story -> BiliPaiNavEntryContentRole.STORY
+        BiliPaiNavKey.Partition -> BiliPaiNavEntryContentRole.PARTITION
+        is BiliPaiNavKey.Category -> BiliPaiNavEntryContentRole.CATEGORY
         else -> BiliPaiNavEntryContentRole.DEFERRED_LEGACY_ROUTE
     }
 }
