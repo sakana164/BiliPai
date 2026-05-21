@@ -493,10 +493,15 @@ fun DynamicCardV2(
                     gifImageLoader = gifImageLoader,
                     maxDisplayImages = if (isDetail) null else 9,
                     onImageClick = { index, rect ->
-                        val action = resolveDynamicCardMediaAction(item, index)
-                        if (action is DynamicCardMediaAction.PreviewImages) {
-                            selectedImageIndex = action.initialIndex
-                            sourceRect = rect
+                        when (val action = resolveDynamicCardMediaAction(item, index, isDetail = isDetail)) {
+                            is DynamicCardMediaAction.PreviewImages -> {
+                                selectedImageIndex = action.initialIndex
+                                sourceRect = rect
+                            }
+                            is DynamicCardMediaAction.OpenDynamicDetail -> {
+                                onDynamicDetailClick?.invoke(action.dynamicId)
+                            }
+                            DynamicCardMediaAction.None -> Unit
                         }
                     }
                 )

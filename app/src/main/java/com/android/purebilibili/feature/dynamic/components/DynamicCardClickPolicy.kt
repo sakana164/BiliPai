@@ -30,6 +30,8 @@ internal sealed interface DynamicCardMediaAction {
         val initialIndex: Int
     ) : DynamicCardMediaAction
 
+    data class OpenDynamicDetail(val dynamicId: String) : DynamicCardMediaAction
+
     data object None : DynamicCardMediaAction
 }
 
@@ -190,11 +192,20 @@ internal fun resolveDynamicCardPrimaryAction(item: DynamicItem): DynamicCardPrim
 
 internal fun resolveDynamicCardMediaAction(
     item: DynamicItem,
-    clickedIndex: Int
+    clickedIndex: Int,
+    isDetail: Boolean = true
 ): DynamicCardMediaAction {
     val target = item.orig ?: item
     val major = target.modules.module_dynamic?.major
     if (major == null) return DynamicCardMediaAction.None
+    if (!isDetail && major.opus != null) {
+        val dynamicId = target.id_str.trim()
+        return if (dynamicId.isNotEmpty()) {
+            DynamicCardMediaAction.OpenDynamicDetail(dynamicId)
+        } else {
+            DynamicCardMediaAction.None
+        }
+    }
     val images = when {
         major.draw != null && major.draw.items.isNotEmpty() -> major.draw.items.map { it.src }
         major.opus != null && major.opus.pics.isNotEmpty() -> major.opus.pics.map { it.url }

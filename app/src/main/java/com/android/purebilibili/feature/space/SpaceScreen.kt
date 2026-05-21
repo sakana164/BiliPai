@@ -917,7 +917,13 @@ private fun SpaceContent(
                     ) { article ->
                         SpaceArticleListItem(
                             article = article,
-                            onClick = { onArticleClick(article.id, article.title) }
+                            onClick = {
+                                dispatchSpaceArticleClick(
+                                    article = article,
+                                    onDynamicDetailClick = onDynamicDetailClick,
+                                    onArticleClick = onArticleClick
+                                )
+                            }
                         )
                     }
                 }
@@ -1266,7 +1272,13 @@ private fun SpaceContent(
                         ) { article ->
                             SpaceArticleListItem(
                                 article = article,
-                                onClick = { onArticleClick(article.id, article.title) }
+                                onClick = {
+                                    dispatchSpaceArticleClick(
+                                        article = article,
+                                        onDynamicDetailClick = onDynamicDetailClick,
+                                        onArticleClick = onArticleClick
+                                    )
+                                }
                             )
                         }
 
@@ -3205,6 +3217,18 @@ private fun SpaceAudioListItem(
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(28.dp)
         )
+    }
+}
+
+private fun dispatchSpaceArticleClick(
+    article: SpaceArticleItem,
+    onDynamicDetailClick: (String) -> Unit,
+    onArticleClick: (Long, String) -> Unit
+) {
+    when (val action = resolveSpaceArticleClickAction(article)) {
+        is SpaceDynamicClickAction.OpenDynamicDetail -> onDynamicDetailClick(action.dynamicId)
+        is SpaceDynamicClickAction.OpenArticle -> onArticleClick(action.articleId, action.title)
+        else -> Unit
     }
 }
 

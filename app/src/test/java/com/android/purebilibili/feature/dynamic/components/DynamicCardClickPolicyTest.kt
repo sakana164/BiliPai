@@ -221,6 +221,50 @@ class DynamicCardClickPolicyTest {
     }
 
     @Test
+    fun resolveDynamicCardMediaAction_opensDynamicDetailForOpusPreviewOnListCard() {
+        val item = DynamicItem(
+            id_str = "1201902028962398230",
+            modules = DynamicModules(
+                module_dynamic = DynamicContentModule(
+                    major = DynamicMajor(
+                        type = "MAJOR_TYPE_OPUS",
+                        opus = OpusMajor(
+                            pics = listOf(OpusPic(url = "https://i0.hdslb.com/opus.jpg"))
+                        )
+                    )
+                )
+            )
+        )
+
+        val action = resolveDynamicCardMediaAction(item, clickedIndex = 0, isDetail = false)
+
+        assertTrue(action is DynamicCardMediaAction.OpenDynamicDetail)
+        assertEquals("1201902028962398230", action.dynamicId)
+    }
+
+    @Test
+    fun resolveDynamicCardMediaAction_previewsOpusImagesOnDetailPage() {
+        val item = DynamicItem(
+            id_str = "1201902028962398230",
+            modules = DynamicModules(
+                module_dynamic = DynamicContentModule(
+                    major = DynamicMajor(
+                        type = "MAJOR_TYPE_OPUS",
+                        opus = OpusMajor(
+                            pics = listOf(OpusPic(url = "https://i0.hdslb.com/opus.jpg"))
+                        )
+                    )
+                )
+            )
+        )
+
+        val action = resolveDynamicCardMediaAction(item, clickedIndex = 0, isDetail = true)
+
+        assertTrue(action is DynamicCardMediaAction.PreviewImages)
+        assertEquals(listOf("https://i0.hdslb.com/opus.jpg"), action.images)
+    }
+
+    @Test
     fun resolveArticleCoverDrawItems_filtersBlankCoversForRendering() {
         val drawItems = resolveArticleCoverDrawItems(
             ArticleMajor(

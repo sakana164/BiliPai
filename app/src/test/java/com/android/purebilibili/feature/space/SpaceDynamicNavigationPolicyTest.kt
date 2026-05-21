@@ -3,6 +3,7 @@ package com.android.purebilibili.feature.space
 import com.android.purebilibili.data.model.response.SpaceDynamicArchive
 import com.android.purebilibili.data.model.response.SpaceDynamicContent
 import com.android.purebilibili.data.model.response.SpaceDynamicItem
+import com.android.purebilibili.data.model.response.SpaceArticleItem
 import com.android.purebilibili.data.model.response.SpaceDynamicMajor
 import com.android.purebilibili.data.model.response.SpaceDynamicModules
 import com.android.purebilibili.data.model.response.SpaceDynamicOpus
@@ -138,5 +139,46 @@ class SpaceDynamicNavigationPolicyTest {
 
         assertEquals(sharedAction.dynamicId, spaceAction.dynamicId)
         assertEquals("1200069469486972932", spaceAction.dynamicId)
+    }
+
+    @Test
+    fun resolveSpaceArticleClickAction_opensDynamicDetailForOpusJumpUrl() {
+        val action = resolveSpaceArticleClickAction(
+            SpaceArticleItem(
+                id = 1201902028962398230L,
+                title = "长图文",
+                jump_url = "//www.bilibili.com/opus/1201902028962398230"
+            )
+        )
+
+        assertTrue(action is SpaceDynamicClickAction.OpenDynamicDetail)
+        assertEquals("1201902028962398230", action.dynamicId)
+    }
+
+    @Test
+    fun resolveSpaceArticleClickAction_opensDynamicDetailForOpusIdWithoutJumpUrl() {
+        val action = resolveSpaceArticleClickAction(
+            SpaceArticleItem(
+                id = 1201902028962398230L,
+                title = "长图文"
+            )
+        )
+
+        assertTrue(action is SpaceDynamicClickAction.OpenDynamicDetail)
+        assertEquals("1201902028962398230", action.dynamicId)
+    }
+
+    @Test
+    fun resolveSpaceArticleClickAction_keepsLegacyArticleForCvId() {
+        val action = resolveSpaceArticleClickAction(
+            SpaceArticleItem(
+                id = 123456L,
+                title = "旧专栏"
+            )
+        )
+
+        assertTrue(action is SpaceDynamicClickAction.OpenArticle)
+        assertEquals(123456L, action.articleId)
+        assertEquals("旧专栏", action.title)
     }
 }

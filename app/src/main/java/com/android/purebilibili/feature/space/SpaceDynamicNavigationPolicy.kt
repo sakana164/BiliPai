@@ -1,5 +1,8 @@
 package com.android.purebilibili.feature.space
 
+import com.android.purebilibili.core.util.BilibiliNavigationTarget
+import com.android.purebilibili.core.util.BilibiliNavigationTargetParser
+import com.android.purebilibili.data.model.response.SpaceArticleItem
 import com.android.purebilibili.data.model.response.SpaceDynamicItem
 import com.android.purebilibili.feature.dynamic.components.DynamicCardPrimaryAction
 import com.android.purebilibili.feature.dynamic.components.resolveDynamicCardPrimaryAction
@@ -19,3 +22,27 @@ internal fun resolveSpaceDynamicClickAction(dynamic: SpaceDynamicItem): SpaceDyn
         else -> SpaceDynamicClickAction.None
     }
 }
+
+internal fun resolveSpaceArticleClickAction(article: SpaceArticleItem): SpaceDynamicClickAction {
+    when (val target = BilibiliNavigationTargetParser.parse(article.jump_url)) {
+        is BilibiliNavigationTarget.Dynamic -> {
+            return SpaceDynamicClickAction.OpenDynamicDetail(target.dynamicId)
+        }
+        is BilibiliNavigationTarget.Article -> {
+            return SpaceDynamicClickAction.OpenArticle(
+                articleId = target.articleId,
+                title = article.title
+            )
+        }
+        else -> Unit
+    }
+
+    val articleId = article.id.takeIf { it > 0L } ?: return SpaceDynamicClickAction.None
+    return if (articleId >= OPUS_ID_MIN_VALUE) {
+        SpaceDynamicClickAction.OpenDynamicDetail(articleId.toString())
+    } else {
+        SpaceDynamicClickAction.OpenArticle(articleId, article.title)
+    }
+}
+
+private const val OPUS_ID_MIN_VALUE = 1_000_000_000_000_000L
