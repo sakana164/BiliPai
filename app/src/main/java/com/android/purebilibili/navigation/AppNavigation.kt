@@ -83,7 +83,9 @@ import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardReturnTransitionState
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoPredictiveReturnState
 import com.android.purebilibili.core.ui.transition.VideoCardReturnTransitionState
+import com.android.purebilibili.core.ui.transition.VideoPredictiveReturnState
 import com.android.purebilibili.data.model.response.BgmInfo
 
 import androidx.compose.ui.zIndex
@@ -127,6 +129,7 @@ import com.android.purebilibili.core.util.NetworkUtils
 import com.android.purebilibili.navigation3.BiliPaiNavDisplayHost
 import com.android.purebilibili.navigation3.BiliPaiNavEntryContentRole
 import com.android.purebilibili.navigation3.BiliPaiNavKey
+import com.android.purebilibili.navigation3.BiliPaiPredictiveBackGestureState
 import com.android.purebilibili.navigation3.BiliPaiReturnSessionState
 import com.android.purebilibili.navigation3.legacyRouteToBiliPaiNavKey
 import com.android.purebilibili.navigation3.popBiliPaiNavKey
@@ -138,6 +141,7 @@ import com.android.purebilibili.navigation3.resolveBiliPaiNavSourceMetadata
 import com.android.purebilibili.navigation3.resolveBiliPaiVideoSource
 import com.android.purebilibili.navigation3.resolveInitialBiliPaiBackStack
 import com.android.purebilibili.navigation3.shouldUseNavigation3PredictivePop
+import com.android.purebilibili.navigation3.shouldEnableVideoPredictiveReturnToCard
 import com.android.purebilibili.navigation3.toLegacyRoute
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier // 确保 Modifier 被导入
@@ -336,6 +340,9 @@ fun AppNavigation(
     var bottomBarSearchLaunchKey by remember { mutableStateOf(0) }
     var pendingBottomBarSearchLaunchKey by remember { mutableStateOf<Int?>(null) }
     var navigation3ReturnSession by remember { mutableStateOf(BiliPaiReturnSessionState()) }
+    var navigation3PredictiveBackGestureState by remember {
+        mutableStateOf(BiliPaiPredictiveBackGestureState())
+    }
     val effectiveInitialSearchKeyword = inAppSearchKeyword ?: initialSearchKeyword
     val consumeInitialSearchKeyword: (String) -> Unit = { consumedKeyword ->
         if (inAppSearchKeyword == consumedKeyword) {
@@ -677,6 +684,34 @@ fun AppNavigation(
         }
         val navigation3SourceMetadata = currentNavigation3SourceMetadata()
         val previousNavigation3Key = navigation3BackStack.getOrNull(navigation3BackStack.lastIndex - 1)
+        val videoPredictiveReturnToCardEnabled = remember(
+            currentNavigation3Key,
+            previousNavigation3Key,
+            predictiveBackAnimationStyle,
+            cardTransitionEnabled,
+            navigation3SourceMetadata,
+            CardPositionManager.lastClickedCardBounds
+        ) {
+            shouldEnableVideoPredictiveReturnToCard(
+                currentKey = currentNavigation3Key,
+                previousKey = previousNavigation3Key,
+                predictiveBackAnimationStyle = predictiveBackAnimationStyle,
+                cardTransitionEnabled = cardTransitionEnabled,
+                sourceMetadata = navigation3SourceMetadata,
+                sourceBounds = CardPositionManager.lastClickedCardBounds
+            )
+        }
+        val videoPredictiveReturnState = remember(
+            videoPredictiveReturnToCardEnabled,
+            navigation3PredictiveBackGestureState,
+            CardPositionManager.lastClickedCardBounds
+        ) {
+            VideoPredictiveReturnState(
+                active = videoPredictiveReturnToCardEnabled && navigation3PredictiveBackGestureState.active,
+                progress = navigation3PredictiveBackGestureState.progress,
+                sourceBounds = CardPositionManager.lastClickedCardBounds
+            )
+        }
         val backGestureDecision = remember(
             predictiveBackAnimationStyle,
             cardTransitionEnabled,
@@ -2096,17 +2131,23 @@ fun AppNavigation(
                     }
                     }
 
-                BiliPaiNavDisplayHost(
-                    backStack = navigation3BackStack,
-                    motionMode = navigation3MotionMode,
-                    predictiveBackAnimationStyle = predictiveBackAnimationStyle,
-                    sourceMetadata = navigation3SourceMetadata,
-                    onBack = { performSystemBackAction() },
-                    modifier = Modifier.fillMaxSize(),
-                    sharedTransitionScope = LocalSharedTransitionScope.current,
-                    visibleBottomBarRoutes = visibleBottomBarRoutes
-                ) { key ->
-                    RenderNavigationContent(key)
+                CompositionLocalProvider(
+                    LocalVideoPredictiveReturnState provides videoPredictiveReturnState
+                ) {
+                    BiliPaiNavDisplayHost(
+                        backStack = navigation3BackStack,
+                        motionMode = navigation3MotionMode,
+                        predictiveBackAnimationStyle = predictiveBackAnimationStyle,
+                        sourceMetadata = navigation3SourceMetadata,
+                        onBack = { performSystemBackAction() },
+                        modifier = Modifier.fillMaxSize(),
+                        sharedTransitionScope = LocalSharedTransitionScope.current,
+                        visibleBottomBarRoutes = visibleBottomBarRoutes,
+                        suppressPredictiveBackDecorator = videoPredictiveReturnToCardEnabled,
+                        onPredictiveBackGestureChange = { navigation3PredictiveBackGestureState = it }
+                    ) { key ->
+                        RenderNavigationContent(key)
+                    }
                 }
                 }
             } // End of Content Box

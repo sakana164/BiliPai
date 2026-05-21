@@ -98,6 +98,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.purebilibili.core.ui.blur.rememberRecoverableHazeState
+import com.android.purebilibili.core.ui.transition.videoPredictiveReturnTransform
 import com.android.purebilibili.core.store.PortraitPlayerCollapseMode
 //  已改用 MaterialTheme.colorScheme.primary
 
@@ -2644,7 +2645,7 @@ fun VideoDetailScreen(
         motion = routeSheetMotion,
         isFullscreenMode = isFullscreenMode,
         backgroundColor = MaterialTheme.colorScheme.background,
-        modifier = detailShellModifier
+        modifier = detailShellModifier.videoPredictiveReturnTransform()
     ) {
         // 📐 [平板适配] 全屏模式过渡动画（只有手机横屏才进入全屏）
         if (isFullscreenMode) {

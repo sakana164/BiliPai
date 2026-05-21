@@ -5,6 +5,7 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -43,6 +44,8 @@ internal fun BiliPaiNavDisplayHost(
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     visibleBottomBarRoutes: Set<String> = emptySet(),
+    suppressPredictiveBackDecorator: Boolean = false,
+    onPredictiveBackGestureChange: (BiliPaiPredictiveBackGestureState) -> Unit = {},
     content: @Composable (BiliPaiNavKey) -> Unit
 ) {
     val safeBackStack = remember(backStack) {
@@ -52,6 +55,14 @@ internal fun BiliPaiNavDisplayHost(
     val navigationScope = rememberCoroutineScope()
     val predictiveBackMotion = rememberBiliPaiPredictiveBackMotion(predictiveBackAnimationStyle)
     var navigationEventState: NavigationEventState<SceneInfo<BiliPaiNavKey>>? = null
+    val predictivePopRouteTransition = remember(motionMode, sourceMetadata, safeBackStack) {
+        resolveBiliPaiNavDisplayPredictivePopRouteTransition(
+            motionMode = motionMode,
+            sourceMetadata = sourceMetadata,
+            fromKey = safeBackStack.lastOrNull(),
+            toKey = safeBackStack.getOrNull(safeBackStack.lastIndex - 1)
+        )
+    }
     val scopedContent: @Composable (BiliPaiNavKey) -> Unit = remember(content, application) {
         { key ->
             ProvideAnimatedVisibilityScope(
@@ -89,11 +100,15 @@ internal fun BiliPaiNavDisplayHost(
             ) { content ->
                 with(predictiveBackMotion) {
                     Box(
-                        modifier = Modifier.predictiveBackAnimationDecorator(
-                            transitionState = navigationEventState?.transitionState,
-                            contentPageKey = content.contentKey,
-                            currentPageKey = safeBackStack.lastOrNull()
-                        )
+                        modifier = if (suppressPredictiveBackDecorator) {
+                            Modifier
+                        } else {
+                            Modifier.predictiveBackAnimationDecorator(
+                                transitionState = navigationEventState?.transitionState,
+                                contentPageKey = content.contentKey,
+                                currentPageKey = safeBackStack.lastOrNull()
+                            )
+                        }
                     ) {
                         content.Content()
                     }
@@ -116,13 +131,11 @@ internal fun BiliPaiNavDisplayHost(
         currentInfo = currentInfo,
         backInfo = previousSceneInfos
     )
-    val predictivePopRouteTransition = remember(motionMode, sourceMetadata, safeBackStack) {
-        resolveBiliPaiNavDisplayPredictivePopRouteTransition(
-            motionMode = motionMode,
-            sourceMetadata = sourceMetadata,
-            fromKey = safeBackStack.lastOrNull(),
-            toKey = safeBackStack.getOrNull(safeBackStack.lastIndex - 1)
-        )
+    val predictiveBackGestureState = resolveBiliPaiPredictiveBackGestureState(
+        navigationEventState.transitionState
+    )
+    LaunchedEffect(predictiveBackGestureState) {
+        onPredictiveBackGestureChange(predictiveBackGestureState)
     }
 
     NavigationBackHandler(
