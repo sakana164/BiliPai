@@ -2448,7 +2448,7 @@ private fun Modifier.spaceVideoCoverSharedBounds(
                         easing = cardSharedTransitionMotionSpec.easing
                     )
                 } else {
-                    com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                    com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                 }
             },
             clipInOverlayDuringTransition = OverlayClip(coverShape)
@@ -2936,7 +2936,7 @@ private fun SpaceArchiveListItemRow(
                             easing = cardSharedTransitionMotionSpec.easing
                         )
                     } else {
-                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                     }
                 },
                 clipInOverlayDuringTransition = OverlayClip(coverShape)
@@ -3048,7 +3048,7 @@ private fun SpaceArchiveListItemRow(
                             ),
                             animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                             boundsTransform = { _, _ ->
-                                com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                             }
                         )
                 }
@@ -3100,7 +3100,7 @@ private fun SpaceArchiveListItemRow(
                             ),
                             animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                             boundsTransform = { _, _ ->
-                                com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                             },
                             clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(4.dp))
                         )
@@ -3118,7 +3118,7 @@ private fun SpaceArchiveListItemRow(
                             ),
                             animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                             boundsTransform = { _, _ ->
-                                com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                             },
                             clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(4.dp))
                         )

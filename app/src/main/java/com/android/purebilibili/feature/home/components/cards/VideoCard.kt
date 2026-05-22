@@ -692,7 +692,7 @@ fun ElegantVideoCard(
                                     sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey(video.bvid)),
                                     animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                                     boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                                     }
                                 )
                             }
@@ -934,7 +934,7 @@ fun ElegantVideoCard(
                         sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey(video.bvid)),
                         animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                         boundsTransform = { _, _ ->
-                            com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                            com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                         }
                     )
                 }
@@ -1057,7 +1057,7 @@ fun ElegantVideoCard(
                         sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoUpNameSharedElementKey(video.bvid)),
                         animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                         boundsTransform = { _, _ ->
-                            com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                            com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                         }
                     )
                 }
@@ -1069,7 +1069,7 @@ fun ElegantVideoCard(
                         sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoUpActionSharedElementKey(video.bvid)),
                         animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                         boundsTransform = { _, _ ->
-                            com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                            com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                         }
                     )
                 }
@@ -1122,7 +1122,7 @@ fun ElegantVideoCard(
                                     sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoAvatarSharedElementKey(video.bvid)),
                                     animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                                     boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                                     },
                                     clipInOverlayDuringTransition = OverlayClip(CircleShape)
                                 )
@@ -1198,7 +1198,7 @@ fun ElegantVideoCard(
                             sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey(video.bvid)),
                             animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                             boundsTransform = { _, _ ->
-                                com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                             }
                         )
                     }

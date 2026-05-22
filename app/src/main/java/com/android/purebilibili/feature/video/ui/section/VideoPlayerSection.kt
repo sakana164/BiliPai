@@ -1089,7 +1089,7 @@ fun VideoPlayerSection(
                  sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoPlayerSharedElementKey(bvid)),
                  animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
                  boundsTransform = { _, _ ->
-                     com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                     com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                  }
              )
          }
@@ -2540,7 +2540,7 @@ fun VideoPlayerSection(
                         )
                     ),
                     animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                    boundsTransform = { _, _ -> com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec },
+                    boundsTransform = { _, _ -> com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec() },
                     clipInOverlayDuringTransition = OverlayClip(coverCardShape)
                 )
             }

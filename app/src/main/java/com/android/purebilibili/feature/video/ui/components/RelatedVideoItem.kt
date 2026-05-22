@@ -204,7 +204,7 @@ fun RelatedVideoItem(
                                         easing = cardSharedTransitionMotionSpec.easing
                                     )
                                 } else {
-                                    com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                    com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                                 }
                             },
                             clipInOverlayDuringTransition = OverlayClip(
@@ -276,7 +276,7 @@ fun RelatedVideoItem(
                             sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey(video.bvid)),
                             animatedVisibilityScope = animatedVisibilityScope,
                             boundsTransform = { _, _ ->
-                                com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                             }
                         )
                     }
@@ -306,7 +306,7 @@ fun RelatedVideoItem(
                                     sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoUpNameSharedElementKey(video.bvid)),
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                                     }
                                 )
                             }
@@ -318,7 +318,7 @@ fun RelatedVideoItem(
                                     sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoUpActionSharedElementKey(video.bvid)),
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                                     }
                                 )
                             }
@@ -353,7 +353,7 @@ fun RelatedVideoItem(
                                                 sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoAvatarSharedElementKey(video.bvid)),
                                                 animatedVisibilityScope = animatedVisibilityScope,
                                                 boundsTransform = { _, _ ->
-                                                    com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                                    com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                                                 },
                                                 clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.CircleShape)
                                             )
@@ -394,7 +394,7 @@ fun RelatedVideoItem(
                                     sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey(video.bvid)),
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                                     }
                                 )
                             }
@@ -413,7 +413,7 @@ fun RelatedVideoItem(
                                     sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoDanmakuSharedElementKey(video.bvid)),
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                                     }
                                 )
                             }

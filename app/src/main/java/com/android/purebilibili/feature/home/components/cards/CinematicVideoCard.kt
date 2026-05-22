@@ -249,7 +249,7 @@ fun CinematicVideoCard(
                                     easing = cardSharedTransitionMotionSpec.easing
                                 )
                             } else {
-                                com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                                com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
                             }
                         },
                         clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius))

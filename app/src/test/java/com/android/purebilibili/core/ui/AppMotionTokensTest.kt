@@ -81,6 +81,19 @@ class AppMotionTokensTest {
     }
 
     @Test
+    fun spatialSpec_keepsSharedElementSpringParameters() {
+        val spec = AppMotionTokens.resolveSpatialSpec<androidx.compose.ui.geometry.Rect>(
+            uiPreset = UiPreset.IOS,
+            androidNativeVariant = AndroidNativeVariant.MATERIAL3
+        )
+        val spring = spec as? SpringSpec<androidx.compose.ui.geometry.Rect>
+            ?: error("expected SpringSpec, got ${spec::class.simpleName}")
+
+        assertEquals(0.82f, spring.dampingRatio, "spatial damping")
+        assertEquals(380f, spring.stiffness, "spatial stiffness")
+    }
+
+    @Test
     fun chromeTokens_exposeMotionMillis() {
         val ios = resolveAndroidNativeChromeTokens(UiPreset.IOS, AndroidNativeVariant.MATERIAL3)
         val md3 = resolveAndroidNativeChromeTokens(UiPreset.MD3, AndroidNativeVariant.MATERIAL3)
