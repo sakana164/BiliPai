@@ -99,7 +99,7 @@ class BiliPaiNavMotionPolicyTest {
     }
 
     @Test
-    fun predictiveEnabledSharedVideoReturnLetsNavDisplayOwnBackGesture() {
+    fun predictiveEnabledSharedVideoReturnUsesClassicAppBack() {
         val decision = resolveBiliPaiBackGestureDecision(
             predictiveBackAnimationStyle = PredictiveBackAnimationStyle.AOSP,
             cardTransitionEnabled = true,
@@ -114,9 +114,9 @@ class BiliPaiNavMotionPolicyTest {
             )
         )
 
-        assertEquals(BiliPaiBackGestureOwner.NAV_DISPLAY_PREDICTIVE, decision.owner)
+        assertEquals(BiliPaiBackGestureOwner.APP_CLASSIC, decision.owner)
         assertEquals(BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT, decision.routeTransition)
-        assertFalse(decision.interceptSystemBack)
+        assertTrue(decision.interceptSystemBack)
     }
 
     @Test

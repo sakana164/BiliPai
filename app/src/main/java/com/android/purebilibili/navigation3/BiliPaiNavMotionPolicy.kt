@@ -114,10 +114,18 @@ internal fun resolveBiliPaiBackGestureDecision(
         fromKey = currentKey,
         toKey = previousKey
     )
+    val shouldUseClassicVideoSharedReturn = currentKey is BiliPaiNavKey.VideoDetail &&
+        previousKey != null &&
+        isCardReturnTargetNavKey(previousKey) &&
+        routeTransition == BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
     val owner = when (systemBackAction) {
         AppSystemBackAction.RETURN_TO_HOME_TAB -> BiliPaiBackGestureOwner.APP_ACTION
         AppSystemBackAction.NAVIGATE_UP -> {
-            if (predictiveBackAnimationStyle.usesPredictiveBack) {
+            if (shouldUseClassicVideoSharedReturn) {
+                // 视频共享元素回程必须先由应用壳标记 returning，再 pop；
+                // 否则 NavDisplay 预测性返回会早一帧移除详情页，导致首页闪屏。
+                BiliPaiBackGestureOwner.APP_CLASSIC
+            } else if (predictiveBackAnimationStyle.usesPredictiveBack) {
                 BiliPaiBackGestureOwner.NAV_DISPLAY_PREDICTIVE
             } else {
                 BiliPaiBackGestureOwner.APP_CLASSIC
