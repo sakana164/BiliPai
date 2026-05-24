@@ -283,7 +283,10 @@ fun AppNavigation(
     val settingsViewModel: SettingsViewModel = viewModel(
         factory = remember(application) { SettingsViewModelFactory(application) }
     )
-    val privacyAuthenticationEnabled by SettingsManager.getPrivacyContentAuthenticationEnabled(context).collectAsState(initial = false)
+    val privacyAuthenticationEnabled by SettingsManager.getPrivacyContentAuthenticationEnabled(context).collectAsState(
+        initial = false,
+        context = kotlin.coroutines.EmptyCoroutineContext
+    )
     var privacySessionUnlocked by remember { mutableStateOf(false) }
     LaunchedEffect(privacyAuthenticationEnabled) {
         if (!privacyAuthenticationEnabled) {
@@ -291,10 +294,13 @@ fun AppNavigation(
         }
     }
     val uriHandler = LocalUriHandler.current
-    val downloadTasks by com.android.purebilibili.feature.download.DownloadManager.tasks.collectAsState()
+    val downloadTasks by com.android.purebilibili.feature.download.DownloadManager.tasks.collectAsState(
+        context = kotlin.coroutines.EmptyCoroutineContext
+    )
     val uiPreset = LocalUiPreset.current
     val homeSettings by SettingsManager.getHomeSettings(context).collectAsState(
-        initial = com.android.purebilibili.core.store.HomeSettings()
+        initial = com.android.purebilibili.core.store.HomeSettings(),
+        context = kotlin.coroutines.EmptyCoroutineContext
     )
     val effectiveHomeSettings = remember(homeSettings, uiPreset) {
         resolveEffectiveHomeSettings(
@@ -376,8 +382,14 @@ fun AppNavigation(
         }
         val currentNavigation3Key = navigation3BackStack.lastOrNull()
         val currentRoute = currentNavigation3Key?.toLegacyRoute()
-        val configuredHomeWallpaperUri by SettingsManager.getHomeWallpaperUri(context).collectAsState(initial = "")
-        val splashWallpaperUri by SettingsManager.getSplashWallpaperUri(context).collectAsState(initial = "")
+        val configuredHomeWallpaperUri by SettingsManager.getHomeWallpaperUri(context).collectAsState(
+            initial = "",
+            context = kotlin.coroutines.EmptyCoroutineContext
+        )
+        val splashWallpaperUri by SettingsManager.getSplashWallpaperUri(context).collectAsState(
+            initial = "",
+            context = kotlin.coroutines.EmptyCoroutineContext
+        )
         val globalHomeWallpaperUri = remember(configuredHomeWallpaperUri, splashWallpaperUri) {
             resolveHomeWallpaperUri(
                 homeWallpaperUri = configuredHomeWallpaperUri,
@@ -417,7 +429,8 @@ fun AppNavigation(
         }
 
         val appNavigationSettings by SettingsManager.getAppNavigationSettings(context).collectAsState(
-            initial = AppNavigationSettings()
+            initial = AppNavigationSettings(),
+            context = kotlin.coroutines.EmptyCoroutineContext
         )
         val bottomBarVisibilityMode = appNavigationSettings.bottomBarVisibilityMode
         val orderedVisibleTabIds = appNavigationSettings.orderedVisibleTabIds
@@ -1292,7 +1305,9 @@ fun AppNavigation(
                             globalHazeState = mainHazeState
                         )
                         BiliPaiNavEntryContentRole.SEARCH -> {
-                            val homeState by homeViewModel.uiState.collectAsState()
+                            val homeState by homeViewModel.uiState.collectAsState(
+                                context = kotlin.coroutines.EmptyCoroutineContext
+                            )
                             SearchScreen(
                                 userFace = homeState.user.face,
                                 initialKeyword = effectiveInitialSearchKeyword.orEmpty(),
