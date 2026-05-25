@@ -57,6 +57,41 @@ class LiveDanmakuConnectionHealthPolicyTest {
     }
 
     @Test
+    fun `heartbeat only connection reconnects after business message stalls`() {
+        val health = markLiveDanmakuHeartbeatReply(
+            health = markLiveDanmakuBusinessMessage(
+                health = markLiveDanmakuConnected(LiveDanmakuConnectionHealth(), nowMs = 1_000L),
+                nowMs = 10_000L
+            ),
+            nowMs = 80_000L
+        )
+
+        val action = resolveLiveDanmakuHealthAction(
+            health = health,
+            nowMs = 90_001L,
+            silenceTimeoutMs = 75_000L
+        )
+
+        assertEquals(LiveDanmakuHealthAction.RECONNECT, action)
+    }
+
+    @Test
+    fun `heartbeat only connection stays connected before first business message`() {
+        val health = markLiveDanmakuHeartbeatReply(
+            health = markLiveDanmakuConnected(LiveDanmakuConnectionHealth(), nowMs = 1_000L),
+            nowMs = 80_000L
+        )
+
+        val action = resolveLiveDanmakuHealthAction(
+            health = health,
+            nowMs = 140_000L,
+            silenceTimeoutMs = 75_000L
+        )
+
+        assertEquals(LiveDanmakuHealthAction.KEEP_ALIVE, action)
+    }
+
+    @Test
     fun `manual disconnect suppresses silent reconnect`() {
         val health = markLiveDanmakuDisconnectedByUser(
             markLiveDanmakuConnected(LiveDanmakuConnectionHealth(), nowMs = 1_000L)

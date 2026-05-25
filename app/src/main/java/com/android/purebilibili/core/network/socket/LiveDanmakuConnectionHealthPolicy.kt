@@ -75,10 +75,15 @@ internal fun resolveLiveDanmakuHealthAction(
     if (health.disconnectedByUser || health.connectedAtMs <= 0L) {
         return LiveDanmakuHealthAction.KEEP_ALIVE
     }
-    val lastObservedAtMs = health.lastServerFrameAtMs.takeIf { it > 0L } ?: health.connectedAtMs
-    return if (nowMs - lastObservedAtMs > silenceTimeoutMs) {
-        LiveDanmakuHealthAction.RECONNECT
-    } else {
-        LiveDanmakuHealthAction.KEEP_ALIVE
+    val lastServerFrameObservedAtMs = health.lastServerFrameAtMs.takeIf { it > 0L } ?: health.connectedAtMs
+    if (nowMs - lastServerFrameObservedAtMs > silenceTimeoutMs) {
+        return LiveDanmakuHealthAction.RECONNECT
     }
+
+    val lastBusinessMessageAtMs = health.lastBusinessMessageAtMs
+    if (lastBusinessMessageAtMs > 0L && nowMs - lastBusinessMessageAtMs > silenceTimeoutMs) {
+        return LiveDanmakuHealthAction.RECONNECT
+    }
+
+    return LiveDanmakuHealthAction.KEEP_ALIVE
 }
