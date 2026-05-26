@@ -7,13 +7,15 @@ import kotlin.test.assertTrue
 class BiliPaiNavContentTransformPolicyStructureTest {
 
     @Test
-    fun disabledVideoDirectionalReturnKeepsTargetContentVisibleImmediately() {
+    fun disabledVideoDirectionalReturnMovesTargetAndOutgoingPagesHorizontally() {
         val source = contentTransformPolicySource()
         val returnFunctionStart = source.indexOf("private fun disabledVideoDirectionReturnTransform")
         val returnFunctionEnd = source.length
         val returnFunction = source.substring(returnFunctionStart, returnFunctionEnd)
 
-        assertTrue(returnFunction.contains("return EnterTransition.None togetherWith"))
+        assertTrue(returnFunction.contains("slideInHorizontally("))
+        assertTrue(returnFunction.contains("initialOffsetX = { width -> -directionSign * width / 3 }"))
+        assertTrue(returnFunction.contains("slideOutHorizontally("))
     }
 
     @Test
@@ -24,6 +26,13 @@ class BiliPaiNavContentTransformPolicyStructureTest {
         val returnFunction = source.substring(returnFunctionStart, returnFunctionEnd)
 
         assertTrue(returnFunction.contains("targetOffsetX = { width -> directionSign * width / 2 }"))
+    }
+
+    @Test
+    fun disabledVideoDirectionalReturnUsesLongerMotionWindowForVisibleScreenshots() {
+        val source = contentTransformPolicySource()
+
+        assertTrue(source.contains("NAV3_DISABLED_VIDEO_RETURN_MILLIS = 320"))
     }
 
     @Test

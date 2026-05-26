@@ -3,6 +3,7 @@ package com.android.purebilibili.navigation3
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -12,6 +13,7 @@ import androidx.compose.animation.togetherWith
 
 private const val NAV3_FALLBACK_FADE_MILLIS = 180
 private const val NAV3_DISABLED_VIDEO_DIRECTION_MILLIS = 220
+private const val NAV3_DISABLED_VIDEO_RETURN_MILLIS = 320
 private const val NAV3_SPACE_FORWARD_MILLIS = 220
 internal fun resolveBiliPaiNavContentTransform(
     routeTransition: BiliPaiNavRouteTransition
@@ -67,11 +69,28 @@ private fun spaceForwardTransform(): ContentTransform {
 }
 
 private fun disabledVideoDirectionReturnTransform(directionSign: Int): ContentTransform {
-    return EnterTransition.None togetherWith
+    return (
+        slideInHorizontally(
+            animationSpec = tween(
+                durationMillis = NAV3_DISABLED_VIDEO_RETURN_MILLIS,
+                easing = FastOutSlowInEasing
+            ),
+            initialOffsetX = { width -> -directionSign * width / 3 }
+        ) + fadeIn(
+            animationSpec = tween(NAV3_DISABLED_VIDEO_RETURN_MILLIS),
+            initialAlpha = 0.94f
+        )
+    ) togetherWith
         (
             slideOutHorizontally(
-                animationSpec = tween(NAV3_DISABLED_VIDEO_DIRECTION_MILLIS),
+                animationSpec = tween(
+                    durationMillis = NAV3_DISABLED_VIDEO_RETURN_MILLIS,
+                    easing = FastOutSlowInEasing
+                ),
                 targetOffsetX = { width -> directionSign * width / 2 }
-            ) + fadeOut(animationSpec = tween(NAV3_DISABLED_VIDEO_DIRECTION_MILLIS))
+            ) + fadeOut(
+                animationSpec = tween(NAV3_DISABLED_VIDEO_RETURN_MILLIS),
+                targetAlpha = 0.90f
+            )
         )
 }
