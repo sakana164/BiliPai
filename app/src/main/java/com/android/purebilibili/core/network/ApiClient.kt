@@ -161,6 +161,52 @@ interface BilibiliApi {
         @Query("photo") photo: Boolean = true
     ): okhttp3.ResponseBody
 
+    @GET("x/note/list/archive")
+    suspend fun getPrivateVideoNoteIds(
+        @Query("oid") oid: Long,
+        @Query("oid_type") oidType: Int = 0,
+        @Query("csrf") csrf: String? = null
+    ): VideoNoteArchiveListResponse
+
+    @GET("x/note/info")
+    suspend fun getPrivateVideoNoteInfo(
+        @Query("oid") oid: Long,
+        @Query("oid_type") oidType: Int = 0,
+        @Query("note_id") noteId: String
+    ): VideoNoteInfoResponse
+
+    @GET("x/note/is_forbid")
+    suspend fun getVideoNoteForbidState(
+        @Query("aid") aid: Long
+    ): VideoNoteForbidResponse
+
+    @retrofit2.http.FormUrlEncoded
+    @POST("x/note/add")
+    suspend fun saveVideoNote(
+        @retrofit2.http.FieldMap fields: Map<String, String>
+    ): VideoNoteSaveResponse
+
+    @retrofit2.http.FormUrlEncoded
+    @POST("x/note/del")
+    suspend fun deleteVideoNote(
+        @retrofit2.http.Field("oid") oid: Long,
+        @retrofit2.http.Field("note_id") noteId: String,
+        @retrofit2.http.Field("csrf") csrf: String
+    ): SimpleApiResponse
+
+    @GET("x/note/publish/list/archive")
+    suspend fun getPublicVideoNoteList(
+        @Query("oid") oid: Long,
+        @Query("oid_type") oidType: Int = 0,
+        @Query("ps") pageSize: Int = 10,
+        @Query("pn") pageNumber: Int = 1
+    ): PublicVideoNoteListResponse
+
+    @GET("x/note/publish/info")
+    suspend fun getPublicVideoNoteInfo(
+        @Query("cvid") cvid: Long
+    ): PublicVideoNoteInfoResponse
+
     @GET("x/web-interface/history/cursor")
     suspend fun getHistoryList(
         @Query("ps") ps: Int = 30,

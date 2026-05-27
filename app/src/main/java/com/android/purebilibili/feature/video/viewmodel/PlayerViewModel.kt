@@ -29,6 +29,8 @@ import com.android.purebilibili.core.util.NetworkUtils
 import com.android.purebilibili.data.model.VideoLoadError
 import com.android.purebilibili.data.model.response.*
 import com.android.purebilibili.data.repository.VideoRepository
+import com.android.purebilibili.data.repository.VideoNoteRepository
+import com.android.purebilibili.data.repository.VideoNoteSavePayload
 import com.android.purebilibili.data.repository.ViewGrpcRepository
 import com.android.purebilibili.data.repository.resolveVideoPlaybackAuthState
 import com.android.purebilibili.feature.plugin.PlaybackCdnPlugin
@@ -38,6 +40,15 @@ import com.android.purebilibili.feature.plugin.SponsorBlockVideoSnapshot
 import com.android.purebilibili.feature.plugin.buildSponsorBlockSkipRecord
 import com.android.purebilibili.feature.video.controller.QualityManager
 import com.android.purebilibili.feature.video.controller.QualityPermissionResult
+import com.android.purebilibili.feature.video.note.VideoNoteBlock
+import com.android.purebilibili.feature.video.note.VideoNoteContentCodec
+import com.android.purebilibili.feature.video.note.VideoNoteEditorDocument
+import com.android.purebilibili.feature.video.note.VideoNoteLoadStatus
+import com.android.purebilibili.feature.video.note.VideoNotePublicPreview
+import com.android.purebilibili.feature.video.note.VideoNoteUiState
+import com.android.purebilibili.feature.video.note.buildVideoNoteDraftFromAiSummary
+import com.android.purebilibili.feature.video.note.resolveVideoNoteConflictMessage
+import com.android.purebilibili.feature.video.note.resolveVideoNoteSaveFeedback
 import com.android.purebilibili.feature.video.playback.policy.shouldRefreshPremiumAudioForPlaybackSpeedChange
 import com.android.purebilibili.feature.video.usecase.*
 import kotlinx.coroutines.Dispatchers
@@ -349,6 +360,7 @@ sealed class PlayerUiState {
         // [新增] AI Summary & BGM
         val aiSummary: AiSummaryData? = null,
         val aiSummaryPrompt: AiSummaryPromptState? = null,
+        val videoNoteState: VideoNoteUiState = VideoNoteUiState(),
         val bgmInfo: BgmInfo? = null,
         val bgmInfoList: List<BgmInfo> = emptyList(),
         // [New] AI Audio Translation
@@ -1326,6 +1338,7 @@ class PlayerViewModel : ViewModel() {
     private var activeLoadJob: Job? = null
     private var playerInfoJob: Job? = null
     private var aiSummaryJob: Job? = null
+    private var videoNoteJob: Job? = null
     
     //  Public Player Accessor
     val currentPlayer: Player?
@@ -2370,6 +2383,7 @@ class PlayerViewModel : ViewModel() {
         playbackCoordinator.dismissResumeSuggestion()
         bootstrapContextIfNeeded()
         aiSummaryJob?.cancel()
+        videoNoteJob?.cancel()
         Logger.d(
             "PlayerVM",
             "SUB_DBG loadVideo start: request=${playbackRequest.bvid}/${playbackRequest.cid}, aid=${playbackRequest.aid}, force=${playbackRequest.force}, current=$currentBvid/$currentCid, ui=${(_uiState.value as? PlayerUiState.Success)?.info?.bvid}/${(_uiState.value as? PlayerUiState.Success)?.info?.cid}"
@@ -2731,6 +2745,10 @@ class PlayerViewModel : ViewModel() {
                             loadedOwnerMid = result.info.owner.mid,
                             isLoggedIn = result.isLoggedIn,
                             requestToken = requestToken
+                        )
+                        loadVideoNote(
+                            loadedBvid = result.info.bvid,
+                            loadedAid = result.info.aid
                         )
 
                         //  [新增] 更新播放列表
@@ -4979,6 +4997,7 @@ class PlayerViewModel : ViewModel() {
         aiSummaryJob?.cancel()
         aiSummaryJob = viewModelScope.launch {
             var queuedRetryCount = 0
+            var requestRetryCount = 0
             val loadingPrompt = initialAiSummaryPromptState()
             _uiState.update { current ->
                 if (
@@ -5077,6 +5096,19 @@ class PlayerViewModel : ViewModel() {
                     }.onFailure { throwable ->
                         val diagnosis =
                             com.android.purebilibili.data.repository.diagnoseAiSummaryFailure(throwable)
+                        if (shouldRetryAiSummaryRequestFailure(diagnosis.status, requestRetryCount)) {
+                            requestRetryCount += 1
+                            nextDelayMs = resolveAiSummaryRetryDelayMs(
+                                queuedRetryCount = requestRetryCount,
+                                isInBackground = BackgroundManager.isInBackground
+                            )
+                            shouldPollAgain = true
+                            Logger.i(
+                                "PlayerVM",
+                                "🤖 AI Summary retryable failure, retry scheduled: bvid=$bvid cid=$cid retryInMs=$nextDelayMs retryCount=$requestRetryCount"
+                            )
+                            return@onFailure
+                        }
                         val prompt = resolveAiSummaryPromptState(diagnosis)
                         _uiState.update { current ->
                             if (current is PlayerUiState.Success && current.info.bvid == bvid) {
@@ -5108,6 +5140,262 @@ class PlayerViewModel : ViewModel() {
                     return@launch
                 }
             }
+        }
+    }
+
+    private fun loadVideoNote(
+        loadedBvid: String,
+        loadedAid: Long
+    ) {
+        if (loadedAid <= 0L) return
+        videoNoteJob?.cancel()
+        videoNoteJob = viewModelScope.launch {
+            _uiState.update { state ->
+                val success = state as? PlayerUiState.Success ?: return@update state
+                if (success.info.bvid != loadedBvid) return@update state
+                success.copy(
+                    videoNoteState = success.videoNoteState.copy(
+                        status = VideoNoteLoadStatus.LOADING,
+                        errorMessage = null,
+                        feedbackMessage = null
+                    )
+                )
+            }
+
+            VideoNoteRepository.getVideoNoteSnapshot(loadedAid)
+                .onSuccess { snapshot ->
+                    _uiState.update { state ->
+                        val success = state as? PlayerUiState.Success ?: return@update state
+                        if (success.info.bvid != loadedBvid || success.info.aid != loadedAid) return@update state
+                        val privateNote = snapshot.privateNote
+                        val privateDocument = privateNote?.let {
+                            VideoNoteContentCodec.decode(
+                                title = it.title.ifBlank { success.info.title },
+                                content = it.content
+                            )
+                        }
+                        success.copy(
+                            videoNoteState = VideoNoteUiState(
+                                status = VideoNoteLoadStatus.READY,
+                                forbidNoteEntrance = snapshot.forbidNoteEntrance,
+                                privateNoteId = snapshot.privateNoteId,
+                                privateNoteTitle = privateNote?.title.orEmpty(),
+                                privateNoteSummary = privateNote?.summary.orEmpty(),
+                                privateNoteDocument = privateDocument,
+                                publicNoteCount = snapshot.publicNoteTotal,
+                                publicNotes = snapshot.publicNotes.map { note ->
+                                    VideoNotePublicPreview(
+                                        cvid = note.cvid,
+                                        title = note.title,
+                                        summary = note.summary,
+                                        authorName = note.author?.name.orEmpty(),
+                                        webUrl = note.webUrl,
+                                        likes = note.likes
+                                    )
+                                }
+                            )
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _uiState.update { state ->
+                        val success = state as? PlayerUiState.Success ?: return@update state
+                        if (success.info.bvid != loadedBvid || success.info.aid != loadedAid) return@update state
+                        success.copy(
+                            videoNoteState = success.videoNoteState.copy(
+                                status = VideoNoteLoadStatus.ERROR,
+                                errorMessage = throwable.message ?: "笔记加载失败"
+                            )
+                        )
+                    }
+                }
+        }
+    }
+
+    fun retryVideoNote() {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        loadVideoNote(loadedBvid = current.info.bvid, loadedAid = current.info.aid)
+    }
+
+    fun openVideoNoteEditor() {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        if (current.videoNoteState.forbidNoteEntrance) return
+        val document = current.videoNoteState.privateNoteDocument ?: VideoNoteEditorDocument(
+            title = current.info.title,
+            blocks = listOf(VideoNoteBlock.Text(""))
+        )
+        _uiState.update { state ->
+            val success = state as? PlayerUiState.Success ?: return@update state
+            success.copy(
+                videoNoteState = success.videoNoteState.copy(
+                    editorVisible = true,
+                    editorDocument = document,
+                    editorFromAiSummary = false,
+                    errorMessage = null,
+                    feedbackMessage = null
+                )
+            )
+        }
+    }
+
+    fun closeVideoNoteEditor() {
+        _uiState.update { state ->
+            val success = state as? PlayerUiState.Success ?: return@update state
+            success.copy(videoNoteState = success.videoNoteState.copy(editorVisible = false))
+        }
+    }
+
+    fun updateVideoNoteEditorDocument(document: VideoNoteEditorDocument) {
+        _uiState.update { state ->
+            val success = state as? PlayerUiState.Success ?: return@update state
+            success.copy(videoNoteState = success.videoNoteState.copy(editorDocument = document))
+        }
+    }
+
+    fun insertCurrentPlaybackTimestampIntoNote() {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val positionSeconds = ((exoPlayer?.currentPosition ?: 0L) / 1000L).coerceAtLeast(0L)
+        val pageIndex = current.info.pages.indexOfFirst { it.cid == current.info.cid }.coerceAtLeast(0)
+        val timestamp = VideoNoteBlock.Timestamp(
+            seconds = positionSeconds,
+            cid = current.info.cid,
+            index = pageIndex,
+            cidCount = current.info.pages.size.coerceAtLeast(1)
+        )
+        val document = current.videoNoteState.editorDocument
+        updateVideoNoteEditorDocument(
+            document.copy(blocks = document.blocks + timestamp + VideoNoteBlock.Text(" "))
+        )
+    }
+
+    fun createVideoNoteDraftFromAiSummary() {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val aiSummary = current.aiSummary ?: return
+        val pageIndex = current.info.pages.indexOfFirst { it.cid == current.info.cid }.coerceAtLeast(0)
+        val draft = buildVideoNoteDraftFromAiSummary(
+            title = current.videoNoteState.privateNoteDocument?.title ?: current.info.title,
+            aiSummary = aiSummary,
+            cid = current.info.cid,
+            pageIndex = pageIndex,
+            cidCount = current.info.pages.size.coerceAtLeast(1),
+            existingDocument = current.videoNoteState.privateNoteDocument
+        )
+        _uiState.update { state ->
+            val success = state as? PlayerUiState.Success ?: return@update state
+            success.copy(
+                videoNoteState = success.videoNoteState.copy(
+                    editorVisible = true,
+                    editorDocument = draft,
+                    editorFromAiSummary = true,
+                    feedbackMessage = resolveVideoNoteConflictMessage(
+                        hasExistingPrivateNote = success.videoNoteState.privateNoteDocument != null
+                    ),
+                    errorMessage = null
+                )
+            )
+        }
+    }
+
+    fun saveVideoNote(updatedDocument: VideoNoteEditorDocument? = null) {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val noteState = current.videoNoteState
+        if (noteState.saving || noteState.forbidNoteEntrance) return
+        val sourceDocument = updatedDocument ?: noteState.editorDocument
+        val document = sourceDocument.copy(
+            title = sourceDocument.title.ifBlank { current.info.title }
+        )
+        val encoded = VideoNoteContentCodec.encode(document)
+        if (encoded.contentLength <= 0) {
+            _uiState.update { state ->
+                val success = state as? PlayerUiState.Success ?: return@update state
+                success.copy(videoNoteState = success.videoNoteState.copy(errorMessage = "先写一点内容再保存。"))
+            }
+            return
+        }
+        _uiState.update { state ->
+            val success = state as? PlayerUiState.Success ?: return@update state
+            success.copy(videoNoteState = success.videoNoteState.copy(saving = true, errorMessage = null))
+        }
+        viewModelScope.launch {
+            VideoNoteRepository.savePrivateNote(
+                VideoNoteSavePayload(
+                    aid = current.info.aid,
+                    noteId = noteState.privateNoteId,
+                    title = document.title,
+                    summary = encoded.summary,
+                    content = encoded.content,
+                    tags = encoded.tags,
+                    contentLength = encoded.contentLength
+                )
+            ).onSuccess { noteId ->
+                _uiState.update { state ->
+                    val success = state as? PlayerUiState.Success ?: return@update state
+                    if (success.info.bvid != current.info.bvid) return@update state
+                    success.copy(
+                        videoNoteState = success.videoNoteState.copy(
+                            status = VideoNoteLoadStatus.READY,
+                            privateNoteId = noteId,
+                            privateNoteTitle = document.title,
+                            privateNoteSummary = encoded.summary,
+                            privateNoteDocument = document,
+                            editorVisible = false,
+                            saving = false,
+                            feedbackMessage = resolveVideoNoteSaveFeedback(noteState.editorFromAiSummary),
+                            errorMessage = null
+                        )
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update { state ->
+                    val success = state as? PlayerUiState.Success ?: return@update state
+                    success.copy(
+                        videoNoteState = success.videoNoteState.copy(
+                            saving = false,
+                            errorMessage = throwable.message ?: "笔记保存失败"
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun deleteVideoNote() {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val noteId = current.videoNoteState.privateNoteId ?: return
+        if (current.videoNoteState.deleting) return
+        _uiState.update { state ->
+            val success = state as? PlayerUiState.Success ?: return@update state
+            success.copy(videoNoteState = success.videoNoteState.copy(deleting = true, errorMessage = null))
+        }
+        viewModelScope.launch {
+            VideoNoteRepository.deletePrivateNote(aid = current.info.aid, noteId = noteId)
+                .onSuccess {
+                    _uiState.update { state ->
+                        val success = state as? PlayerUiState.Success ?: return@update state
+                        if (success.info.bvid != current.info.bvid) return@update state
+                        success.copy(
+                            videoNoteState = success.videoNoteState.copy(
+                                privateNoteId = null,
+                                privateNoteTitle = "",
+                                privateNoteSummary = "",
+                                privateNoteDocument = null,
+                                deleting = false,
+                                feedbackMessage = "笔记已删除。"
+                            )
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    _uiState.update { state ->
+                        val success = state as? PlayerUiState.Success ?: return@update state
+                        success.copy(
+                            videoNoteState = success.videoNoteState.copy(
+                                deleting = false,
+                                errorMessage = throwable.message ?: "笔记删除失败"
+                            )
+                        )
+                    }
+                }
         }
     }
     
@@ -6654,6 +6942,7 @@ class PlayerViewModel : ViewModel() {
         onlineCountJob?.cancel()  // 👀 取消在线人数轮询
         playbackTransitionMonitorJob?.cancel()
         aiSummaryJob?.cancel()
+        videoNoteJob?.cancel()
         activeLoadJob?.cancel()
         playerInfoJob?.cancel()
         appContext?.let { context ->

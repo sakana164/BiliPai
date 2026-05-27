@@ -288,6 +288,7 @@ dependencies {
     // 图标扩展库 (全屏、设置图标等)
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.animation:animation")
+    implementation("com.mohamedrejeb.richeditor:richeditor-compose:1.0.0-rc14")
 
     // --- 2. Network (网络请求) ---
     implementation("com.squareup.retrofit2:retrofit:2.12.0")

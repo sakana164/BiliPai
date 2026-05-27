@@ -3427,6 +3427,7 @@ fun VideoDetailScreen(
                                                         emoteMap = success.emoteMap,
                                                         isRepliesLoading = commentState.isRepliesLoading,
                                                         isRepliesEnd = commentState.isRepliesEnd,
+                                                        isLoggedIn = success.isLoggedIn,
                                                         // [新增] 传递删除相关参数
                                                         currentMid = commentState.currentMid,
                                                         showUpFlag = commentState.showUpFlag,
@@ -3540,6 +3541,19 @@ fun VideoDetailScreen(
                                                         aiSummary = success.aiSummary,
                                                         aiSummaryPrompt = success.aiSummaryPrompt,
                                                         onRetryAiSummary = { viewModel.retryAiSummary() },
+                                                        onCreateNoteDraftFromAiSummary = { viewModel.createVideoNoteDraftFromAiSummary() },
+                                                        videoNoteState = success.videoNoteState,
+                                                        onOpenVideoNoteEditor = { viewModel.openVideoNoteEditor() },
+                                                        onCloseVideoNoteEditor = { viewModel.closeVideoNoteEditor() },
+                                                        onVideoNoteDocumentChange = { viewModel.updateVideoNoteEditorDocument(it) },
+                                                        onInsertVideoNoteTimestamp = { viewModel.insertCurrentPlaybackTimestampIntoNote() },
+                                                        onVideoNoteTimestampClick = { positionMs -> viewModel.seekTo(positionMs) },
+                                                        onSaveVideoNote = { viewModel.saveVideoNote(it) },
+                                                        onDeleteVideoNote = { viewModel.deleteVideoNote() },
+                                                        onRetryVideoNote = { viewModel.retryVideoNote() },
+                                                        onPublicVideoNoteClick = { _, url ->
+                                                            if (url.isNotBlank()) onOpenBilibiliLink?.invoke(url)
+                                                        },
                                                         bgmInfo = success.bgmInfo,
                                                         bgmInfoList = success.bgmInfoList,
                                                         onBgmClick = onBgmClick,

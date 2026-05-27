@@ -92,6 +92,11 @@ import io.github.alexzhirkevich.cupertino.icons.outlined.*
 import com.android.purebilibili.data.model.response.AiSummaryData
 import com.android.purebilibili.feature.video.ui.section.AiSummaryCard
 import com.android.purebilibili.feature.video.ui.section.AiSummaryPromptCard
+import com.android.purebilibili.feature.video.ui.section.VideoNoteCard
+import com.android.purebilibili.feature.video.ui.section.VideoNoteDeleteConfirmDialog
+import com.android.purebilibili.feature.video.ui.section.VideoNoteEditorSheet
+import com.android.purebilibili.feature.video.note.VideoNoteEditorDocument
+import com.android.purebilibili.feature.video.note.VideoNoteUiState
 import kotlin.math.abs
 
 internal fun shouldShowDanmakuSendInput(isPlayerCollapsed: Boolean): Boolean = !isPlayerCollapsed
@@ -248,6 +253,7 @@ fun VideoContentSection(
     emoteMap: Map<String, String>,
     isRepliesLoading: Boolean,
     isRepliesEnd: Boolean = false,
+    isLoggedIn: Boolean = false,
     isFollowing: Boolean,
     isFavorited: Boolean,
     isLiked: Boolean,
@@ -317,6 +323,17 @@ fun VideoContentSection(
     aiSummary: AiSummaryData? = null,
     aiSummaryPrompt: com.android.purebilibili.feature.video.viewmodel.AiSummaryPromptState? = null,
     onRetryAiSummary: () -> Unit = {},
+    onCreateNoteDraftFromAiSummary: () -> Unit = {},
+    videoNoteState: VideoNoteUiState = VideoNoteUiState(),
+    onOpenVideoNoteEditor: () -> Unit = {},
+    onCloseVideoNoteEditor: () -> Unit = {},
+    onVideoNoteDocumentChange: (VideoNoteEditorDocument) -> Unit = {},
+    onInsertVideoNoteTimestamp: () -> Unit = {},
+    onVideoNoteTimestampClick: (Long) -> Unit = {},
+    onSaveVideoNote: (VideoNoteEditorDocument) -> Unit = {},
+    onDeleteVideoNote: () -> Unit = {},
+    onRetryVideoNote: () -> Unit = {},
+    onPublicVideoNoteClick: (Long, String) -> Unit = { _, _ -> },
     bgmInfo: BgmInfo? = null,
     bgmInfoList: List<BgmInfo> = emptyList(),
     onBgmClick: (BgmInfo) -> Unit = {},
@@ -369,6 +386,7 @@ fun VideoContentSection(
     // 合集展开状态
     var showCollectionSheet by remember { mutableStateOf(false) }
     var showDanmakuSettings by remember { mutableStateOf(false) }
+    var confirmDeleteNote by remember { mutableStateOf(false) }
     val uiPreset = LocalUiPreset.current
     val tabSwitchAnimationSpec = remember(uiPreset) {
         resolveVideoContentTabSwitchAnimationSpec(uiPreset)
@@ -454,6 +472,7 @@ fun VideoContentSection(
                         coinCount = coinCount,
                         downloadProgress = downloadProgress,
                         isInWatchLater = isInWatchLater,
+                        isLoggedIn = isLoggedIn,
                         onFollowClick = onFollowClick,
                         onFavoriteClick = onFavoriteClick,
                         onLikeClick = onLikeClick,
@@ -476,6 +495,12 @@ fun VideoContentSection(
                         aiSummary = aiSummary,
                         aiSummaryPrompt = aiSummaryPrompt,
                         onRetryAiSummary = onRetryAiSummary,
+                        onCreateNoteDraftFromAiSummary = onCreateNoteDraftFromAiSummary,
+                        videoNoteState = videoNoteState,
+                        onOpenVideoNoteEditor = onOpenVideoNoteEditor,
+                        onRetryVideoNote = onRetryVideoNote,
+                        onDeleteVideoNoteClick = { confirmDeleteNote = true },
+                        onPublicVideoNoteClick = onPublicVideoNoteClick,
                         bgmInfo = bgmInfo,
                         bgmInfoList = bgmInfoList,
                         onlineCount = onlineCount,
@@ -567,6 +592,25 @@ fun VideoContentSection(
                 onDismiss = { showDanmakuSettings = false }
             )
         }
+
+        VideoNoteEditorSheet(
+            noteState = videoNoteState,
+            onDismiss = onCloseVideoNoteEditor,
+            onDocumentChange = onVideoNoteDocumentChange,
+            onInsertTimestamp = onInsertVideoNoteTimestamp,
+            onTimestampClick = onVideoNoteTimestampClick,
+            onSave = onSaveVideoNote
+        )
+
+        VideoNoteDeleteConfirmDialog(
+            visible = confirmDeleteNote,
+            deleting = videoNoteState.deleting,
+            onConfirm = {
+                confirmDeleteNote = false
+                onDeleteVideoNote()
+            },
+            onDismiss = { confirmDeleteNote = false }
+        )
     }
 }
 
@@ -586,6 +630,7 @@ private fun VideoIntroTab(
     coinCount: Int,
     downloadProgress: Float,
     isInWatchLater: Boolean,
+    isLoggedIn: Boolean = false,
     onFollowClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onLikeClick: () -> Unit,
@@ -609,6 +654,12 @@ private fun VideoIntroTab(
     aiSummary: AiSummaryData? = null,
     aiSummaryPrompt: com.android.purebilibili.feature.video.viewmodel.AiSummaryPromptState? = null,
     onRetryAiSummary: () -> Unit = {},
+    onCreateNoteDraftFromAiSummary: () -> Unit = {},
+    videoNoteState: VideoNoteUiState = VideoNoteUiState(),
+    onOpenVideoNoteEditor: () -> Unit = {},
+    onRetryVideoNote: () -> Unit = {},
+    onDeleteVideoNoteClick: () -> Unit = {},
+    onPublicVideoNoteClick: (Long, String) -> Unit = { _, _ -> },
     bgmInfo: BgmInfo? = null,
     bgmInfoList: List<BgmInfo> = emptyList(),
     onTimestampClick: ((Long) -> Unit)? = null,
@@ -635,6 +686,7 @@ private fun VideoIntroTab(
                 coinCount = coinCount,
                 downloadProgress = downloadProgress,
                 isInWatchLater = isInWatchLater,
+                isLoggedIn = isLoggedIn,
                 onFollowClick = onFollowClick,
                 onFavoriteClick = onFavoriteClick,
                 onLikeClick = onLikeClick,
@@ -655,6 +707,12 @@ private fun VideoIntroTab(
                 aiSummary = aiSummary,
                 aiSummaryPrompt = aiSummaryPrompt,
                 onRetryAiSummary = onRetryAiSummary,
+                onCreateNoteDraftFromAiSummary = onCreateNoteDraftFromAiSummary,
+                videoNoteState = videoNoteState,
+                onOpenVideoNoteEditor = onOpenVideoNoteEditor,
+                onRetryVideoNote = onRetryVideoNote,
+                onDeleteVideoNoteClick = onDeleteVideoNoteClick,
+                onPublicVideoNoteClick = onPublicVideoNoteClick,
                 bgmInfo = bgmInfo,
                 bgmInfoList = bgmInfoList,
                 relatedVideos = relatedVideos,
@@ -952,6 +1010,7 @@ private fun VideoHeaderContent(
     coinCount: Int,
     downloadProgress: Float,
     isInWatchLater: Boolean,
+    isLoggedIn: Boolean = false,
     onFollowClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onLikeClick: () -> Unit,
@@ -971,6 +1030,12 @@ private fun VideoHeaderContent(
     aiSummary: AiSummaryData? = null,
     aiSummaryPrompt: com.android.purebilibili.feature.video.viewmodel.AiSummaryPromptState? = null,
     onRetryAiSummary: () -> Unit = {},
+    onCreateNoteDraftFromAiSummary: () -> Unit = {},
+    videoNoteState: VideoNoteUiState = VideoNoteUiState(),
+    onOpenVideoNoteEditor: () -> Unit = {},
+    onRetryVideoNote: () -> Unit = {},
+    onDeleteVideoNoteClick: () -> Unit = {},
+    onPublicVideoNoteClick: (Long, String) -> Unit = { _, _ -> },
     bgmInfo: BgmInfo? = null,
     bgmInfoList: List<BgmInfo> = emptyList(),
     relatedVideos: List<RelatedVideo> = emptyList(),
@@ -1036,6 +1101,7 @@ private fun VideoHeaderContent(
             AiSummaryCard(
                 aiSummary = aiSummary,
                 onTimestampClick = onTimestampClick,
+                onCreateNoteDraftClick = onCreateNoteDraftFromAiSummary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         } else if (videoAiSummaryEntryEnabled && aiSummaryPrompt != null) {
@@ -1045,6 +1111,16 @@ private fun VideoHeaderContent(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
+
+        VideoNoteCard(
+            noteState = videoNoteState,
+            isLoggedIn = isLoggedIn,
+            onCreateOrEditClick = onOpenVideoNoteEditor,
+            onRetryClick = onRetryVideoNote,
+            onDeleteClick = onDeleteVideoNoteClick,
+            onPublicNoteClick = onPublicVideoNoteClick,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
 
         if (showInteractionActions) {
             ActionButtonsRow(
