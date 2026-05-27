@@ -236,6 +236,41 @@ class DynamicScreenStatePolicyTest {
     }
 
     @Test
+    fun `non up tab clears selected user highlight`() {
+        assertNull(resolveDynamicSelectedUserForTab(selectedTab = 0, selectedUserId = 10001L))
+        assertNull(resolveDynamicSelectedUserForTab(selectedTab = 2, selectedUserId = 10001L))
+        assertEquals(10001L, resolveDynamicSelectedUserForTab(selectedTab = 4, selectedUserId = 10001L))
+    }
+
+    @Test
+    fun `feed should reset scroll when tab or selected user source changes`() {
+        assertTrue(
+            shouldResetDynamicFeedScrollOnSourceChange(
+                previousTab = 4,
+                nextTab = 0,
+                previousSelectedUserId = 10001L,
+                nextSelectedUserId = null
+            )
+        )
+        assertTrue(
+            shouldResetDynamicFeedScrollOnSourceChange(
+                previousTab = 4,
+                nextTab = 4,
+                previousSelectedUserId = 10001L,
+                nextSelectedUserId = 10002L
+            )
+        )
+        assertFalse(
+            shouldResetDynamicFeedScrollOnSourceChange(
+                previousTab = 0,
+                nextTab = 0,
+                previousSelectedUserId = null,
+                nextSelectedUserId = null
+            )
+        )
+    }
+
+    @Test
     fun `clicking user avatar switches to up tab and clearing returns to all`() {
         assertEquals(
             4,

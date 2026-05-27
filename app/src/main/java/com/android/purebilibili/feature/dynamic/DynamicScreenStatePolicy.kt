@@ -38,6 +38,22 @@ internal fun shouldUseSelectedUserDynamicFeed(
     return selectedTab == 4 && selectedUserId != null
 }
 
+internal fun resolveDynamicSelectedUserForTab(
+    selectedTab: Int,
+    selectedUserId: Long?
+): Long? {
+    return selectedUserId.takeIf { selectedTab == 4 }
+}
+
+internal fun shouldResetDynamicFeedScrollOnSourceChange(
+    previousTab: Int,
+    nextTab: Int,
+    previousSelectedUserId: Long?,
+    nextSelectedUserId: Long?
+): Boolean {
+    return previousTab != nextTab || previousSelectedUserId != nextSelectedUserId
+}
+
 internal fun resolveDynamicTabAfterUserSelection(
     selectedUserId: Long?,
     clickedUserId: Long?,

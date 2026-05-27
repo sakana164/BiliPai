@@ -639,12 +639,20 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
             savedTab = tab,
             tabCount = DYNAMIC_TOP_TAB_COUNT
         )
-        if (_selectedTab.value == resolvedTab) return
+        val previousSelectedUserId = _selectedUserId.value
+        val nextSelectedUserId = resolveDynamicSelectedUserForTab(
+            selectedTab = resolvedTab,
+            selectedUserId = previousSelectedUserId
+        )
+        if (_selectedTab.value == resolvedTab && previousSelectedUserId == nextSelectedUserId) return
+        if (previousSelectedUserId != nextSelectedUserId) {
+            selectUser(nextSelectedUserId)
+        }
         _selectedTab.value = resolvedTab
         userPrefs.edit()
             .putInt(KEY_SELECTED_TAB, resolvedTab)
             .apply()
-        if (_selectedUserId.value == null) {
+        if (nextSelectedUserId == null) {
             DynamicRepository.resetPagination(
                 scope = DynamicFeedScope.DYNAMIC_SCREEN,
                 type = resolveDynamicFeedRequestType(resolvedTab)
