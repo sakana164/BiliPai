@@ -4222,8 +4222,8 @@ object SettingsManager {
         val orderString = prefs[KEY_BOTTOM_BAR_ORDER] ?: DEFAULT_BOTTOM_BAR_ORDER
         val tabsString = prefs[KEY_BOTTOM_BAR_VISIBLE_TABS] ?: DEFAULT_BOTTOM_BAR_VISIBLE_TABS
         val order = orderString.split(",").filter { it.isNotBlank() }
-        val visibleSet = tabsString.split(",").filter { it.isNotBlank() }.toSet()
-        order.filter { it in visibleSet }
+        val visible = tabsString.split(",").filter { it.isNotBlank() }
+        resolveOrderedVisibleBottomTabs(order, visible)
     }
     
 
@@ -4772,15 +4772,25 @@ object SettingsManager {
         val orderString = preferences[KEY_BOTTOM_BAR_ORDER] ?: DEFAULT_BOTTOM_BAR_ORDER
         val tabsString = preferences[KEY_BOTTOM_BAR_VISIBLE_TABS] ?: DEFAULT_BOTTOM_BAR_VISIBLE_TABS
         val order = orderString.split(",").filter { it.isNotBlank() }
-        val visibleSet = tabsString.split(",").filter { it.isNotBlank() }.toSet()
+        val visible = tabsString.split(",").filter { it.isNotBlank() }
         return AppNavigationSettings(
             bottomBarVisibilityMode = BottomBarVisibilityMode.fromValue(
                 preferences[KEY_BOTTOM_BAR_VISIBILITY_MODE] ?: BottomBarVisibilityMode.ALWAYS_VISIBLE.value
             ),
-            orderedVisibleTabIds = order.filter { it in visibleSet },
+            orderedVisibleTabIds = resolveOrderedVisibleBottomTabs(order, visible),
             bottomBarItemColors = parseBottomBarItemColors(preferences[KEY_BOTTOM_BAR_ITEM_COLORS] ?: ""),
             tabletUseSidebar = preferences[KEY_TABLET_NAVIGATION_MODE] ?: false
         )
+    }
+
+    private fun resolveOrderedVisibleBottomTabs(
+        order: List<String>,
+        visible: List<String>
+    ): List<String> {
+        val visibleSet = visible.toSet()
+        val orderedVisible = order.filter { it in visibleSet }
+        val missingVisible = visible.filterNot { it in orderedVisible }
+        return orderedVisible + missingVisible
     }
 
     fun getAppNavigationSettings(context: Context): Flow<AppNavigationSettings> {
