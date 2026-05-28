@@ -1099,6 +1099,20 @@ class VideoPlayerSectionPolicyTest {
     }
 
     @Test
+    fun longPressSpeedLockHint_promptActionsMarkLocalHintAsShownImmediately() {
+        val source = loadVideoPlayerSectionSource()
+        val hintPrompt = source
+            .substringAfter("text = \"需要长按锁定倍速吗？\"")
+            .substringBefore("Text(\"不再提示\")")
+        val dismissAction = source
+            .substringAfter("TextButton(\n                            onClick = {\n                                showLongPressSpeedLockHint = false")
+            .substringBefore("Text(\"不再提示\")")
+
+        assertTrue(hintPrompt.contains("hasShownLongPressSpeedLockHintLocally = true"))
+        assertTrue(dismissAction.contains("hasShownLongPressSpeedLockHintLocally = true"))
+    }
+
+    @Test
     fun longPressSpeedDrag_usesSingleLongPressDragGestureDetector() {
         val source = loadVideoPlayerSectionSource()
 

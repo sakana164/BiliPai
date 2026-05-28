@@ -1539,13 +1539,13 @@ object SettingsManager {
             .map { preferences -> preferences[KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN] ?: false }
 
     suspend fun setLongPressSpeedLockHintShown(context: Context, shown: Boolean) {
-        context.settingsDataStore.edit { preferences ->
-            preferences[KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN] = shown
-        }
         context.getSharedPreferences(LONG_PRESS_SPEED_LOCK_CACHE_PREFS, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(CACHE_KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN, shown)
             .apply()
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN] = shown
+        }
     }
 
     fun getLongPressSpeedLockHintShownSync(context: Context): Boolean {

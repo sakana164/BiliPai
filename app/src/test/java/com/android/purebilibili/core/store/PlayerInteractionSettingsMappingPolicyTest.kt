@@ -88,6 +88,19 @@ class PlayerInteractionSettingsMappingPolicyTest {
     }
 
     @Test
+    fun longPressSpeedLockHintShown_updatesSyncCacheBeforeDataStoreWrite() {
+        val source = File("src/main/java/com/android/purebilibili/core/store/SettingsManager.kt")
+            .takeIf { it.exists() }
+            ?: File("app/src/main/java/com/android/purebilibili/core/store/SettingsManager.kt")
+        val body = source.readText()
+            .substringAfter("suspend fun setLongPressSpeedLockHintShown(context: Context, shown: Boolean)")
+            .substringBefore("fun getLongPressSpeedLockHintShownSync")
+
+        assertTrue(body.indexOf("putBoolean(CACHE_KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN, shown)") >= 0)
+        assertTrue(body.indexOf("putBoolean(CACHE_KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN, shown)") < body.indexOf("context.settingsDataStore.edit"))
+    }
+
+    @Test
     fun savedDoubleTapSeekPreference_keepsUserChoice() {
         val prefs = mutablePreferencesOf(
             booleanPreferencesKey("double_tap_seek_enabled") to true

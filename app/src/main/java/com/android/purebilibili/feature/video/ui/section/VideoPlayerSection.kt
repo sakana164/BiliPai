@@ -3542,6 +3542,7 @@ fun VideoPlayerSection(
                         TextButton(
                             onClick = {
                                 showLongPressSpeedLockHint = false
+                                hasShownLongPressSpeedLockHintLocally = true
                                 settingsScope.launch {
                                     com.android.purebilibili.core.store.SettingsManager
                                         .setLongPressSpeedLockEnabled(context, true)
@@ -3556,6 +3557,7 @@ fun VideoPlayerSection(
                         TextButton(
                             onClick = {
                                 showLongPressSpeedLockHint = false
+                                hasShownLongPressSpeedLockHintLocally = true
                                 finishLongPressSpeedGesture(gestureEnded = true)
                                 settingsScope.launch {
                                     com.android.purebilibili.core.store.SettingsManager
