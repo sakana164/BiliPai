@@ -352,6 +352,24 @@ class PlaybackSettingsSelectionPolicyTest {
     }
 
     @Test
+    fun `playback settings exposes video note switches with collapse gated by enabled`() {
+        val source = File("src/main/java/com/android/purebilibili/feature/settings/screen/PlaybackSettingsScreen.kt")
+            .readText()
+
+        assertTrue(source.contains("显示视频笔记"))
+        assertTrue(source.contains("默认折叠视频笔记"))
+        assertTrue(source.contains("getVideoNoteEnabled"))
+        assertTrue(source.contains("setVideoNoteEnabled"))
+        assertTrue(source.contains("getVideoNoteDefaultCollapsed"))
+        assertTrue(source.contains("setVideoNoteDefaultCollapsed"))
+
+        val noteSwitchBlock = source
+            .substringAfter("title = \"显示视频笔记\"")
+            .substringBefore("title = \"默认折叠视频笔记\"")
+        assertTrue(noteSwitchBlock.contains("if (videoNoteEnabled)"))
+    }
+
+    @Test
     fun `playback settings clarifies auto highest does not treat video cap as failure`() {
         val source = File("src/main/java/com/android/purebilibili/feature/settings/screen/PlaybackSettingsScreen.kt")
             .readText()

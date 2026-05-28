@@ -50,6 +50,7 @@ import com.android.purebilibili.feature.video.note.buildVideoNoteDraftFromAiSumm
 import com.android.purebilibili.feature.video.note.resolveVideoNoteConflictMessage
 import com.android.purebilibili.feature.video.note.resolveVideoNoteEditableDocument
 import com.android.purebilibili.feature.video.note.resolveVideoNoteSaveFeedback
+import com.android.purebilibili.feature.video.note.shouldLoadVideoNote
 import com.android.purebilibili.feature.video.playback.policy.shouldRefreshPremiumAudioForPlaybackSpeedChange
 import com.android.purebilibili.feature.video.usecase.*
 import kotlinx.coroutines.Dispatchers
@@ -2747,10 +2748,15 @@ class PlayerViewModel : ViewModel() {
                             isLoggedIn = result.isLoggedIn,
                             requestToken = requestToken
                         )
-                        loadVideoNote(
-                            loadedBvid = result.info.bvid,
-                            loadedAid = result.info.aid
-                        )
+                        val videoNoteEnabled = appContext?.let {
+                            com.android.purebilibili.core.store.SettingsManager.getVideoNoteEnabledSync(it)
+                        } ?: true
+                        if (shouldLoadVideoNote(videoNoteEnabled, result.info.aid)) {
+                            loadVideoNote(
+                                loadedBvid = result.info.bvid,
+                                loadedAid = result.info.aid
+                            )
+                        }
 
                         //  [新增] 更新播放列表
                         updatePlaylist(result.info, result.related)
@@ -5148,7 +5154,10 @@ class PlayerViewModel : ViewModel() {
         loadedBvid: String,
         loadedAid: Long
     ) {
-        if (loadedAid <= 0L) return
+        val videoNoteEnabled = appContext?.let {
+            com.android.purebilibili.core.store.SettingsManager.getVideoNoteEnabledSync(it)
+        } ?: true
+        if (!shouldLoadVideoNote(videoNoteEnabled, loadedAid)) return
         videoNoteJob?.cancel()
         videoNoteJob = viewModelScope.launch {
             _uiState.update { state ->
@@ -5215,6 +5224,10 @@ class PlayerViewModel : ViewModel() {
 
     fun retryVideoNote() {
         val current = _uiState.value as? PlayerUiState.Success ?: return
+        val videoNoteEnabled = appContext?.let {
+            com.android.purebilibili.core.store.SettingsManager.getVideoNoteEnabledSync(it)
+        } ?: true
+        if (!shouldLoadVideoNote(videoNoteEnabled, current.info.aid)) return
         loadVideoNote(loadedBvid = current.info.bvid, loadedAid = current.info.aid)
     }
 

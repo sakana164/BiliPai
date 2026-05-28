@@ -151,6 +151,7 @@ internal enum class SettingsIconRole {
     SUBTITLE,
     COMMENT_DECORATION,
     AI_SUMMARY,
+    VIDEO_NOTE,
     LIKE_INTERACTION,
     VIDEO_DESCRIPTION,
     FULLSCREEN_ORIENTATION,
@@ -304,6 +305,7 @@ private fun resolveMd3SettingsSemanticIcon(role: SettingsIconRole): ImageVector 
     SettingsIconRole.SUBTITLE -> Icons.Outlined.Article
     SettingsIconRole.COMMENT_DECORATION -> Icons.Outlined.ChatBubbleOutline
     SettingsIconRole.AI_SUMMARY -> Icons.Outlined.AutoAwesome
+    SettingsIconRole.VIDEO_NOTE -> Icons.Outlined.Article
     SettingsIconRole.LIKE_INTERACTION -> Icons.Outlined.TouchApp
     SettingsIconRole.VIDEO_DESCRIPTION -> Icons.Outlined.Article
     SettingsIconRole.FULLSCREEN_ORIENTATION -> Icons.Outlined.TouchApp
@@ -401,6 +403,7 @@ private fun resolveIosSettingsSemanticIcon(role: SettingsIconRole): ImageVector 
     SettingsIconRole.SUBTITLE -> CupertinoIcons.Outlined.DocText
     SettingsIconRole.COMMENT_DECORATION -> CupertinoIcons.Outlined.TextBubble
     SettingsIconRole.AI_SUMMARY -> CupertinoIcons.Outlined.Sparkles
+    SettingsIconRole.VIDEO_NOTE -> CupertinoIcons.Outlined.DocText
     SettingsIconRole.LIKE_INTERACTION -> CupertinoIcons.Outlined.HandTap
     SettingsIconRole.VIDEO_DESCRIPTION -> CupertinoIcons.Outlined.DocText
     SettingsIconRole.FULLSCREEN_ORIENTATION -> CupertinoIcons.Outlined.ArrowLeftArrowRight

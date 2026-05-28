@@ -977,6 +977,12 @@ private fun PlaybackInteractionSettingsSection(
     val videoAiSummaryEntryEnabled by com.android.purebilibili.core.store.SettingsManager
         .getVideoAiSummaryEntryEnabled(context)
         .collectAsState(initial = true)
+    val videoNoteEnabled by com.android.purebilibili.core.store.SettingsManager
+        .getVideoNoteEnabled(context)
+        .collectAsState(initial = true)
+    val videoNoteDefaultCollapsed by com.android.purebilibili.core.store.SettingsManager
+        .getVideoNoteDefaultCollapsed(context)
+        .collectAsState(initial = false)
     val videoInfoDefaultExpanded by com.android.purebilibili.core.store.SettingsManager
         .getVideoInfoDefaultExpanded(context)
         .collectAsState(initial = true)
@@ -1149,8 +1155,8 @@ private fun PlaybackInteractionSettingsSection(
             iconTint = com.android.purebilibili.core.theme.iOSBlue
         )
         IOSDivider()
-	        IOSSwitchItem(
-	            icon = rememberSettingsSemanticIcon(SettingsIconRole.AI_SUMMARY),
+        IOSSwitchItem(
+            icon = rememberSettingsSemanticIcon(SettingsIconRole.AI_SUMMARY),
             title = "显示 AI 总结入口",
             subtitle = if (videoAiSummaryEntryEnabled) {
                 "视频简介区展示 AI 总结按钮，点按后展开内容"
@@ -1166,6 +1172,44 @@ private fun PlaybackInteractionSettingsSection(
             },
             iconTint = com.android.purebilibili.core.theme.iOSPurple
         )
+        IOSDivider()
+        IOSSwitchItem(
+            icon = rememberSettingsSemanticIcon(SettingsIconRole.VIDEO_NOTE),
+            title = "显示视频笔记",
+            subtitle = if (videoNoteEnabled) {
+                "视频简介区展示笔记入口，并加载私有笔记和公开笔记"
+            } else {
+                "关闭后隐藏笔记入口，并跳过视频笔记接口"
+            },
+            checked = videoNoteEnabled,
+            onCheckedChange = {
+                scope.launch {
+                    com.android.purebilibili.core.store.SettingsManager
+                        .setVideoNoteEnabled(context, it)
+                }
+            },
+            iconTint = iOSTeal
+        )
+        if (videoNoteEnabled) {
+            IOSDivider()
+            IOSSwitchItem(
+                icon = rememberSettingsSemanticIcon(SettingsIconRole.VIDEO_NOTE),
+                title = "默认折叠视频笔记",
+                subtitle = if (videoNoteDefaultCollapsed) {
+                    "进入视频页时先显示笔记摘要，需要时再展开"
+                } else {
+                    "进入视频页时直接展开视频笔记内容和操作"
+                },
+                checked = videoNoteDefaultCollapsed,
+                onCheckedChange = {
+                    scope.launch {
+                        com.android.purebilibili.core.store.SettingsManager
+                            .setVideoNoteDefaultCollapsed(context, it)
+                    }
+                },
+                iconTint = com.android.purebilibili.core.theme.iOSBlue
+            )
+        }
         IOSDivider()
 	        IOSSwitchItem(
 	            icon = rememberSettingsSemanticIcon(SettingsIconRole.LIKE_INTERACTION),

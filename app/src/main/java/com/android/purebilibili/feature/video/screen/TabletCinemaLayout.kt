@@ -101,6 +101,7 @@ import com.android.purebilibili.feature.dynamic.components.ImagePreviewTextConte
 import com.android.purebilibili.feature.video.state.VideoPlayerState
 import com.android.purebilibili.feature.video.note.VideoNoteEditorDocument
 import com.android.purebilibili.feature.video.note.buildVideoNoteShareText
+import com.android.purebilibili.feature.video.note.shouldShowVideoNoteCard
 import com.android.purebilibili.feature.video.progress.PbpProgressData
 import com.android.purebilibili.feature.video.ui.components.CommentSortFilterBar
 import com.android.purebilibili.feature.video.ui.components.CollectionRow
@@ -863,15 +864,22 @@ private fun CinemaVideoIntroSection(
                 onActionClick = onRetryAiSummary
             )
         }
-        VideoNoteCard(
-            noteState = success.videoNoteState,
-            isLoggedIn = success.isLoggedIn,
-            onCreateOrEditClick = onOpenVideoNoteEditor,
-            onRetryClick = onRetryVideoNote,
-            onDeleteClick = onDeleteVideoNoteClick,
-            onShareClick = onShareVideoNote,
-            onPublicNoteClick = onPublicVideoNoteClick
-        )
+        val videoNoteEnabled by SettingsManager.getVideoNoteEnabled(context)
+            .collectAsState(initial = true)
+        val videoNoteDefaultCollapsed by SettingsManager.getVideoNoteDefaultCollapsed(context)
+            .collectAsState(initial = false)
+        if (shouldShowVideoNoteCard(videoNoteEnabled)) {
+            VideoNoteCard(
+                noteState = success.videoNoteState,
+                isLoggedIn = success.isLoggedIn,
+                onCreateOrEditClick = onOpenVideoNoteEditor,
+                onRetryClick = onRetryVideoNote,
+                onDeleteClick = onDeleteVideoNoteClick,
+                onShareClick = onShareVideoNote,
+                onPublicNoteClick = onPublicVideoNoteClick,
+                defaultCollapsed = videoNoteDefaultCollapsed
+            )
+        }
     }
 }
 

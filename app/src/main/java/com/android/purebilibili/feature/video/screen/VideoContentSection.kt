@@ -99,6 +99,7 @@ import com.android.purebilibili.feature.video.ui.section.VideoNoteEditorSheet
 import com.android.purebilibili.feature.video.note.VideoNoteEditorDocument
 import com.android.purebilibili.feature.video.note.VideoNoteUiState
 import com.android.purebilibili.feature.video.note.buildVideoNoteShareText
+import com.android.purebilibili.feature.video.note.shouldShowVideoNoteCard
 import kotlin.math.abs
 
 internal fun shouldShowDanmakuSendInput(isPlayerCollapsed: Boolean): Boolean = !isPlayerCollapsed
@@ -1076,6 +1077,18 @@ private fun VideoHeaderContent(
             initial = true,
             context = kotlin.coroutines.EmptyCoroutineContext
         )
+    val videoNoteEnabled by com.android.purebilibili.core.store.SettingsManager
+        .getVideoNoteEnabled(context)
+        .collectAsState(
+            initial = true,
+            context = kotlin.coroutines.EmptyCoroutineContext
+        )
+    val videoNoteDefaultCollapsed by com.android.purebilibili.core.store.SettingsManager
+        .getVideoNoteDefaultCollapsed(context)
+        .collectAsState(
+            initial = false,
+            context = kotlin.coroutines.EmptyCoroutineContext
+        )
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1133,16 +1146,19 @@ private fun VideoHeaderContent(
             )
         }
 
-        VideoNoteCard(
-            noteState = videoNoteState,
-            isLoggedIn = isLoggedIn,
-            onCreateOrEditClick = onOpenVideoNoteEditor,
-            onRetryClick = onRetryVideoNote,
-            onDeleteClick = onDeleteVideoNoteClick,
-            onShareClick = onShareVideoNote,
-            onPublicNoteClick = onPublicVideoNoteClick,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        if (shouldShowVideoNoteCard(videoNoteEnabled)) {
+            VideoNoteCard(
+                noteState = videoNoteState,
+                isLoggedIn = isLoggedIn,
+                onCreateOrEditClick = onOpenVideoNoteEditor,
+                onRetryClick = onRetryVideoNote,
+                onDeleteClick = onDeleteVideoNoteClick,
+                onShareClick = onShareVideoNote,
+                onPublicNoteClick = onPublicVideoNoteClick,
+                defaultCollapsed = videoNoteDefaultCollapsed,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
 
         if (showInteractionActions) {
             ActionButtonsRow(

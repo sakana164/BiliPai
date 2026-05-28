@@ -60,6 +60,7 @@ import com.android.purebilibili.feature.video.note.VideoNoteUiState
 import com.android.purebilibili.feature.video.note.hasUnsavedVideoNoteDraft
 import com.android.purebilibili.feature.video.note.resolveVideoNotePrimaryActionLabel
 import com.android.purebilibili.feature.video.note.resolveVideoNoteEmptyMessage
+import com.android.purebilibili.feature.video.note.shouldShowVideoNoteBody
 import com.mohamedrejeb.richeditor.model.rememberRichTextState
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditor
 
@@ -72,10 +73,16 @@ fun VideoNoteCard(
     onDeleteClick: () -> Unit,
     onShareClick: (VideoNoteEditorDocument) -> Unit,
     onPublicNoteClick: (Long, String) -> Unit,
+    defaultCollapsed: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val hasUnsavedDraft = hasUnsavedVideoNoteDraft(noteState)
     val primaryActionLabel = resolveVideoNotePrimaryActionLabel(noteState)
+    var userExpanded by remember(defaultCollapsed) { mutableStateOf(!defaultCollapsed) }
+    val showBody = shouldShowVideoNoteBody(
+        defaultCollapsed = defaultCollapsed,
+        userExpanded = userExpanded
+    )
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -103,89 +110,96 @@ fun VideoNoteCard(
                 if (noteState.status == VideoNoteLoadStatus.LOADING) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 }
-            }
-
-            if (!noteState.feedbackMessage.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = noteState.feedbackMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            if (!noteState.errorMessage.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = noteState.errorMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = onCreateOrEditClick,
-                    enabled = (isLoggedIn || hasUnsavedDraft) &&
-                        !noteState.forbidNoteEntrance &&
-                        !noteState.saving
-                ) {
-                    Icon(
-                        imageVector = if (primaryActionLabel == "新建") Icons.Outlined.Add else Icons.Outlined.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(primaryActionLabel)
-                }
-                noteState.privateNoteDocument?.let { privateDocument ->
-                    OutlinedButton(
-                        onClick = { onShareClick(privateDocument) }
-                    ) {
-                        Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("分享")
-                    }
-                    OutlinedButton(
-                        onClick = onDeleteClick,
-                        enabled = !noteState.deleting
-                    ) {
-                        Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("删除")
-                    }
-                }
-                if (noteState.status == VideoNoteLoadStatus.ERROR) {
-                    TextButton(onClick = onRetryClick) {
-                        Text("重试")
+                if (defaultCollapsed) {
+                    TextButton(onClick = { userExpanded = !userExpanded }) {
+                        Text(if (showBody) "收起" else "展开")
                     }
                 }
             }
 
-            if (noteState.publicNotes.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = "公开笔记 ${noteState.publicNoteCount} 篇",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                noteState.publicNotes.take(2).forEach { note ->
+            if (showBody) {
+                if (!noteState.feedbackMessage.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = note.title.ifBlank { note.summary },
+                        text = noteState.feedbackMessage,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onPublicNoteClick(note.cvid, note.webUrl) }
-                            .padding(vertical = 4.dp)
+                        color = MaterialTheme.colorScheme.primary
                     )
+                }
+                if (!noteState.errorMessage.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = noteState.errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onCreateOrEditClick,
+                        enabled = (isLoggedIn || hasUnsavedDraft) &&
+                            !noteState.forbidNoteEntrance &&
+                            !noteState.saving
+                    ) {
+                        Icon(
+                            imageVector = if (primaryActionLabel == "新建") Icons.Outlined.Add else Icons.Outlined.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(primaryActionLabel)
+                    }
+                    noteState.privateNoteDocument?.let { privateDocument ->
+                        OutlinedButton(
+                            onClick = { onShareClick(privateDocument) }
+                        ) {
+                            Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("分享")
+                        }
+                        OutlinedButton(
+                            onClick = onDeleteClick,
+                            enabled = !noteState.deleting
+                        ) {
+                            Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("删除")
+                        }
+                    }
+                    if (noteState.status == VideoNoteLoadStatus.ERROR) {
+                        TextButton(onClick = onRetryClick) {
+                            Text("重试")
+                        }
+                    }
+                }
+
+                if (noteState.publicNotes.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "公开笔记 ${noteState.publicNoteCount} 篇",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    noteState.publicNotes.take(2).forEach { note ->
+                        Text(
+                            text = note.title.ifBlank { note.summary },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onPublicNoteClick(note.cvid, note.webUrl) }
+                                .padding(vertical = 4.dp)
+                        )
+                    }
                 }
             }
         }

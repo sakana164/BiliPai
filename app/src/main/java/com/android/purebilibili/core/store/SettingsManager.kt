@@ -923,7 +923,12 @@ object SettingsManager {
     private val KEY_AUDIO_FOCUS_ENABLED = booleanPreferencesKey("audio_focus_enabled")
     private val KEY_AUDIO_MODE_AUTO_PIP_ENABLED = booleanPreferencesKey("audio_mode_auto_pip_enabled")
     private val KEY_VIDEO_AI_SUMMARY_ENTRY_ENABLED = booleanPreferencesKey("video_ai_summary_entry_enabled")
+    private val KEY_VIDEO_NOTE_ENABLED = booleanPreferencesKey("video_note_enabled")
+    private val KEY_VIDEO_NOTE_DEFAULT_COLLAPSED = booleanPreferencesKey("video_note_default_collapsed")
     private val KEY_VIDEO_INFO_DEFAULT_EXPANDED = booleanPreferencesKey("video_info_default_expanded")
+    private const val VIDEO_NOTE_CACHE_PREFS = "video_note_settings"
+    private const val CACHE_KEY_VIDEO_NOTE_ENABLED = "video_note_enabled"
+    private const val CACHE_KEY_VIDEO_NOTE_DEFAULT_COLLAPSED = "video_note_default_collapsed"
     private const val PLAYBACK_SPEED_CACHE_PREFS = "playback_speed_cache"
     private const val CACHE_KEY_DEFAULT_PLAYBACK_SPEED = "default_speed"
     private const val CACHE_KEY_REMEMBER_LAST_SPEED = "remember_last_speed"
@@ -3991,6 +3996,42 @@ object SettingsManager {
         }
     }
 
+    fun getVideoNoteEnabled(context: Context): Flow<Boolean> = context.settingsDataStore.data
+        .map { preferences -> preferences[KEY_VIDEO_NOTE_ENABLED] ?: true }
+
+    suspend fun setVideoNoteEnabled(context: Context, enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_VIDEO_NOTE_ENABLED] = enabled
+        }
+        context.getSharedPreferences(VIDEO_NOTE_CACHE_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(CACHE_KEY_VIDEO_NOTE_ENABLED, enabled)
+            .apply()
+    }
+
+    fun getVideoNoteEnabledSync(context: Context): Boolean {
+        return context.getSharedPreferences(VIDEO_NOTE_CACHE_PREFS, Context.MODE_PRIVATE)
+            .getBoolean(CACHE_KEY_VIDEO_NOTE_ENABLED, true)
+    }
+
+    fun getVideoNoteDefaultCollapsed(context: Context): Flow<Boolean> = context.settingsDataStore.data
+        .map { preferences -> preferences[KEY_VIDEO_NOTE_DEFAULT_COLLAPSED] ?: false }
+
+    suspend fun setVideoNoteDefaultCollapsed(context: Context, enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_VIDEO_NOTE_DEFAULT_COLLAPSED] = enabled
+        }
+        context.getSharedPreferences(VIDEO_NOTE_CACHE_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(CACHE_KEY_VIDEO_NOTE_DEFAULT_COLLAPSED, enabled)
+            .apply()
+    }
+
+    fun getVideoNoteDefaultCollapsedSync(context: Context): Boolean {
+        return context.getSharedPreferences(VIDEO_NOTE_CACHE_PREFS, Context.MODE_PRIVATE)
+            .getBoolean(CACHE_KEY_VIDEO_NOTE_DEFAULT_COLLAPSED, false)
+    }
+
     fun getVideoInfoDefaultExpanded(context: Context): Flow<Boolean> = context.settingsDataStore.data
         .map { preferences -> preferences[KEY_VIDEO_INFO_DEFAULT_EXPANDED] ?: true }
 
@@ -5029,6 +5070,8 @@ object SettingsManager {
             BooleanShareablePreferenceDefinition(KEY_BACKGROUND_PLAYBACK_ENABLED, SettingsShareSection.PLAYBACK),
             BooleanShareablePreferenceDefinition(KEY_AUDIO_FOCUS_ENABLED, SettingsShareSection.PLAYBACK),
             BooleanShareablePreferenceDefinition(KEY_VIDEO_AI_SUMMARY_ENTRY_ENABLED, SettingsShareSection.PLAYBACK),
+            BooleanShareablePreferenceDefinition(KEY_VIDEO_NOTE_ENABLED, SettingsShareSection.PLAYBACK),
+            BooleanShareablePreferenceDefinition(KEY_VIDEO_NOTE_DEFAULT_COLLAPSED, SettingsShareSection.PLAYBACK),
             BooleanShareablePreferenceDefinition(KEY_VIDEO_INFO_DEFAULT_EXPANDED, SettingsShareSection.PLAYBACK),
             BooleanShareablePreferenceDefinition(KEY_CLICK_TO_PLAY, SettingsShareSection.PLAYBACK),
             BooleanShareablePreferenceDefinition(KEY_RESUME_PLAYBACK_PROMPT_ENABLED, SettingsShareSection.PLAYBACK),

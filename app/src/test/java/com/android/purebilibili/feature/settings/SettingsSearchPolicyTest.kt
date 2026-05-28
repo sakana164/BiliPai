@@ -195,6 +195,18 @@ class SettingsSearchPolicyTest {
     }
 
     @Test
+    fun queryByVideoNote_hitsPlaybackInteractionEntry() {
+        val results = resolveSettingsSearchResults("默认折叠视频笔记")
+
+        assertTrue(
+            results.any {
+                it.target == SettingsSearchTarget.PLAYBACK &&
+                    it.focusId == SettingsSearchFocusIds.PLAYBACK_INTERACTION
+            }
+        )
+    }
+
+    @Test
     fun queryBySubReplyBlur_returnsNoRemovedBlurSetting() {
         val results = resolveSettingsSearchResults("楼中楼模糊")
 
