@@ -244,7 +244,7 @@ fun AnimationSettingsContent(
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-	                                        rememberSettingsSemanticIcon(SettingsIconRole.BOTTOM_BAR_GLASS),
+	                                        rememberSettingsSemanticIcon(SettingsIconRole.BOTTOM_BAR_GLASS_PREVIEW),
                                         contentDescription = null,
                                         tint = iOSBlue,
                                         modifier = Modifier.size(24.dp)

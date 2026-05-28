@@ -951,6 +951,10 @@ fun PrivacySection(
     val permissionVisual = rememberSettingsEntryVisual(SettingsSearchTarget.PERMISSION, uiPreset)
     val blockedListVisual = rememberSettingsEntryVisual(SettingsSearchTarget.BLOCKED_LIST, uiPreset)
     val visibilityOffIcon = rememberSettingsSemanticIcon(SettingsIconRole.PRIVACY_PERMISSION, uiPreset)
+    val contentAuthenticationIcon = rememberSettingsSemanticIcon(
+        SettingsIconRole.PRIVACY_CONTENT_AUTHENTICATION,
+        uiPreset
+    )
 
     SettingsCardGroup {
         SettingSwitchItem(
@@ -963,7 +967,7 @@ fun PrivacySection(
         )
         SettingsDivider(startIndent = 66.dp)
         SettingSwitchItem(
-            icon = visibilityOffIcon,
+            icon = contentAuthenticationIcon,
             title = "进入隐私内容时验证",
             subtitle = "进入收藏、历史等页面时使用指纹、人脸或锁屏密码",
             checked = privacyContentAuthenticationEnabled,

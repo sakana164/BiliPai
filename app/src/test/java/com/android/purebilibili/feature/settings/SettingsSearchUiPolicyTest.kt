@@ -35,7 +35,7 @@ class SettingsSearchUiPolicyTest {
     fun webDavSearchResult_reusesDataStorageSectionIcon() {
         val visual = resolveSettingsEntryVisual(SettingsSearchTarget.WEBDAV_BACKUP)
 
-        assertSame(CupertinoIcons.Outlined.DocOnDoc, visual.icon)
+        assertSame(CupertinoIcons.Outlined.IcloudAndArrowUp, visual.icon)
     }
 
     @Test

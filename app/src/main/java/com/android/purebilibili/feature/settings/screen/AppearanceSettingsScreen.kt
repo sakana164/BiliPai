@@ -1122,7 +1122,7 @@ fun AppearanceSettingsContent(
                 IOSGroup {
                     // 图标设置
 	                    IOSClickableItem(
-	                        icon = rememberSettingsSemanticIcon(SettingsIconRole.BOTTOM_BAR),
+	                        icon = rememberSettingsSemanticIcon(SettingsIconRole.APP_ICON),
                         title = "应用图标",
                         value = when(state.appIcon) {
                             // 🎀 二次元少女系列
@@ -1306,7 +1306,7 @@ fun AppearanceSettingsContent(
                         
                         IOSDivider(modifier = Modifier.padding(start = 16.dp))
                         IOSSwitchItem(
-                            icon = rememberSettingsSemanticIcon(SettingsIconRole.DISPLAY_STYLE),
+                            icon = rememberSettingsSemanticIcon(SettingsIconRole.HOME_CARD_STATS_COMPACT),
                             title = "统计信息贴封面（紧凑）",
                             subtitle = if (compactVideoStatsOnCover) {
                                 "播放量和评论数显示在封面底部，缩小卡片间距"

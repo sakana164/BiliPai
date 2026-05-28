@@ -632,7 +632,7 @@ fun PlaybackSettingsContent(
                 Box(modifier = Modifier.staggeredEntrance(9, isVisible, motionTier = effectiveMotionTier)) {
                     IOSGroup {
 	                        IOSSwitchItem(
-	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.PLAYER_DIAGNOSTICS),
+	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.PLAYER_STATS),
                             title = "详细统计信息",
                             subtitle = "显示编解码、码率等极客信息",
                             checked = isStatsEnabled,
@@ -645,7 +645,7 @@ fun PlaybackSettingsContent(
                         IOSDivider()
                         val scope = rememberCoroutineScope()
 	                        IOSSwitchItem(
-	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.PLAYER_DIAGNOSTICS),
+	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.PLAYER_DIAGNOSTIC_LOGS),
                             title = "播放器诊断日志",
                             subtitle = "记录黑屏、卡顿、点击无响应等播放器诊断信息",
                             checked = playerDiagnosticLoggingEnabled,
@@ -658,7 +658,7 @@ fun PlaybackSettingsContent(
                         )
                         IOSDivider()
 	                        IOSSwitchItem(
-	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.QUALITY_WARNING),
+	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.QUALITY_WARNING_ONCE),
                             title = "画质降档诊断弹窗",
                             subtitle = "仅在明确切换失败、权限或接口异常时提示；视频本身无更高档不打断播放",
                             checked = qualitySwitchFailureDialogEnabled,
@@ -747,7 +747,7 @@ fun PlaybackSettingsContent(
 
                     IOSGroup {
 	                        IOSSwitchItem(
-	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.PLAYBACK_QUALITY),
+	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.DIRECTED_TRAFFIC),
                             title = "B站定向流量支持",
                             subtitle = if (directedTrafficEnabled) {
                                 "移动数据下优先使用应用内播放链路（实验性）"
@@ -767,7 +767,7 @@ fun PlaybackSettingsContent(
                         IOSDivider()
 
 	                        IOSSwitchItem(
-	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.PLAYBACK_QUALITY),
+	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.AUTO_HIGHEST_QUALITY),
                             title = "自动最高画质",
                             subtitle = if (autoHighestQualityEnabled) {
                                 "已开启，按每个视频实际最高可播档自动选择；没有 4K/HDR 时不会当作异常"
@@ -1014,7 +1014,7 @@ private fun PlaybackInteractionSettingsSection(
             .getClickToPlay(context).collectAsState(initial = true)
 
 	        IOSSwitchItem(
-	            icon = rememberSettingsSemanticIcon(SettingsIconRole.BACKGROUND_PLAYBACK),
+	            icon = rememberSettingsSemanticIcon(SettingsIconRole.AUTO_PLAY_ON_OPEN),
             title = "进入视频自动播放",
             subtitle = if (clickToPlayEnabled) {
                 "进入视频详情页时自动开始播放"
@@ -1051,7 +1051,7 @@ private fun PlaybackInteractionSettingsSection(
         IOSDivider()
         //  [新增] 自动播放下一个视频
 	        IOSSwitchItem(
-	            icon = rememberSettingsSemanticIcon(SettingsIconRole.BACKGROUND_PLAYBACK),
+	            icon = rememberSettingsSemanticIcon(SettingsIconRole.AUTO_PLAY_NEXT),
             title = "自动播放下一个",
             subtitle = "普通视频结束后自动播放推荐视频",
             checked = autoPlayEnabled,
@@ -1193,7 +1193,7 @@ private fun PlaybackInteractionSettingsSection(
         if (videoNoteEnabled) {
             IOSDivider()
             IOSSwitchItem(
-                icon = rememberSettingsSemanticIcon(SettingsIconRole.VIDEO_NOTE),
+                icon = rememberSettingsSemanticIcon(SettingsIconRole.VIDEO_NOTE_COLLAPSE),
                 title = "默认折叠视频笔记",
                 subtitle = if (videoNoteDefaultCollapsed) {
                     "进入视频页时先显示笔记摘要，需要时再展开"
@@ -1396,7 +1396,7 @@ private fun PlaybackFullscreenGestureSettingsSection(
         }
         IOSDivider()
 	        IOSSwitchItem(
-	            icon = rememberSettingsSemanticIcon(SettingsIconRole.FULLSCREEN_GESTURE),
+	            icon = rememberSettingsSemanticIcon(SettingsIconRole.INTERACTIVE_COMMANDS),
             title = "隐藏视频内互动提示",
             subtitle = if (hideInteractiveCommandDanmaku) {
                 "已开启：不显示关注、一键三连、UP 提示和投票等视频内互动提示"
@@ -1435,7 +1435,7 @@ private fun PlaybackFullscreenGestureSettingsSection(
 
         IOSDivider()
 	        IOSSwitchItem(
-	            icon = rememberSettingsSemanticIcon(SettingsIconRole.FULLSCREEN_GESTURE_REVERSE),
+	            icon = rememberSettingsSemanticIcon(SettingsIconRole.PORTRAIT_SWIPE_FULLSCREEN),
             title = "竖屏上滑进入全屏",
             subtitle = if (portraitSwipeToFullscreenEnabled) {
                 "开启后在竖屏下向上滑动可快速进入全屏"
@@ -1454,7 +1454,7 @@ private fun PlaybackFullscreenGestureSettingsSection(
 
         IOSDivider()
 	        IOSSwitchItem(
-	            icon = rememberSettingsSemanticIcon(SettingsIconRole.FULLSCREEN_GESTURE),
+	            icon = rememberSettingsSemanticIcon(SettingsIconRole.CENTER_SWIPE_FULLSCREEN),
             title = "中部滑动切换全屏",
             subtitle = if (centerSwipeToFullscreenEnabled) {
                 "开启后：播放器中部纵向滑动可切换进入/退出全屏（受手势反向影响）"
@@ -1491,7 +1491,7 @@ private fun PlaybackFullscreenGestureSettingsSection(
         )
         IOSDivider()
 	        IOSSwitchItem(
-	            icon = rememberSettingsSemanticIcon(SettingsIconRole.FULLSCREEN_GESTURE),
+	            icon = rememberSettingsSemanticIcon(SettingsIconRole.SYSTEM_BRIGHTNESS),
             title = "调节系统亮度",
             subtitle = if (slideVolumeBrightnessEnabled) {
                 "开启后亮度手势会尝试同步系统亮度（需系统允许）"
