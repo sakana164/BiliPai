@@ -105,10 +105,14 @@ enum class BottomBarLiquidGlassPreset(
         0,
         "BiliPai 调校",
         "保留当前多层折射、色散和指示器动效"
+    ),
+    IOS26_REFINED(
+        1,
+        "iOS 26 玻璃",
+        "厚边折射 + 顶光高亮环，无色散，沿用 BiliPai 指示器滑动与配色"
     );
 
     companion object {
-        // TODO: 通透底栏液态玻璃已移除；旧存储值 1 暂时回退到 BiliPai 调校，后续重新设计后再分配新实现。
         fun fromValue(value: Int): BottomBarLiquidGlassPreset =
             entries.find { it.value == value } ?: BILIPAI_TUNED
     }

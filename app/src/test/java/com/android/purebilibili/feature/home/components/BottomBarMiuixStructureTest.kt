@@ -51,7 +51,14 @@ class BottomBarMiuixStructureTest {
         assertTrue(kernelSuRendererSource.contains("resolveSharedBottomBarCapsuleShape("))
         assertTrue(kernelSuRendererSource.contains(".kernelSuFloatingDockSurface("))
         assertTrue(kernelSuRendererSource.contains("blurRadius = tuning.shellBlurRadiusDp.dp"))
-        assertTrue(source.contains("blur(tuning.shellBlurRadiusDp.dp.toPx())"))
+        assertTrue(source.contains("BottomBarGlassMaterialSpec"))
+        assertTrue(source.contains("resolveBottomBarGlassMaterialSpec("))
+        assertTrue(source.contains("resolveBottomBarGlassMaterialContainerColor("))
+        assertFalse(source.contains("BottomBarShellEffectSpec"))
+        assertFalse(source.contains("resolveBottomBarIOS26SurfaceTint("))
+        assertFalse(kernelSuRendererSource.contains("bottomBarIOS26ScrollGlassProgress"))
+        assertFalse(kernelSuRendererSource.contains("scrollGlassProgress = scrollGlassProgress"))
+        assertTrue(source.contains("liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset"))
         assertTrue(kernelSuRendererSource.contains("drawBackdrop("))
         assertTrue(kernelSuRendererSource.contains("vibrancy()"))
         assertTrue(kernelSuRendererSource.contains("lens("))
@@ -137,7 +144,7 @@ class BottomBarMiuixStructureTest {
             )
         )
         assertTrue(kernelSuRendererSource.contains("scaleX = edgeCompressionScaleX"))
-        assertTrue(kernelSuRendererSource.contains("chromaticAberration = true"))
+        assertTrue(kernelSuRendererSource.contains("chromaticAberration = materialSpec.shellChromaticAberration"))
         assertTrue(
             kernelSuRendererSource.contains(
                 "val backdropPresetProgress = resolveBottomBarEffectiveBackdropPresetProgress("

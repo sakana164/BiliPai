@@ -143,6 +143,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.runtimeShaderEffect
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
@@ -731,8 +732,10 @@ internal fun shouldRenderBottomBarHeavyInteractiveEffects(
 internal fun shouldUseBottomBarCombinedIndicatorBackdrop(
     preset: BottomBarLiquidGlassPreset
 ): Boolean {
+    // IOS26_REFINED 在指示器路径上完全等价 BILIPAI_TUNED，仅在壳层材质链上有差异
     return when (preset) {
-        BottomBarLiquidGlassPreset.BILIPAI_TUNED -> true
+        BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+        BottomBarLiquidGlassPreset.IOS26_REFINED -> true
     }
 }
 
@@ -740,7 +743,8 @@ internal fun shouldRenderBottomBarForegroundAboveIndicator(
     preset: BottomBarLiquidGlassPreset
 ): Boolean {
     return when (preset) {
-        BottomBarLiquidGlassPreset.BILIPAI_TUNED -> false
+        BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+        BottomBarLiquidGlassPreset.IOS26_REFINED -> false
     }
 }
 
@@ -748,7 +752,8 @@ internal fun shouldUseBottomBarIndicatorLens(
     preset: BottomBarLiquidGlassPreset
 ): Boolean {
     return when (preset) {
-        BottomBarLiquidGlassPreset.BILIPAI_TUNED -> true
+        BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+        BottomBarLiquidGlassPreset.IOS26_REFINED -> true
     }
 }
 
@@ -779,13 +784,15 @@ internal fun resolveAndroidNativeBottomBarTuning(
 internal fun resolveAndroidNativeBottomBarContainerColor(
     surfaceColor: Color,
     tuning: AndroidNativeBottomBarTuning,
-    glassEnabled: Boolean
+    glassEnabled: Boolean,
+    liquidGlassPreset: BottomBarLiquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED
 ): Color {
-    return if (glassEnabled) {
-        surfaceColor.copy(alpha = if (surfaceColor.luminance() < 0.5f) 0.30f else 0.38f)
-    } else {
-        surfaceColor.copy(alpha = tuning.shellSurfaceAlpha)
-    }
+    return resolveBottomBarGlassMaterialContainerColor(
+        surfaceColor = surfaceColor,
+        preset = liquidGlassPreset,
+        glassEnabled = glassEnabled,
+        fallbackAlpha = tuning.shellSurfaceAlpha
+    )
 }
 
 internal fun resolveAndroidNativeFloatingBottomBarContainerColor(
@@ -793,13 +800,15 @@ internal fun resolveAndroidNativeFloatingBottomBarContainerColor(
     tuning: AndroidNativeBottomBarTuning,
     glassEnabled: Boolean,
     blurEnabled: Boolean,
-    blurIntensity: com.android.purebilibili.core.ui.blur.BlurIntensity
+    blurIntensity: com.android.purebilibili.core.ui.blur.BlurIntensity,
+    liquidGlassPreset: BottomBarLiquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED
 ): Color {
     return if (glassEnabled) {
         resolveAndroidNativeBottomBarContainerColor(
             surfaceColor = surfaceColor,
             tuning = tuning,
-            glassEnabled = true
+            glassEnabled = true,
+            liquidGlassPreset = liquidGlassPreset
         )
     } else {
         resolveBottomBarSurfaceColor(
@@ -837,8 +846,20 @@ internal fun Modifier.kernelSuFloatingDockSurface(
     motionTier: MotionTier,
     isTransitionRunning: Boolean,
     forceLowBlurBudget: Boolean,
+    liquidGlassPreset: BottomBarLiquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+    isScrolling: Boolean = false,
+    materialMotionProgress: Float = 0f,
+    materialPressProgress: Float = 0f
 ): Modifier = composed {
     val isDarkTheme = isSystemInDarkTheme()
+    val materialSpec: BottomBarGlassMaterialSpec = resolveBottomBarGlassMaterialSpec(
+        preset = liquidGlassPreset,
+        isDarkTheme = isDarkTheme,
+        isScrolling = isScrolling,
+        glassEnabled = glassEnabled,
+        motionProgress = materialMotionProgress,
+        pressProgress = materialPressProgress
+    )
     val useHazeBlur = shouldUseAndroidNativeFloatingHazeBlur(
         blurEnabled = blurEnabled,
         glassEnabled = glassEnabled,
@@ -862,33 +883,110 @@ internal fun Modifier.kernelSuFloatingDockSurface(
         )
         .run {
             if (backdrop != null && !useHazeBlur) {
+                val innerRimGlowProvider: (() -> InnerShadow)? = remember(
+                    materialSpec.innerRimGlow,
+                    isDarkTheme,
+                    glassEnabled
+                ) {
+                    val innerRimGlow = materialSpec.innerRimGlow
+                    if (glassEnabled && innerRimGlow != null) {
+                        val cached = InnerShadow(
+                            radius = innerRimGlow.radiusDp.dp,
+                            alpha = innerRimGlow.alpha,
+                            color = if (isDarkTheme) Color.White else Color.Black
+                        )
+                        val provider: () -> InnerShadow = { cached }
+                        provider
+                    } else {
+                        null
+                    }
+                }
                 drawBackdrop(
                     backdrop = backdrop,
                     shape = { shape },
                     effects = {
                         if (glassEnabled || (blurEnabled && !useHazeBlur)) {
-                            vibrancy()
-                            blur(blurRadius.toPx())
-                            if (glassEnabled && drawShellLens) {
+                            if (materialSpec.vibrancy) {
+                                vibrancy()
+                            }
+                            blur((materialSpec.blurRadiusDp?.dp ?: blurRadius).toPx())
+                            if (
+                                glassEnabled &&
+                                drawShellLens &&
+                                materialSpec.shellRefractionHeightDp > 0f &&
+                                materialSpec.shellRefractionAmountDp > 0f
+                            ) {
                                 lens(
-                                    refractionHeight = 24.dp.toPx(),
-                                    refractionAmount = 24.dp.toPx(),
+                                    refractionHeight = materialSpec.shellRefractionHeightDp.dp.toPx(),
+                                    refractionAmount = materialSpec.shellRefractionAmountDp.dp.toPx(),
                                     depthEffect = true,
-                                    chromaticAberration = true
+                                    chromaticAberration = materialSpec.shellChromaticAberration
                                 )
+                            }
+                            val shellShader = materialSpec.shellShader
+                            if (glassEnabled && drawShellLens && shellShader != null) {
+                                val cornerPx = (size.height.coerceAtMost(size.width)) / 2f
+                                val u = resolveLiquidGlassShaderUniforms(
+                                    widthPx = size.width,
+                                    heightPx = size.height,
+                                    paddingPx = padding,
+                                    cornerRadiusPx = cornerPx,
+                                    thicknessPx = shellShader.thicknessDp.dp.toPx(),
+                                    refractIndex = shellShader.refractIndex,
+                                    refractIntensity = shellShader.refractIntensity,
+                                    intensityScale = 1f
+                                )
+                                runtimeShaderEffect(
+                                    key = LIQUID_GLASS_SHADER_KEY,
+                                    shaderString = LIQUID_GLASS_SHADER,
+                                    uniformShaderName = "img"
+                                ) {
+                                    setFloatUniform("resolution", u.resolutionX, u.resolutionY)
+                                    setFloatUniform("center", u.centerX, u.centerY)
+                                    setFloatUniform("size", u.halfWidth, u.halfHeight)
+                                    setFloatUniform(
+                                        "radius",
+                                        u.cornerRadiusPx, u.cornerRadiusPx,
+                                        u.cornerRadiusPx, u.cornerRadiusPx
+                                    )
+                                    setFloatUniform("thickness", u.thicknessPx)
+                                    setFloatUniform("refract_index", u.refractIndex)
+                                    setFloatUniform("refract_intensity", u.refractIntensity)
+                                    setFloatUniform(
+                                        "foreground_color_premultiplied",
+                                        0f, 0f, 0f, 0f
+                                    )
+                                }
                             }
                         }
                     },
                     highlight = {
-                        Highlight.Default.copy(alpha = if (glassEnabled) 1f else 0f)
+                        if (materialSpec.highlightWidthScale == 1f) {
+                            Highlight.Default.copy(alpha = if (glassEnabled) 1f else 0f)
+                        } else {
+                            val baseWidth = Highlight.Default.width
+                            Highlight.Default.copy(
+                                alpha = if (glassEnabled) 1f else 0f,
+                                width = baseWidth * materialSpec.highlightWidthScale,
+                                blurRadius = baseWidth * 0.18f
+                            )
+                        }
                     },
                     shadow = {
                         Shadow.Default.copy(
-                            color = Color.Black.copy(alpha = if (isDarkTheme) 0.2f else 0.1f)
+                            color = Color.Black.copy(
+                                alpha = (
+                                    if (isDarkTheme) 0.2f else 0.1f
+                                ) * materialSpec.shadowAlphaScale
+                            )
                         )
                     },
+                    innerShadow = innerRimGlowProvider,
                     onDrawSurface = {
                         drawRect(containerColor)
+                        if (materialSpec.foregroundTint.alpha > 0f) {
+                            drawRect(materialSpec.foregroundTint)
+                        }
                     }
                 )
             } else {
@@ -1367,7 +1465,8 @@ internal fun resolveBottomBarEffectiveBackdropPresetProgress(
         pressProgress = pressProgress
     )
     return when (preset) {
-        BottomBarLiquidGlassPreset.BILIPAI_TUNED -> base
+        BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+        BottomBarLiquidGlassPreset.IOS26_REFINED -> base
     }
 }
 
@@ -1682,7 +1781,8 @@ internal fun resolveBottomBarEffectiveRefractionMotionProfile(
     profile: BottomBarRefractionMotionProfile
 ): BottomBarRefractionMotionProfile {
     return when (preset) {
-        BottomBarLiquidGlassPreset.BILIPAI_TUNED -> profile
+        BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+        BottomBarLiquidGlassPreset.IOS26_REFINED -> profile
     }
 }
 
@@ -1691,7 +1791,8 @@ internal fun resolveBottomBarPresetPanelOffsets(
     rawPanelOffsetPx: Float
 ): BottomBarPresetPanelOffsets {
     return when (preset) {
-        BottomBarLiquidGlassPreset.BILIPAI_TUNED -> BottomBarPresetPanelOffsets(
+        BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+        BottomBarLiquidGlassPreset.IOS26_REFINED -> BottomBarPresetPanelOffsets(
             visiblePanelOffsetPx = rawPanelOffsetPx,
             exportPanelOffsetPx = rawPanelOffsetPx,
             indicatorPanelOffsetPx = rawPanelOffsetPx
@@ -1978,7 +2079,8 @@ fun FrostedBottomBar(
             tuning = tuning,
             glassEnabled = glassEnabled,
             blurEnabled = hazeState != null,
-            blurIntensity = currentUnifiedBlurIntensity()
+            blurIntensity = currentUnifiedBlurIntensity(),
+            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
         )
         KernelSuAlignedBottomBar(
             currentItem = currentItem,
@@ -2092,7 +2194,8 @@ private fun MaterialBottomBar(
             tuning = androidNativeTuning,
             glassEnabled = glassEnabled,
             blurEnabled = blurEnabled,
-            blurIntensity = blurIntensity
+            blurIntensity = blurIntensity,
+            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
         )
     } else {
         resolveBottomBarSurfaceColor(
@@ -2331,7 +2434,8 @@ private fun MiuixBottomBar(
             tuning = tuning,
             glassEnabled = glassEnabled,
             blurEnabled = blurEnabled,
-            blurIntensity = blurIntensity
+            blurIntensity = blurIntensity,
+            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
         )
     } else {
         resolveBottomBarSurfaceColor(
@@ -2718,6 +2822,14 @@ private fun KernelSuAlignedBottomBar(
         isDragging = dampedDragState.isDragging
     )
     val indicatorLayerScaleProgress = maxOf(indicatorDragScaleProgress, effectivePressProgress)
+    val materialSpec: BottomBarGlassMaterialSpec = resolveBottomBarGlassMaterialSpec(
+        preset = liquidGlassPreset,
+        isDarkTheme = isDarkTheme,
+        isScrolling = isFeedScrollInProgress,
+        glassEnabled = glassEnabled,
+        motionProgress = motionProgress,
+        pressProgress = effectivePressProgress
+    )
     var searchExpansionOverride by remember {
         mutableStateOf(BottomBarSearchExpansionOverride.FOLLOW_AUTO)
     }
@@ -2919,6 +3031,10 @@ private fun KernelSuAlignedBottomBar(
             val captureLensSpec = resolveBottomBarBackdropPresetCaptureLens(
                 progress = effectiveCaptureProgress
             )
+            val shellCaptureRefractionHeightDp = captureLensSpec.refractionHeightDp *
+                (materialSpec.shellRefractionHeightDp / 24f)
+            val shellCaptureRefractionAmountDp = captureLensSpec.refractionAmountDp *
+                (materialSpec.shellRefractionAmountDp / 24f)
             val indicatorLensSpec = resolveBottomBarBackdropPresetIndicatorLens(
                 progress = effectiveIndicatorEffectProgress
             )
@@ -3086,7 +3202,11 @@ private fun KernelSuAlignedBottomBar(
                     interactiveHighlightEnabled = interactiveHighlightEnabled,
                     shellHighlightAlpha = shellHighlightAlpha,
                     interactiveHighlightCenterXPx = interactiveHighlightCenterXPx,
-                    uiSkinDecoration = uiSkinDecoration
+                    uiSkinDecoration = uiSkinDecoration,
+                    liquidGlassPreset = liquidGlassPreset,
+                    isScrolling = isFeedScrollInProgress,
+                    materialMotionProgress = motionProgress,
+                    materialPressProgress = effectivePressProgress
                 ) {
 
                 if (shouldComposeDockContent) {
@@ -3166,28 +3286,87 @@ private fun KernelSuAlignedBottomBar(
                                 translationX = presetPanelOffsets.exportPanelOffsetPx -
                                     captureHorizontalOverscan.toPx()
                             }
-                            .run {
-                                drawBackdrop(
-                                    backdrop = backdrop,
-                                    shape = { shellShape },
-                                    effects = {
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { shellShape },
+                                effects = {
+                                    if (materialSpec.vibrancy) {
                                         vibrancy()
-                                        blur(tuning.shellBlurRadiusDp.dp.toPx())
-                                        lens(
-                                            refractionHeight = captureLensSpec.refractionHeightDp.dp.toPx(),
-                                            refractionAmount = captureLensSpec.refractionAmountDp.dp.toPx(),
-                                            depthEffect = true,
-                                            chromaticAberration = true
-                                        )
-                                    },
-                                    highlight = {
-                                        Highlight.Default.copy(alpha = captureHighlightAlpha)
-                                    },
-                                    onDrawSurface = {
-                                        drawRect(containerColor)
                                     }
-                                )
-                            }
+                                    blur(
+                                        (
+                                            materialSpec.blurRadiusDp
+                                                ?: tuning.shellBlurRadiusDp
+                                            ).dp.toPx()
+                                    )
+                                    if (
+                                        shellCaptureRefractionHeightDp > 0f &&
+                                        shellCaptureRefractionAmountDp > 0f
+                                    ) {
+                                        lens(
+                                            refractionHeight = shellCaptureRefractionHeightDp.dp.toPx(),
+                                            refractionAmount = shellCaptureRefractionAmountDp.dp.toPx(),
+                                            depthEffect = true,
+                                            chromaticAberration = materialSpec.shellChromaticAberration
+                                        )
+                                    }
+                                    val exportShellShader = materialSpec.shellShader
+                                    if (exportShellShader != null) {
+                                        val captureRatio = (captureLensSpec.refractionAmountDp / 24f)
+                                            .coerceIn(0f, 1f)
+                                        val cornerPx = (size.height.coerceAtMost(size.width)) / 2f
+                                        val u = resolveLiquidGlassShaderUniforms(
+                                            widthPx = size.width,
+                                            heightPx = size.height,
+                                            paddingPx = padding,
+                                            cornerRadiusPx = cornerPx,
+                                            thicknessPx = exportShellShader.thicknessDp.dp.toPx(),
+                                            refractIndex = exportShellShader.refractIndex,
+                                            refractIntensity = exportShellShader.refractIntensity,
+                                            intensityScale = captureRatio
+                                        )
+                                        runtimeShaderEffect(
+                                            key = LIQUID_GLASS_SHADER_KEY,
+                                            shaderString = LIQUID_GLASS_SHADER,
+                                            uniformShaderName = "img"
+                                        ) {
+                                            setFloatUniform("resolution", u.resolutionX, u.resolutionY)
+                                            setFloatUniform("center", u.centerX, u.centerY)
+                                            setFloatUniform("size", u.halfWidth, u.halfHeight)
+                                            setFloatUniform(
+                                                "radius",
+                                                u.cornerRadiusPx, u.cornerRadiusPx,
+                                                u.cornerRadiusPx, u.cornerRadiusPx
+                                            )
+                                            setFloatUniform("thickness", u.thicknessPx)
+                                            setFloatUniform("refract_index", u.refractIndex)
+                                            setFloatUniform("refract_intensity", u.refractIntensity)
+                                            setFloatUniform(
+                                                "foreground_color_premultiplied",
+                                                0f, 0f, 0f, 0f
+                                            )
+                                        }
+                                    }
+                                },
+                                highlight = {
+                                    if (materialSpec.highlightWidthScale == 1f) {
+                                        Highlight.Default.copy(alpha = captureHighlightAlpha)
+                                    } else {
+                                        val baseWidth = Highlight.Default.width
+                                        Highlight.Default.copy(
+                                            alpha = captureHighlightAlpha,
+                                            width = baseWidth * materialSpec.highlightWidthScale,
+                                            blurRadius = baseWidth * 0.18f
+                                        )
+                                    }
+                                },
+                                onDrawSurface = {
+                                    drawRect(containerColor)
+                                    if (materialSpec.foregroundTint.alpha > 0f) {
+                                        drawRect(materialSpec.foregroundTint)
+                                    }
+                                }
+                            )
                     ) {
                         Box(
                             modifier = Modifier
@@ -3276,7 +3455,11 @@ private fun KernelSuAlignedBottomBar(
                                         hazeState = hazeState,
                                         motionTier = motionTier,
                                         isTransitionRunning = isTransitionRunning,
-                                        forceLowBlurBudget = forceLowBlurBudget
+                                        forceLowBlurBudget = forceLowBlurBudget,
+                                        liquidGlassPreset = liquidGlassPreset,
+                                        isScrolling = isFeedScrollInProgress,
+                                        materialMotionProgress = motionProgress,
+                                        materialPressProgress = effectivePressProgress
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -3461,7 +3644,11 @@ private fun KernelSuAlignedBottomBar(
                     forceLowBlurBudget = forceLowBlurBudget,
                     contentColor = unselectedColor,
                     accentColor = selectedColor,
-                    haptic = haptic
+                    haptic = haptic,
+                    liquidGlassPreset = liquidGlassPreset,
+                    isScrolling = isFeedScrollInProgress,
+                    materialMotionProgress = motionProgress,
+                    materialPressProgress = effectivePressProgress
                 )
         }
     }
@@ -3488,6 +3675,10 @@ private fun KernelSuBottomBarShell(
     shellHighlightAlpha: Float,
     interactiveHighlightCenterXPx: Float,
     uiSkinDecoration: BottomBarUiSkinDecoration?,
+    liquidGlassPreset: BottomBarLiquidGlassPreset,
+    isScrolling: Boolean,
+    materialMotionProgress: Float,
+    materialPressProgress: Float,
     content: @Composable BoxScope.() -> Unit
 ) {
     Box(modifier = modifier) {
@@ -3514,7 +3705,11 @@ private fun KernelSuBottomBarShell(
                     hazeState = hazeState,
                     motionTier = motionTier,
                     isTransitionRunning = isTransitionRunning,
-                    forceLowBlurBudget = forceLowBlurBudget
+                    forceLowBlurBudget = forceLowBlurBudget,
+                    liquidGlassPreset = liquidGlassPreset,
+                    isScrolling = isScrolling,
+                    materialMotionProgress = materialMotionProgress,
+                    materialPressProgress = materialPressProgress
                 )
                 .bottomBarInteractiveHighlight(
                     enabled = glassEnabled && interactiveHighlightEnabled,
@@ -3723,7 +3918,11 @@ private fun KernelSuBottomBarSearchSlot(
     forceLowBlurBudget: Boolean,
     contentColor: Color,
     accentColor: Color,
-    haptic: (HapticType) -> Unit
+    haptic: (HapticType) -> Unit,
+    liquidGlassPreset: BottomBarLiquidGlassPreset,
+    isScrolling: Boolean,
+    materialMotionProgress: Float,
+    materialPressProgress: Float
 ) {
     if (!visible) return
     Spacer(modifier = Modifier.width(launchAdjustedSearchGap))
@@ -3751,7 +3950,11 @@ private fun KernelSuBottomBarSearchSlot(
             forceLowBlurBudget = forceLowBlurBudget,
             contentColor = contentColor,
             accentColor = accentColor,
-            haptic = haptic
+            haptic = haptic,
+            liquidGlassPreset = liquidGlassPreset,
+            isScrolling = isScrolling,
+            materialMotionProgress = materialMotionProgress,
+            materialPressProgress = materialPressProgress
         )
     }
 }
@@ -3776,7 +3979,11 @@ private fun KernelSuBottomBarSearchCapsule(
     forceLowBlurBudget: Boolean,
     contentColor: Color,
     accentColor: Color,
-    haptic: (HapticType) -> Unit
+    haptic: (HapticType) -> Unit,
+    liquidGlassPreset: BottomBarLiquidGlassPreset,
+    isScrolling: Boolean,
+    materialMotionProgress: Float,
+    materialPressProgress: Float
 ) {
     var searchLongPressHeld by remember { mutableStateOf(false) }
     val currentOnSubmit by rememberUpdatedState(onSubmit)
@@ -3831,7 +4038,11 @@ private fun KernelSuBottomBarSearchCapsule(
                 hazeState = hazeState,
                 motionTier = motionTier,
                 isTransitionRunning = isTransitionRunning,
-                forceLowBlurBudget = forceLowBlurBudget
+                forceLowBlurBudget = forceLowBlurBudget,
+                liquidGlassPreset = liquidGlassPreset,
+                isScrolling = isScrolling,
+                materialMotionProgress = materialMotionProgress,
+                materialPressProgress = materialPressProgress
             )
             .then(
                 if (!expanded) {

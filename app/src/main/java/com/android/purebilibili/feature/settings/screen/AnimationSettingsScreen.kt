@@ -265,7 +265,10 @@ fun AnimationSettingsContent(
                                 }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf(BottomBarLiquidGlassPreset.BILIPAI_TUNED).forEach { preset ->
+                                    listOf(
+                                        BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+                                        BottomBarLiquidGlassPreset.IOS26_REFINED
+                                    ).forEach { preset ->
                                         val isSelected = bottomBarLiquidGlassPreset == preset
                                         Row(
                                             modifier = Modifier

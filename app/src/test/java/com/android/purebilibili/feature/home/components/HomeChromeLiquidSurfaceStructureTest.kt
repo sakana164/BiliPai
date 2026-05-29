@@ -138,10 +138,10 @@ class HomeChromeLiquidSurfaceStructureTest {
                 bottomBar.readText().contains("vibrancy()") &&
                 bottomBar.readText().contains("drawShellLens: Boolean = true") &&
                 bottomBar.readText().contains("glassEnabled && drawShellLens") &&
-                bottomBar.readText().contains("refractionHeight = 24.dp.toPx()") &&
-                bottomBar.readText().contains("refractionAmount = 24.dp.toPx()") &&
+                bottomBar.readText().contains("shellRefractionHeightDp") &&
+                bottomBar.readText().contains("shellRefractionAmountDp") &&
                 bottomBar.readText().contains("depthEffect = true") &&
-                bottomBar.readText().contains("chromaticAberration = true")
+                bottomBar.readText().contains("shellChromaticAberration")
         )
         assertFalse(
             "bottom bar should not keep the old appChromeLiquidSurface renderer",

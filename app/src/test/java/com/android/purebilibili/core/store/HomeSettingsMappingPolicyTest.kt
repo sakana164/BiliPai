@@ -107,7 +107,8 @@ class HomeSettingsMappingPolicyTest {
         assertEquals(BottomBarSearchAutoExpandMode.DISABLED, result.bottomBarSearchAutoExpandMode)
         assertTrue(result.androidNativeLiquidGlassEnabled)
         assertFalse(result.isLiquidGlassEnabled)
-        assertEquals(BottomBarLiquidGlassPreset.BILIPAI_TUNED, result.bottomBarLiquidGlassPreset)
+        // bottom_bar_liquid_glass_preset = 1 现在解析为 iOS 26 玻璃（早期为占位回退 BILIPAI）
+        assertEquals(BottomBarLiquidGlassPreset.IOS26_REFINED, result.bottomBarLiquidGlassPreset)
         assertEquals(LiquidGlassStyle.SUKISU, result.liquidGlassStyle)
         assertEquals(LiquidGlassMode.BALANCED, result.liquidGlassMode)
         assertEquals(0.52f, result.liquidGlassStrength)

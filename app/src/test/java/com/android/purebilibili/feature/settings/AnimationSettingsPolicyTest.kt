@@ -44,8 +44,10 @@ class AnimationSettingsPolicyTest {
 
         assertFalse(animationSource.contains("底栏液态玻璃预设"))
         assertFalse(animationSource.contains("BottomBarLiquidGlassPreset.entries"))
-        assertTrue(animationSource.contains("listOf(BottomBarLiquidGlassPreset.BILIPAI_TUNED)"))
-        assertTrue(settingsManagerSource.contains("TODO: 通透底栏液态玻璃已移除"))
+        // 底栏液态玻璃预设现在提供 BiliPai 调校 + iOS 26 两种；列表显式枚举，避免误改
+        // 时混入未审视的预设。
+        assertTrue(animationSource.contains("BottomBarLiquidGlassPreset.BILIPAI_TUNED,"))
+        assertTrue(animationSource.contains("BottomBarLiquidGlassPreset.IOS26_REFINED"))
         assertFalse(settingsManagerSource.contains("更轻的模糊、更低的遮罩和更清晰的背景折射"))
         val forbiddenExternalName = listOf("Na", "gram", "X").joinToString("")
         assertFalse(animationSource.contains(forbiddenExternalName))
