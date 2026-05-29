@@ -77,13 +77,16 @@ import com.android.purebilibili.core.ui.rememberAppDownloadIcon
 import com.android.purebilibili.core.ui.rememberAppFolderIcon
 import com.android.purebilibili.core.ui.rememberAppHistoryIcon
 import com.android.purebilibili.core.ui.rememberAppInboxIcon
+import com.android.purebilibili.core.ui.rememberAppCommentIcon
 import com.android.purebilibili.core.ui.rememberAppLikeIcon
+import com.android.purebilibili.core.ui.rememberAppMoreIcon
 import com.android.purebilibili.core.ui.rememberAppLockIcon
 import com.android.purebilibili.core.ui.rememberAppPhotoIcon
 import com.android.purebilibili.core.ui.rememberAppProfileAddIcon
 import com.android.purebilibili.core.ui.rememberAppRefreshIcon
 import com.android.purebilibili.core.ui.rememberAppRestoreIcon
 import com.android.purebilibili.core.ui.rememberAppSettingsIcon
+import com.android.purebilibili.core.ui.rememberAppShareIcon
 import com.android.purebilibili.core.ui.components.UserLevelBadge
 import com.android.purebilibili.core.ui.rememberAppWarningIcon
 import com.android.purebilibili.core.ui.rememberAppWatchLaterIcon
@@ -1705,94 +1708,230 @@ private fun ProfileDynamicList(items: List<SpaceDynamicItem>, onVideoClick: (Str
         ProfileSpaceEmpty("暂无动态")
         return
     }
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        items.forEach { item ->
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        items.forEachIndexed { index, item ->
             ProfileDynamicCard(item = item, onVideoClick = onVideoClick)
+            if (index != items.lastIndex) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
+                    thickness = 0.7.dp
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun ProfileDynamicCard(item: SpaceDynamicItem, onVideoClick: (String) -> Unit) {
-    val dynamic = item.modules.module_dynamic
-    val archive = dynamic?.major?.archive
-    val cover = resolveProfileDynamicCover(item)
-    val summary = dynamic?.desc?.text
-        ?.ifBlank { dynamic.major?.opus?.summary?.text.orEmpty() }
-        ?.ifBlank { dynamic.major?.article?.desc.orEmpty() }
-        .orEmpty()
-    val title = archive?.title
-        ?: dynamic?.major?.opus?.title?.takeIf { it.isNotBlank() }
-        ?: dynamic?.major?.article?.title?.takeIf { it.isNotBlank() }
-        ?: summary.takeIf { it.isNotBlank() }
-        ?: if (item.type.contains("FORWARD", ignoreCase = true)) "转发动态" else "动态"
-    val timeText = item.modules.module_author?.pub_time.orEmpty()
-    val clickableBvid = archive?.bvid?.takeIf { it.isNotBlank() }
+    val author = item.modules.module_author
+    val authorName = resolveProfileDynamicAuthorName(item)
+    val publishText = resolveProfileDynamicPublishText(item)
+    val bodyText = resolveProfileDynamicText(item)
+    val orig = item.orig
+    val moreIcon = rememberAppMoreIcon()
 
-    Surface(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .then(
-                if (clickableBvid != null) {
-                    Modifier.clickable { onVideoClick(clickableBvid) }
-                } else {
-                    Modifier
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            AsyncImage(
+                model = author?.face.orEmpty(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = authorName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (publishText.isNotBlank()) {
+                    Text(
+                        text = publishText,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            ),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.36f),
+            }
+            Icon(
+                imageVector = moreIcon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        if (bodyText.isNotBlank()) {
+            Text(
+                text = bodyText,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 22.sp,
+                maxLines = 8,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        if (orig != null) {
+            ProfileDynamicOriginalContent(item = orig, onVideoClick = onVideoClick)
+        } else {
+            ProfileDynamicMajorContent(item = item, onVideoClick = onVideoClick)
+        }
+
+        ProfileDynamicActionRow(item = item)
+    }
+}
+
+@Composable
+private fun ProfileDynamicOriginalContent(item: SpaceDynamicItem, onVideoClick: (String) -> Unit) {
+    val authorName = resolveProfileDynamicAuthorName(item)
+    val text = resolveProfileDynamicText(item)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
         shadowElevation = 0.dp
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            if (authorName.isNotBlank()) {
                 Text(
-                    text = if (archive != null) "视频动态" else if (item.type.contains("FORWARD", ignoreCase = true)) "转发动态" else "动态",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = timeText,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (summary.isNotBlank() && summary != title) {
-                Text(
-                    text = summary,
+                    text = "@$authorName",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 4,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            if (cover.isNotBlank()) {
-                AsyncImage(
-                    model = cover,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(170.dp)
-                        .clip(RoundedCornerShape(8.dp))
+            if (text.isNotBlank()) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 21.sp,
+                    maxLines = 8,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+            ProfileDynamicMajorContent(item = item, onVideoClick = onVideoClick)
         }
+    }
+}
+
+@Composable
+private fun ProfileDynamicMajorContent(item: SpaceDynamicItem, onVideoClick: (String) -> Unit) {
+    val dynamic = item.modules.module_dynamic
+    val major = dynamic?.major
+    val cover = resolveProfileDynamicCover(item)
+    val title = major?.archive?.title
+        ?.takeIf { it.isNotBlank() }
+        ?: major?.opus?.title?.takeIf { it.isNotBlank() }
+        ?: major?.article?.title?.takeIf { it.isNotBlank() }
+    val clickableBvid = major?.archive?.bvid?.takeIf { it.isNotBlank() }
+
+    if (cover.isBlank() && title.isNullOrBlank()) return
+
+    Column(
+        modifier = Modifier.then(
+            if (clickableBvid != null) Modifier.clickable { onVideoClick(clickableBvid) } else Modifier
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (!title.isNullOrBlank() && title != resolveProfileDynamicText(item)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (cover.isNotBlank()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(cover)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth(0.72f)
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileDynamicActionRow(item: SpaceDynamicItem) {
+    val stat = item.modules.module_stat
+    val shareIcon = rememberAppShareIcon()
+    val commentIcon = rememberAppCommentIcon()
+    val likeIcon = rememberAppLikeIcon()
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ProfileDynamicAction(
+            icon = shareIcon,
+            text = resolveProfileDynamicActionText("转发", stat?.forward?.count ?: 0)
+        )
+        ProfileDynamicAction(
+            icon = commentIcon,
+            text = resolveProfileDynamicActionText("评论", stat?.comment?.count ?: 0)
+        )
+        ProfileDynamicAction(
+            icon = likeIcon,
+            text = resolveProfileDynamicActionText("点赞", stat?.like?.count ?: 0)
+        )
+    }
+}
+
+@Composable
+private fun ProfileDynamicAction(icon: ImageVector, text: String) {
+    Row(
+        modifier = Modifier
+            .heightIn(min = 40.dp)
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(5.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
     }
 }
 

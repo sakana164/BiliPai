@@ -6,12 +6,15 @@ import com.android.purebilibili.data.model.response.SpaceAggregateArchiveItem
 import com.android.purebilibili.data.model.response.SpaceAggregateData
 import com.android.purebilibili.data.model.response.SpaceAggregateFavoriteItem
 import com.android.purebilibili.data.model.response.SpaceAggregateFavoriteSection
+import com.android.purebilibili.data.model.response.SpaceDynamicAuthor
 import com.android.purebilibili.data.model.response.SpaceDynamicContent
+import com.android.purebilibili.data.model.response.SpaceDynamicDesc
 import com.android.purebilibili.data.model.response.SpaceDynamicDraw
 import com.android.purebilibili.data.model.response.SpaceDynamicDrawItem
 import com.android.purebilibili.data.model.response.SpaceDynamicItem
 import com.android.purebilibili.data.model.response.SpaceDynamicMajor
 import com.android.purebilibili.data.model.response.SpaceDynamicModules
+import com.android.purebilibili.data.model.response.SpaceDynamicRichText
 import com.android.purebilibili.data.model.response.SpaceVideoItem
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -129,5 +132,48 @@ class ProfileSpacePolicyTest {
         )
 
         assertEquals("https://i0.hdslb.com/bfs/draw.jpg", resolveProfileDynamicCover(item))
+    }
+
+    @Test
+    fun `dynamic text prefers rich text nodes and keeps mentions`() {
+        val item = SpaceDynamicItem(
+            modules = SpaceDynamicModules(
+                module_author = SpaceDynamicAuthor(name = "测试用户", pub_time = "2026年05月29日"),
+                module_dynamic = SpaceDynamicContent(
+                    desc = SpaceDynamicDesc(
+                        rich_text_nodes = listOf(
+                            SpaceDynamicRichText(type = "RICH_TEXT_NODE_TYPE_AT", orig_text = "@影视飓风 "),
+                            SpaceDynamicRichText(type = "RICH_TEXT_NODE_TYPE_TEXT", text = "互动抽奖")
+                        ),
+                        text = "兜底文本"
+                    )
+                )
+            )
+        )
+
+        assertEquals("@影视飓风 互动抽奖", resolveProfileDynamicText(item))
+        assertEquals("测试用户", resolveProfileDynamicAuthorName(item))
+        assertEquals("2026年05月29日", resolveProfileDynamicPublishText(item))
+    }
+
+    @Test
+    fun `forward dynamic keeps original content cover and action count text`() {
+        val item = SpaceDynamicItem(
+            type = "DYNAMIC_TYPE_FORWARD",
+            orig = SpaceDynamicItem(
+                modules = SpaceDynamicModules(
+                    module_dynamic = SpaceDynamicContent(
+                        major = SpaceDynamicMajor(
+                            draw = SpaceDynamicDraw(
+                                items = listOf(SpaceDynamicDrawItem(src = "https://i0.hdslb.com/bfs/orig.jpg"))
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        assertEquals("https://i0.hdslb.com/bfs/orig.jpg", resolveProfileDynamicCover(item.orig!!))
+        assertEquals("点赞 1.2万", resolveProfileDynamicActionText("点赞", 12000))
     }
 }

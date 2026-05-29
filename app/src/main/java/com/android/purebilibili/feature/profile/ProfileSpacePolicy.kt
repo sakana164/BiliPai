@@ -7,6 +7,7 @@ import com.android.purebilibili.data.model.response.SpaceAggregateArchiveItem
 import com.android.purebilibili.data.model.response.SpaceAggregateData
 import com.android.purebilibili.data.model.response.SpaceAggregateFavoriteItem
 import com.android.purebilibili.data.model.response.SpaceDynamicItem
+import com.android.purebilibili.data.model.response.SpaceDynamicRichText
 import com.android.purebilibili.data.model.response.SpaceVideoItem
 import com.android.purebilibili.feature.home.UserState
 
@@ -165,4 +166,59 @@ fun resolveProfileDynamicCover(item: SpaceDynamicItem): String {
         ?: major?.opus?.pics?.firstOrNull { it.src.isNotBlank() }?.src
         ?: major?.article?.covers?.firstOrNull { it.isNotBlank() }
         ?: ""
+}
+
+fun resolveProfileDynamicText(item: SpaceDynamicItem): String {
+    val dynamic = item.modules.module_dynamic
+    val major = dynamic?.major
+    return listOf(
+        dynamic?.desc?.rich_text_nodes?.toProfileDynamicText(),
+        dynamic?.desc?.text,
+        major?.opus?.summary?.rich_text_nodes?.toProfileDynamicText(),
+        major?.opus?.summary?.text,
+        major?.article?.desc,
+        major?.archive?.desc,
+        major?.opus?.title,
+        major?.article?.title,
+        major?.archive?.title
+    ).firstNotBlank()
+}
+
+fun resolveProfileDynamicAuthorName(item: SpaceDynamicItem): String {
+    return item.modules.module_author?.name?.takeIf { it.isNotBlank() } ?: "动态"
+}
+
+fun resolveProfileDynamicPublishText(item: SpaceDynamicItem): String {
+    return item.modules.module_author?.pub_time?.takeIf { it.isNotBlank() } ?: ""
+}
+
+fun resolveProfileDynamicActionText(label: String, count: Int): String {
+    return if (count > 0) "$label ${formatProfileDynamicCount(count)}" else label
+}
+
+private fun List<SpaceDynamicRichText>.toProfileDynamicText(): String {
+    return joinToString(separator = "") { node ->
+        node.text
+            .ifBlank { node.orig_text }
+            .ifBlank { node.emoji?.text.orEmpty() }
+    }.trim()
+}
+
+private fun List<String?>.firstNotBlank(): String {
+    return firstOrNull { !it.isNullOrBlank() }?.orEmpty() ?: ""
+}
+
+private fun formatProfileDynamicCount(count: Int): String {
+    return when {
+        count >= 10000 -> {
+            val wan = count / 10000.0
+            val text = if (count % 10000 == 0) {
+                (count / 10000).toString()
+            } else {
+                String.format(java.util.Locale.US, "%.1f", wan).trimEnd('0').trimEnd('.')
+            }
+            "${text}万"
+        }
+        else -> count.toString()
+    }
 }

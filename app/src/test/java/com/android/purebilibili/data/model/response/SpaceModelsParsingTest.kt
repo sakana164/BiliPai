@@ -363,4 +363,89 @@ class SpaceModelsParsingTest {
         assertEquals(true, archive?.isChargingArc)
         assertEquals(1, archive?.elecArcType)
     }
+
+    @Test
+    fun decodeSpaceDynamicResponse_acceptsForwardOrigItem() {
+        val payload = """
+            {
+              "code": 0,
+              "message": "0",
+              "data": {
+                "items": [
+                  {
+                    "id_str": "forward-id",
+                    "type": "DYNAMIC_TYPE_FORWARD",
+                    "modules": {
+                      "module_author": {
+                        "name": "转发用户",
+                        "face": "https://i0.hdslb.com/bfs/face/user.jpg",
+                        "pub_time": "2026年05月29日"
+                      },
+                      "module_dynamic": {
+                        "desc": {
+                          "text": "转发动态"
+                        }
+                      },
+                      "module_stat": {
+                        "forward": { "count": 1, "hidden": false },
+                        "comment": { "count": "2", "hidden": false },
+                        "like": { "count": "1.2万", "status": true }
+                      }
+                    },
+                    "orig": {
+                      "id_str": "orig-id",
+                      "type": "DYNAMIC_TYPE_DRAW",
+                      "modules": {
+                        "module_author": {
+                          "name": "影视飓风",
+                          "face": "https://i0.hdslb.com/bfs/face/orig.jpg"
+                        },
+                        "module_dynamic": {
+                          "desc": {
+                            "rich_text_nodes": [
+                              { "type": "RICH_TEXT_NODE_TYPE_AT", "orig_text": "@影视飓风 " },
+                              { "type": "RICH_TEXT_NODE_TYPE_LOTTERY", "text": "互动抽奖" }
+                            ],
+                            "text": "@影视飓风 互动抽奖"
+                          },
+                          "major": {
+                            "type": "MAJOR_TYPE_DRAW",
+                            "draw": {
+                              "items": [
+                                {
+                                  "src": "https://i0.hdslb.com/bfs/new_dyn/orig.jpg",
+                                  "width": 1080,
+                                  "height": 1080
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+        """.trimIndent()
+
+        val response = json.decodeFromString<SpaceDynamicResponse>(payload)
+        val item = response.data?.items?.single()
+        val orig = item?.orig
+
+        assertEquals("DYNAMIC_TYPE_FORWARD", item?.type)
+        assertEquals("转发用户", item?.modules?.module_author?.name)
+        assertEquals(12000, item?.modules?.module_stat?.like?.count)
+        assertEquals(true, item?.modules?.module_stat?.like?.status)
+        assertEquals("orig-id", orig?.id_str)
+        assertEquals("影视飓风", orig?.modules?.module_author?.name)
+        assertEquals(
+            "https://i0.hdslb.com/bfs/new_dyn/orig.jpg",
+            orig?.modules?.module_dynamic?.major?.draw?.items?.single()?.src
+        )
+        assertEquals(
+            "@影视飓风 ",
+            orig?.modules?.module_dynamic?.desc?.rich_text_nodes?.first()?.orig_text
+        )
+    }
 }

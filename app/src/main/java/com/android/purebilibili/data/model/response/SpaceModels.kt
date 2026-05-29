@@ -552,6 +552,7 @@ data class SpaceDynamicItem(
     val basic: DynamicBasic? = null,
     val id_str: String = "",
     val modules: SpaceDynamicModules = SpaceDynamicModules(),
+    val orig: SpaceDynamicItem? = null,
     val type: String = "",  // DYNAMIC_TYPE_AV, DYNAMIC_TYPE_DRAW, DYNAMIC_TYPE_WORD 等
     val visible: Boolean = true
 )
@@ -685,7 +686,9 @@ data class SpaceDynamicStat(
 data class SpaceDynamicCount(
     @Serializable(with = FlexibleIntSerializer::class)
     val count: Int = 0,
-    val forbidden: Boolean = false
+    val forbidden: Boolean = false,
+    val hidden: Boolean = false,
+    val status: Boolean = false
 )
 
 // ==========  Space Audio Models ==========
