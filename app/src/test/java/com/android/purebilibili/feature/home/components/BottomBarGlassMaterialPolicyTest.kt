@@ -155,6 +155,23 @@ class BottomBarGlassMaterialPolicyTest {
     }
 
     @Test
+    fun `ios26 scroll material accepts fractional progress to avoid stop flash`() {
+        val settling = resolveBottomBarGlassMaterialSpec(
+            preset = BottomBarLiquidGlassPreset.IOS26_REFINED,
+            isDarkTheme = false,
+            isScrolling = false,
+            scrollProgress = 0.5f,
+            glassEnabled = true,
+            motionProgress = 0f,
+            pressProgress = 0f
+        )
+
+        assertEquals(6.5f, settling.blurRadiusDp!!, 0.001f)
+        assertEquals(0.025f, settling.foregroundTint.alpha, 0.002f)
+        assertEquals(1.25f, settling.highlightWidthScale, 0.001f)
+    }
+
+    @Test
     fun `container alpha is resolved by material policy`() {
         val tuned = resolveBottomBarGlassMaterialContainerColor(
             surfaceColor = Color.White,

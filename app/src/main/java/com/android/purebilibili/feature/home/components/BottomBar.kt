@@ -848,6 +848,7 @@ internal fun Modifier.kernelSuFloatingDockSurface(
     forceLowBlurBudget: Boolean,
     liquidGlassPreset: BottomBarLiquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
     isScrolling: Boolean = false,
+    materialScrollProgress: Float = if (isScrolling) 1f else 0f,
     materialMotionProgress: Float = 0f,
     materialPressProgress: Float = 0f
 ): Modifier = composed {
@@ -856,6 +857,7 @@ internal fun Modifier.kernelSuFloatingDockSurface(
         preset = liquidGlassPreset,
         isDarkTheme = isDarkTheme,
         isScrolling = isScrolling,
+        scrollProgress = materialScrollProgress,
         glassEnabled = glassEnabled,
         motionProgress = materialMotionProgress,
         pressProgress = materialPressProgress
@@ -2826,10 +2828,19 @@ private fun KernelSuAlignedBottomBar(
         isDragging = dampedDragState.isDragging
     )
     val indicatorLayerScaleProgress = maxOf(indicatorDragScaleProgress, effectivePressProgress)
+    val materialScrollProgress by animateFloatAsState(
+        targetValue = if (isFeedScrollInProgress) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 180,
+            easing = AppMotionEasing.Continuity
+        ),
+        label = "bottomBarMaterialScrollProgress"
+    )
     val materialSpec: BottomBarGlassMaterialSpec = resolveBottomBarGlassMaterialSpec(
         preset = liquidGlassPreset,
         isDarkTheme = isDarkTheme,
         isScrolling = isFeedScrollInProgress,
+        scrollProgress = materialScrollProgress,
         glassEnabled = glassEnabled,
         motionProgress = motionProgress,
         pressProgress = effectivePressProgress
@@ -3210,6 +3221,7 @@ private fun KernelSuAlignedBottomBar(
                     uiSkinDecoration = uiSkinDecoration,
                     liquidGlassPreset = liquidGlassPreset,
                     isScrolling = isFeedScrollInProgress,
+                    materialScrollProgress = materialScrollProgress,
                     materialMotionProgress = motionProgress,
                     materialPressProgress = effectivePressProgress
                 ) {
@@ -3463,6 +3475,7 @@ private fun KernelSuAlignedBottomBar(
                                         forceLowBlurBudget = forceLowBlurBudget,
                                         liquidGlassPreset = liquidGlassPreset,
                                         isScrolling = isFeedScrollInProgress,
+                                        materialScrollProgress = materialScrollProgress,
                                         materialMotionProgress = motionProgress,
                                         materialPressProgress = effectivePressProgress
                                     ),
@@ -3652,6 +3665,7 @@ private fun KernelSuAlignedBottomBar(
                     haptic = haptic,
                     liquidGlassPreset = liquidGlassPreset,
                     isScrolling = isFeedScrollInProgress,
+                    materialScrollProgress = materialScrollProgress,
                     materialMotionProgress = motionProgress,
                     materialPressProgress = effectivePressProgress
                 )
@@ -3682,6 +3696,7 @@ private fun KernelSuBottomBarShell(
     uiSkinDecoration: BottomBarUiSkinDecoration?,
     liquidGlassPreset: BottomBarLiquidGlassPreset,
     isScrolling: Boolean,
+    materialScrollProgress: Float,
     materialMotionProgress: Float,
     materialPressProgress: Float,
     content: @Composable BoxScope.() -> Unit
@@ -3713,6 +3728,7 @@ private fun KernelSuBottomBarShell(
                     forceLowBlurBudget = forceLowBlurBudget,
                     liquidGlassPreset = liquidGlassPreset,
                     isScrolling = isScrolling,
+                    materialScrollProgress = materialScrollProgress,
                     materialMotionProgress = materialMotionProgress,
                     materialPressProgress = materialPressProgress
                 )
@@ -3926,6 +3942,7 @@ private fun KernelSuBottomBarSearchSlot(
     haptic: (HapticType) -> Unit,
     liquidGlassPreset: BottomBarLiquidGlassPreset,
     isScrolling: Boolean,
+    materialScrollProgress: Float,
     materialMotionProgress: Float,
     materialPressProgress: Float
 ) {
@@ -3958,6 +3975,7 @@ private fun KernelSuBottomBarSearchSlot(
             haptic = haptic,
             liquidGlassPreset = liquidGlassPreset,
             isScrolling = isScrolling,
+            materialScrollProgress = materialScrollProgress,
             materialMotionProgress = materialMotionProgress,
             materialPressProgress = materialPressProgress
         )
@@ -3987,6 +4005,7 @@ private fun KernelSuBottomBarSearchCapsule(
     haptic: (HapticType) -> Unit,
     liquidGlassPreset: BottomBarLiquidGlassPreset,
     isScrolling: Boolean,
+    materialScrollProgress: Float,
     materialMotionProgress: Float,
     materialPressProgress: Float
 ) {
@@ -4046,6 +4065,7 @@ private fun KernelSuBottomBarSearchCapsule(
                 forceLowBlurBudget = forceLowBlurBudget,
                 liquidGlassPreset = liquidGlassPreset,
                 isScrolling = isScrolling,
+                materialScrollProgress = materialScrollProgress,
                 materialMotionProgress = materialMotionProgress,
                 materialPressProgress = materialPressProgress
             )

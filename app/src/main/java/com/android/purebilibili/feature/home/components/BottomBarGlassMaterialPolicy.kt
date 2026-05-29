@@ -33,6 +33,7 @@ internal fun resolveBottomBarGlassMaterialSpec(
     preset: BottomBarLiquidGlassPreset,
     isDarkTheme: Boolean,
     isScrolling: Boolean,
+    scrollProgress: Float = if (isScrolling) 1f else 0f,
     glassEnabled: Boolean,
     motionProgress: Float,
     pressProgress: Float
@@ -55,7 +56,7 @@ internal fun resolveBottomBarGlassMaterialSpec(
         BottomBarLiquidGlassPreset.BILIPAI_TUNED -> bilipaiTunedBottomBarGlassMaterial()
         BottomBarLiquidGlassPreset.IOS26_REFINED -> ios26BottomBarGlassMaterial(
             isDarkTheme = isDarkTheme,
-            isScrolling = isScrolling,
+            scrollProgress = scrollProgress,
             motionProgress = motionProgress,
             pressProgress = pressProgress
         )
@@ -93,18 +94,18 @@ private fun bilipaiTunedBottomBarGlassMaterial(): BottomBarGlassMaterialSpec =
 
 private fun ios26BottomBarGlassMaterial(
     isDarkTheme: Boolean,
-    isScrolling: Boolean,
+    scrollProgress: Float,
     motionProgress: Float,
     pressProgress: Float
 ): BottomBarGlassMaterialSpec {
+    val clampedScrollProgress = scrollProgress.coerceIn(0f, 1f)
     val activity = maxOf(
-        if (isScrolling) 1f else 0f,
+        clampedScrollProgress,
         motionProgress.coerceIn(0f, 1f) * 0.45f,
         pressProgress.coerceIn(0f, 1f) * 0.35f
     )
-    // 可读性兜底：仅随上下滚动抬高前景层，与 motion/press 无关
-    val scrollReadability = if (isScrolling) 1f else 0f
-    val readabilityAlpha = lerp(0f, 0.05f, scrollReadability)
+    // 可读性兜底只跟随滚动进度，避免滚动停止时由 Boolean 边沿造成整层闪烁。
+    val readabilityAlpha = lerp(0f, 0.05f, clampedScrollProgress)
     return BottomBarGlassMaterialSpec(
         blurRadiusDp = lerp(7f, 6f, activity),
         vibrancy = false,
