@@ -98,6 +98,7 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
+import com.android.purebilibili.core.ui.blur.shouldAllowRuntimeShaderBackedHazeEffect
 import java.io.File
 
 private const val HOME_HEADER_LIQUID_GLASS_ALPHA = 0.10f
@@ -1415,7 +1416,7 @@ internal fun Modifier.homeTopChromeSurface(
         }
 
         HomeTopChromeRenderMode.LIQUID_GLASS_HAZE -> {
-            if (hazeState != null) {
+            if (hazeState != null && shouldAllowRuntimeShaderBackedHazeEffect(Build.VERSION.SDK_INT)) {
                 if (surfaceTreatment == HomeTopChromeSurfaceTreatment.FLAT_GLASS) {
                     this
                         .hazeEffect(
