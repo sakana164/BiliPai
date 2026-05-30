@@ -3756,16 +3756,19 @@ private fun BoxScope.KernelSuBottomBarIndicatorLayer(
     } else {
         BottomBarIndicatorLayerTransform(scaleX = 1f, scaleY = 1f)
     }
+    val indicatorLayerWidth = indicatorWidth * indicatorLayerTransform.scaleX
+    val indicatorLayerHeight = 56.dp * indicatorLayerTransform.scaleY
     Box(
         modifier = Modifier
             .alpha(dockContentAlpha)
             .graphicsLayer {
-                translationX = indicatorTranslationXPx + indicatorPanelOffsetPx
-                scaleX = indicatorSettleReboundTransform.scaleX * indicatorLayerTransform.scaleX
-                scaleY = indicatorSettleReboundTransform.scaleY * indicatorLayerTransform.scaleY
+                translationX = indicatorTranslationXPx + indicatorPanelOffsetPx -
+                    ((indicatorLayerWidth - indicatorWidth) / 2f).toPx()
+                scaleX = indicatorSettleReboundTransform.scaleX
+                scaleY = indicatorSettleReboundTransform.scaleY
             }
-            .width(indicatorWidth)
-            .height(56.dp)
+            .width(indicatorLayerWidth)
+            .height(indicatorLayerHeight)
             .align(Alignment.CenterStart)
             .run {
                 val indicatorBackdrop = if (shouldUseBottomBarCombinedIndicatorBackdrop(liquidGlassPreset)) {
