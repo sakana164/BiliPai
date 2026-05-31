@@ -4,7 +4,7 @@
 
 ### 版本信息
 - 版本号从 `8.8.0` 升级到 `9.0.0`，`versionCode` 升级到 `213`。
-- 本次为 8.8.0 后的主线更新，重点补齐直播互动与横屏发送、评论输入与楼层体验、首页顶部标签/分区指示器/液态玻璃动效、离线下载与番剧影视能力，并修复 MD3 下拉刷新与胶囊标签点击态问题。
+- 本次为 8.8.0 后的主线更新，重点补齐直播互动与横屏发送、评论输入与楼层体验、首页顶部标签/分区指示器/液态玻璃动效、CDN 稳播优选、空降助手统计、离线下载与番剧影视能力，并修复 MD3 下拉刷新与胶囊标签点击态问题。
 - 六一儿童节快乐；也提前祝高考学子高考顺利，落笔生花，奔赴热爱。
 
 ### 更新内容
@@ -18,6 +18,8 @@
 - **首页返回与底栏收尾修复**：修复首页视频返回时顶栏复位、底栏重复隐藏、底栏收尾和延迟恢复问题，让返回路径的顶部/底部镀铬状态更稳定。
 - **离线下载与本地播放增强**：增强离线下载与断点续传稳定性，修复离线播放器弹幕与进度条体验，离线播放链路更可靠。
 - **番剧影视 API 完善**：完善番剧影视 API 功能，扩展内容获取与页面承载能力。
+- **CDN 稳播优选与手动检测**：优化 CDN 区域优选、播放 fallback 和手动检测链路，提升弱网或区域节点不稳时的播放恢复能力。
+- **空降助手统计与卡片修复**：补齐空降助手洞察统计和卡片展示策略，修复相关卡片状态与 CDN 手动检测联动问题。
 - **骨架屏同步呼吸光**：首页与视频详情骨架屏改为统一节奏的同步呼吸光动画，首屏加载和详情加载占位更一致。
 - **首页下拉刷新修复**：MD3 下拉刷新按完整指示器和提示文字高度预留空间，内容下移更跟手，刷新指示器层级高于视频卡片，避免被视频遮挡。
 - **顶部胶囊点击态修复**：胶囊指示器场景关闭默认矩形水波纹，普通 MD3 下划线标签保留点击反馈，修复点按切换时胶囊周围出现矩形形状的问题。
@@ -33,6 +35,7 @@
 - `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.feature.home.components.TopTabMotionVelocityTest'`
 - `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.feature.home.components.BottomBarIndicatorPolicyTest'`
 - `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.feature.home.HomeFeedSkeletonCardStructureTest' --tests 'com.android.purebilibili.feature.video.ui.components.VideoDetailSkeletonStructureTest'`
+- `./gradlew :app:testDebugUnitTest --tests 'com.android.purebilibili.feature.plugin.CdnRegionPolicyTest' --tests 'com.android.purebilibili.feature.plugin.SponsorBlockPluginPolicyTest' --tests 'com.android.purebilibili.feature.video.viewmodel.PlaybackCdnFallbackPolicyTest' --tests 'com.android.purebilibili.core.network.NetworkClientPolicyTest'`
 - `git diff --check`
 
 ## v8.8.0 (2026-05-31)
