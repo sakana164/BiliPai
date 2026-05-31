@@ -101,14 +101,12 @@ import com.android.purebilibili.feature.home.components.cards.ElegantVideoCard
 import com.android.purebilibili.feature.home.components.cards.LiveRoomCard
 import com.android.purebilibili.feature.home.components.cards.StoryVideoCard   //  故事卡片
 import com.android.purebilibili.core.ui.LoadingAnimation
-import com.android.purebilibili.core.ui.VideoCardSkeleton
 import com.android.purebilibili.core.ui.ErrorState as ModernErrorState
 import com.android.purebilibili.core.ui.AppShapes
 import com.android.purebilibili.core.ui.AppSurfaceTokens
 import com.android.purebilibili.core.ui.ContainerLevel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
-import com.android.purebilibili.core.ui.shimmer
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope  //  共享过渡
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
 import com.android.purebilibili.core.ui.animation.DissolvableVideoCard  //  粒子消散动画
@@ -1489,6 +1487,7 @@ fun HomeScreen(
                              ) {
                              if (category != HomeCategory.POPULAR && categoryState.isLoading && categoryState.videos.isEmpty() && categoryState.liveRooms.isEmpty()) {
                                  // Loading Skeleton per page
+                                 val skeletonPulse = rememberHomeFeedSkeletonPulse()
                                  LazyVerticalGrid(
                                      columns = GridCells.Fixed(gridColumns),
                                      contentPadding = PaddingValues(
@@ -1501,9 +1500,17 @@ fun HomeScreen(
                                  ) {
                                      // [Fix] Dynamic skeleton count to fill tablet screens (at least 5 rows)
                                      val skeletonItemCount = gridColumns * 5
-                                     // [Fix] Use modulo to prevent excessive delay for large item counts on tablet
-                                     // Cap the animation wave to ~10 items (approx 800ms max delay) to ensure visibility
-                                     items(skeletonItemCount) { index -> VideoCardSkeleton(index = index % 10) }
+                                     items(
+                                         count = skeletonItemCount,
+                                         contentType = { "home_feed_skeleton_card" }
+                                     ) {
+                                         HomeFeedSkeletonCard(
+                                             pulse = skeletonPulse,
+                                             wallpaperTintEnabled = homeWallpaperBackdropAppearance.visible,
+                                             wallpaperEffectMode = homeSettings.homeWallpaperEffectMode,
+                                             isDataSaverActive = isDataSaverActive
+                                         )
+                                     }
                                  }
                              } else if (categoryState.error != null && categoryState.videos.isEmpty()) {
                                  // Error State per page
