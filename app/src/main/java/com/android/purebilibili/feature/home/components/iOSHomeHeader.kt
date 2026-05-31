@@ -2012,12 +2012,13 @@ fun iOSHomeHeader(
             drawUnifiedTopPanelChrome &&
             currentSearchHeight > 0.dp &&
             searchRevealFraction > 0f
+    val topTabDockChromeRenderMode = unifiedLocalTabChromeRenderMode
     val useTopTabBottomBarMatchedDock =
         useUnifiedTopPanel &&
             effectiveTabMaterialMode == TopTabMaterialMode.LIQUID_GLASS &&
             (
-                effectiveTabChromeRenderMode == HomeTopChromeRenderMode.LIQUID_GLASS_BACKDROP ||
-                    effectiveTabChromeRenderMode == HomeTopChromeRenderMode.LIQUID_GLASS_HAZE
+                topTabDockChromeRenderMode == HomeTopChromeRenderMode.LIQUID_GLASS_BACKDROP ||
+                    topTabDockChromeRenderMode == HomeTopChromeRenderMode.LIQUID_GLASS_HAZE
             )
     val drawTopTabDockChrome = drawTopTabOuterChromeSurface || useTopTabBottomBarMatchedDock
     val currentTabToSearchSpacing = currentSearchToTabsSpacing + if (drawTopSearchDivider) {
@@ -2060,7 +2061,11 @@ fun iOSHomeHeader(
             } else {
                 tabShape
             },
-            tabChromeRenderMode = effectiveTabChromeRenderMode,
+            tabChromeRenderMode = if (useTopTabBottomBarMatchedDock) {
+                topTabDockChromeRenderMode
+            } else {
+                effectiveTabChromeRenderMode
+            },
             tabSurfaceColor = skinTintedTabSurfaceColor,
             hazeState = hazeState,
             backdrop = backdrop,
