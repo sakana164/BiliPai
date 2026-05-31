@@ -153,6 +153,8 @@ class HomeChromeLiquidSurfaceStructureTest {
                 topBarSource.contains("if (shouldRenderTopTabLiquidGlassIndicator)") &&
                 topBarSource.contains("val shouldUseMd3DockBackedCapsule =") &&
                 topBarSource.contains("KernelSuBottomBarIndicatorLayer(") &&
+                topBarSource.contains("val shouldPrimeTopTabLiquidGlassCapture =") &&
+                topBarSource.contains("(isLiquidGlassEnabled || backdrop != null)") &&
                 topBarSource.contains("val topTabContentBackdrop = rememberLayerBackdrop()") &&
                 topBarSource.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)") &&
                 topBarSource.contains("layerBackdrop(topTabContentBackdrop)") &&

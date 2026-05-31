@@ -987,8 +987,12 @@ private fun LightweightHomeTopTabs(
         val shouldUseMd3DockBackedCapsule = effectiveRenderer == HomeTopTabRenderer.MD3 &&
             shouldUseLiquidGlassIndicator &&
             hasOuterChromeSurface
+        val shouldPrimeTopTabLiquidGlassCapture =
+            (isLiquidGlassEnabled || backdrop != null) &&
+                !skinPlainStyle &&
+                !hasSkinStickerIcons
         val topTabContentBackdrop = rememberLayerBackdrop()
-        val topTabIndicatorContentBackdrop = if (shouldUseLiquidGlassIndicator && backdrop != null) {
+        val topTabIndicatorContentBackdrop = if (shouldPrimeTopTabLiquidGlassCapture && backdrop != null) {
             rememberCombinedBackdrop(backdrop, topTabContentBackdrop)
         } else {
             topTabContentBackdrop
@@ -1200,7 +1204,7 @@ private fun LightweightHomeTopTabs(
                     modifier = Modifier
                         .fillMaxSize()
                         .run {
-                            if (shouldUseLiquidGlassIndicator) {
+                            if (shouldPrimeTopTabLiquidGlassCapture) {
                                 layerBackdrop(topTabContentBackdrop)
                             } else {
                                 this
