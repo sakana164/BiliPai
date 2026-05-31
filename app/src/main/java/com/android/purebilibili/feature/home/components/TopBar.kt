@@ -117,6 +117,41 @@ internal fun resolveTopTabRowHorizontalPaddingDp(
     return if (isFloatingStyle) 0f else 4f
 }
 
+internal fun resolveTopTabDockIndicatorHorizontalGapDp(hasOuterChromeSurface: Boolean): Float =
+    if (hasOuterChromeSurface) 6f else 3f
+
+internal fun resolveTopTabDockIndicatorVerticalGapDp(hasOuterChromeSurface: Boolean): Float =
+    if (hasOuterChromeSurface) 6f else 4f
+
+internal fun resolveTopTabDockIndicatorWidthDp(
+    itemWidthDp: Float,
+    horizontalGapDp: Float,
+    minWidthDp: Float = 0f
+): Float {
+    if (itemWidthDp <= 0f) return 0f
+    val maxWidth = (itemWidthDp - horizontalGapDp.coerceAtLeast(0f) * 2f)
+        .coerceAtLeast(0f)
+    val minWidth = minWidthDp.coerceIn(0f, itemWidthDp)
+    return maxWidth.coerceAtLeast(minWidth)
+}
+
+internal fun resolveTopTabDockIndicatorHeightDp(
+    rowHeightDp: Float,
+    verticalGapDp: Float,
+    minHeightDp: Float
+): Float {
+    if (rowHeightDp <= 0f) return 0f
+    val maxHeight = (rowHeightDp - verticalGapDp.coerceAtLeast(0f) * 2f)
+        .coerceAtLeast(0f)
+    val minHeight = minHeightDp.coerceIn(0f, rowHeightDp)
+    return maxHeight.coerceAtLeast(minHeight)
+}
+
+internal fun resolveTopTabDockIndicatorOffsetPx(
+    slotTranslationPx: Float,
+    horizontalGapPx: Float
+): Float = slotTranslationPx + horizontalGapPx.coerceAtLeast(0f)
+
 internal fun resolveTopTabVisibleSlots(
     categoryCount: Int,
     longestLabelLength: Int = 0
@@ -641,6 +676,7 @@ private fun LightweightHomeTopTabs(
     backdrop: LayerBackdrop? = null,
     topTabSkinIconPaths: Map<String, TopTabSkinIconPaths> = emptyMap(),
     partitionSkinIconPath: String? = null,
+    hasOuterChromeSurface: Boolean = false,
     showPartitionAction: Boolean = true
 ) {
     val uiPreset = LocalUiPreset.current
@@ -787,6 +823,17 @@ private fun LightweightHomeTopTabs(
         val density = LocalDensity.current
         val isDarkTheme = isSystemInDarkTheme()
         val md3IndicatorWidth = if (skinPlainStyle) 30.dp else 28.dp
+        val dockIndicatorHorizontalGap = resolveTopTabDockIndicatorHorizontalGapDp(
+            hasOuterChromeSurface = hasOuterChromeSurface
+        ).dp
+        val dockIndicatorVerticalGap = resolveTopTabDockIndicatorVerticalGapDp(
+            hasOuterChromeSurface = hasOuterChromeSurface
+        ).dp
+        val dockIndicatorHeight = resolveTopTabDockIndicatorHeightDp(
+            rowHeightDp = rowHeight.value,
+            verticalGapDp = dockIndicatorVerticalGap.value,
+            minHeightDp = if (hasOuterChromeSurface) 2f else 30f
+        ).dp
         val md3TopTabVerticalLiftPx = if (skinPlainStyle) {
             0f
         } else {
@@ -891,7 +938,11 @@ private fun LightweightHomeTopTabs(
                 }
             }
         }
-        val md3LiquidCapsuleWidth = (itemWidth - 6.dp).coerceAtLeast(md3IndicatorWidth)
+        val md3LiquidCapsuleWidth = resolveTopTabDockIndicatorWidthDp(
+            itemWidthDp = itemWidth.value,
+            horizontalGapDp = dockIndicatorHorizontalGap.value,
+            minWidthDp = md3IndicatorWidth.value
+        ).dp
         val md3LiquidCapsuleTranslationXPx by remember(
             topTabIndicatorPosition,
             itemWidth,
@@ -994,17 +1045,24 @@ private fun LightweightHomeTopTabs(
                 if (shouldUseMovingIosCapsule) {
                     if (shouldUseLiquidGlassIndicator) {
                         val capsuleShape = resolveSharedBottomBarCapsuleShape()
-                        val indicatorWidth = (itemWidth - 6.dp).coerceAtLeast(0.dp)
+                        val indicatorWidth = resolveTopTabDockIndicatorWidthDp(
+                            itemWidthDp = itemWidth.value,
+                            horizontalGapDp = dockIndicatorHorizontalGap.value
+                        ).dp
                         BottomBarLiquidIndicatorSurface(
                             modifier = Modifier
                                 .align(Alignment.CenterStart)
                                 .graphicsLayer {
-                                    translationX = iosCapsuleTranslationXPx +
-                                        topTabPanelOffsetPx +
-                                        with(density) { 3.dp.toPx() }
+                                    translationX = resolveTopTabDockIndicatorOffsetPx(
+                                        slotTranslationPx = iosCapsuleTranslationXPx +
+                                            topTabPanelOffsetPx,
+                                        horizontalGapPx = with(density) {
+                                            dockIndicatorHorizontalGap.toPx()
+                                        }
+                                    )
                                 }
                                 .width(indicatorWidth)
-                                .height((rowHeight - 8.dp).coerceAtLeast(2.dp)),
+                                .height(dockIndicatorHeight),
                             shape = capsuleShape,
                             liquidGlassEnabled = true,
                             backdrop = backdrop,
@@ -1041,7 +1099,10 @@ private fun LightweightHomeTopTabs(
                                 }
                                 .width(itemWidth)
                                 .fillMaxHeight()
-                                .padding(horizontal = 3.dp, vertical = 4.dp)
+                                .padding(
+                                    horizontal = dockIndicatorHorizontalGap,
+                                    vertical = dockIndicatorVerticalGap
+                                )
                                 .clip(capsuleShape)
                                 .background(
                                     resolveIosTopTabCapsuleContainerColor(
@@ -1062,7 +1123,7 @@ private fun LightweightHomeTopTabs(
                                 translationX = md3LiquidCapsuleTranslationXPx + topTabPanelOffsetPx
                             }
                             .width(md3LiquidCapsuleWidth)
-                            .height((rowHeight - 8.dp).coerceAtLeast(30.dp)),
+                            .height(dockIndicatorHeight),
                         shape = capsuleShape,
                         liquidGlassEnabled = true,
                         backdrop = backdrop,
@@ -1470,6 +1531,7 @@ fun CategoryTabRow(
         backdrop = backdrop,
         topTabSkinIconPaths = topTabSkinIconPaths,
         partitionSkinIconPath = partitionSkinIconPath,
+        hasOuterChromeSurface = hasOuterChromeSurface,
         showPartitionAction = showPartitionAction
     )
 }
