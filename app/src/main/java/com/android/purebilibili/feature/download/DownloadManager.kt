@@ -56,6 +56,7 @@ object DownloadManager {
     
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
     private val client = OkHttpClient.Builder()
+        .protocols(com.android.purebilibili.core.network.NetworkModule.resolveSharedNetworkProtocols())
         .followRedirects(true)
         .build()
     private val assetDownloader = ResumableAssetDownloader(client)

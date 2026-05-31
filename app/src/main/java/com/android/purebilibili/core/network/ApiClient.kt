@@ -2117,6 +2117,10 @@ object NetworkModule {
                 val request = builder.build()
                 try {
                     val response = chain.proceed(request)
+                    com.android.purebilibili.core.util.Logger.d(
+                        "ApiClient",
+                        " Network protocol: ${response.protocol} ${request.url.host}${request.url.encodedPath}"
+                    )
                     if (response.code >= 500 || response.code == 429 || response.code == 412) {
                         com.android.purebilibili.core.util.CrashReporter.reportApiError(
                             endpoint = "${request.method} ${request.url.encodedPath}",
@@ -2203,6 +2207,10 @@ object NetworkModule {
                 val request = builder.build()
                 try {
                     val response = chain.proceed(request)
+                    com.android.purebilibili.core.util.Logger.d(
+                        "ApiClient",
+                        " Guest network protocol: ${response.protocol} ${request.url.host}${request.url.encodedPath}"
+                    )
                     if (response.code >= 500 || response.code == 429 || response.code == 412) {
                         com.android.purebilibili.core.util.CrashReporter.reportApiError(
                             endpoint = "guest ${request.method} ${request.url.encodedPath}",

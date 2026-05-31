@@ -2,6 +2,11 @@
 package com.android.purebilibili.feature.plugin
 
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
@@ -13,6 +18,7 @@ import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
 import io.github.alexzhirkevich.cupertino.icons.filled.*
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -30,6 +36,7 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.android.purebilibili.core.plugin.PlayerPluginApi
@@ -58,6 +65,8 @@ import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.io.File
+import java.io.FileOutputStream
 
 private const val TAG = "SponsorBlockPlugin"
 const val SPONSOR_BLOCK_PLUGIN_ID = "sponsor_block"
@@ -143,7 +152,7 @@ class SponsorBlockPlugin : PlayerPluginApi {
     override val id = SPONSOR_BLOCK_PLUGIN_ID
     override val name = "空降助手"
     override val description = "自动跳过视频中的广告、赞助、片头片尾等片段"
-    override val version = "1.0.0"
+    override val version = "1.1.0"
     override val author = "BiliPai项目组"
     override val icon: ImageVector = CupertinoIcons.Default.Paperplane
     override val capabilityManifest: PluginCapabilityManifest = PluginCapabilityManifest(
@@ -419,7 +428,10 @@ class SponsorBlockPlugin : PlayerPluginApi {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            SponsorBlockInsightPanel(summary = insightSummary)
+            SponsorBlockInsightPanel(
+                summary = insightSummary,
+                onShareClick = { shareSponsorBlockInsightImage(context, insightSummary) }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -520,7 +532,10 @@ class SponsorBlockPlugin : PlayerPluginApi {
 }
 
 @Composable
-private fun SponsorBlockInsightPanel(summary: SponsorBlockInsightSummary) {
+private fun SponsorBlockInsightPanel(
+    summary: SponsorBlockInsightSummary,
+    onShareClick: () -> Unit
+) {
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
@@ -536,6 +551,7 @@ private fun SponsorBlockInsightPanel(summary: SponsorBlockInsightSummary) {
             ) {
                 SponsorBlockSummaryRail(
                     summary = summary,
+                    onShareClick = onShareClick,
                     modifier = Modifier.widthIn(min = 156.dp, max = 190.dp)
                 )
                 SponsorBlockRecentSection(
@@ -550,6 +566,14 @@ private fun SponsorBlockInsightPanel(summary: SponsorBlockInsightSummary) {
             ) {
                 SponsorBlockSummaryHeader(summary = summary)
                 SponsorBlockCompactStats(summary = summary)
+                SponsorBlockPeriodStats(summary = summary)
+                SponsorBlockFavoriteSection(summary = summary)
+                Button(
+                    onClick = onShareClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("分享统计图片")
+                }
                 SponsorBlockRecentSection(summary = summary)
             }
         }
@@ -559,6 +583,7 @@ private fun SponsorBlockInsightPanel(summary: SponsorBlockInsightSummary) {
 @Composable
 private fun SponsorBlockSummaryRail(
     summary: SponsorBlockInsightSummary,
+    onShareClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -587,6 +612,14 @@ private fun SponsorBlockSummaryRail(
                 value = "${summary.uniqueUpCount}",
                 modifier = Modifier.weight(1f)
             )
+        }
+        SponsorBlockPeriodStats(summary = summary)
+        SponsorBlockFavoriteSection(summary = summary)
+        Button(
+            onClick = onShareClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("分享统计图片")
         }
     }
 }
@@ -689,6 +722,83 @@ private fun SponsorBlockCompactStatItem(
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun SponsorBlockPeriodStats(summary: SponsorBlockInsightSummary) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = "频次对比",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium
+        )
+        summary.periodStats.forEach { stat ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stat.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${stat.skipCount} 次 · ${stat.uniqueVideoCount} 个视频",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SponsorBlockFavoriteSection(summary: SponsorBlockInsightSummary) {
+    val topVideoText = summary.topVideo?.let {
+        "${it.title.ifBlank { it.bvid }} · ${it.skipCount} 次"
+    } ?: "暂无"
+    val topUpText = summary.topUp?.let {
+        "${it.name.ifBlank { "未知UP" }} · ${it.skipCount} 次"
+    } ?: "暂无"
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        SponsorBlockFavoriteRow(title = "最常跳过视频", value = topVideoText)
+        SponsorBlockFavoriteRow(title = "最常命中 UP", value = topUpText)
+    }
+}
+
+@Composable
+private fun SponsorBlockFavoriteRow(title: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
     }
@@ -917,6 +1027,137 @@ private fun SponsorBlockChip(text: String) {
             overflow = TextOverflow.Ellipsis
         )
     }
+}
+
+private fun shareSponsorBlockInsightImage(
+    context: Context,
+    summary: SponsorBlockInsightSummary
+) {
+    runCatching {
+        val bitmap = buildSponsorBlockInsightBitmap(summary)
+        val shareDir = File(context.cacheDir, "shared_images").apply { mkdirs() }
+        val shareFile = File(shareDir, "sponsor_block_insight.png")
+        FileOutputStream(shareFile).use { output ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+        }
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            shareFile
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_TEXT, buildSponsorBlockInsightShareText(summary))
+            putExtra(Intent.EXTRA_SUBJECT, "BiliPai 空降助手统计")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(Intent.createChooser(intent, "分享空降助手统计"))
+    }.onFailure { error ->
+        Logger.e(TAG, "分享空降助手统计图片失败: ${error.message}")
+        android.widget.Toast.makeText(context, "分享图片生成失败", android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun buildSponsorBlockInsightBitmap(summary: SponsorBlockInsightSummary): Bitmap {
+    val width = 1080
+    val horizontalPadding = 72f
+    val bitmap = Bitmap.createBitmap(width, 1480, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    canvas.drawColor(AndroidColor.rgb(18, 24, 34))
+
+    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        textSize = 54f
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+    }
+    val subtitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.rgb(190, 202, 218)
+        textSize = 30f
+    }
+    val valuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.rgb(255, 214, 102)
+        textSize = 42f
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+    }
+    val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.rgb(230, 236, 244)
+        textSize = 32f
+    }
+    val cardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.rgb(34, 44, 59)
+    }
+
+    var y = 96f
+    canvas.drawText("BiliPai 空降助手统计", horizontalPadding, y, titlePaint)
+    y += 54f
+    canvas.drawText("记录只保存在本地，可一键分享", horizontalPadding, y, subtitlePaint)
+
+    y += 58f
+    drawSponsorShareCard(canvas, cardPaint, horizontalPadding, y, width - horizontalPadding, y + 190f)
+    canvas.drawText("累计跳过", horizontalPadding + 34f, y + 62f, subtitlePaint)
+    canvas.drawText("${summary.totalSkipCount} 次", horizontalPadding + 34f, y + 128f, valuePaint)
+    canvas.drawText("累计节省 ${summary.totalSavedText}", horizontalPadding + 430f, y + 128f, valuePaint)
+
+    y += 245f
+    summary.periodStats.forEach { stat ->
+        drawSponsorShareCard(canvas, cardPaint, horizontalPadding, y, width - horizontalPadding, y + 118f)
+        canvas.drawText(stat.label, horizontalPadding + 30f, y + 48f, bodyPaint)
+        canvas.drawText("${stat.skipCount} 次 / ${stat.uniqueVideoCount} 个视频", horizontalPadding + 260f, y + 48f, bodyPaint)
+        canvas.drawText("节省 ${stat.savedText}", horizontalPadding + 260f, y + 90f, subtitlePaint)
+        y += 136f
+    }
+
+    y += 18f
+    val topVideo = summary.topVideo?.let {
+        "最常跳过视频：${it.title.ifBlank { it.bvid }}（${it.skipCount} 次）"
+    } ?: "最常跳过视频：暂无"
+    val topUp = summary.topUp?.let {
+        "最常命中 UP：${it.name.ifBlank { "未知UP" }}（${it.skipCount} 次，${it.uniqueVideoCount} 个视频）"
+    } ?: "最常命中 UP：暂无"
+    listOf(topVideo, topUp).forEach { line ->
+        wrapShareText(line, bodyPaint, width - horizontalPadding * 2 - 40f).forEach { wrapped ->
+            canvas.drawText(wrapped, horizontalPadding, y, bodyPaint)
+            y += 44f
+        }
+        y += 16f
+    }
+
+    canvas.drawText("由 BiliPai 生成", horizontalPadding, 1408f, subtitlePaint)
+    return bitmap
+}
+
+private fun drawSponsorShareCard(
+    canvas: Canvas,
+    paint: Paint,
+    left: Float,
+    top: Float,
+    right: Float,
+    bottom: Float
+) {
+    canvas.drawRoundRect(left, top, right, bottom, 28f, 28f, paint)
+}
+
+private fun wrapShareText(
+    text: String,
+    paint: Paint,
+    maxWidth: Float
+): List<String> {
+    if (paint.measureText(text) <= maxWidth) return listOf(text)
+    val result = mutableListOf<String>()
+    var current = ""
+    text.forEach { char ->
+        val next = current + char
+        if (paint.measureText(next) > maxWidth && current.isNotEmpty()) {
+            result += current
+            current = char.toString()
+        } else {
+            current = next
+        }
+    }
+    if (current.isNotEmpty()) result += current
+    return result
 }
 
 /**

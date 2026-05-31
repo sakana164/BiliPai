@@ -1,6 +1,9 @@
 package com.android.purebilibili.feature.video.viewmodel
 
 import com.android.purebilibili.data.model.response.DashAudio
+import com.android.purebilibili.feature.plugin.CdnCandidateHealth
+import com.android.purebilibili.feature.plugin.CdnHealthEvent
+import com.android.purebilibili.feature.plugin.recordCdnHealthEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -165,5 +168,27 @@ class PlaybackCdnFallbackPolicyTest {
                 audioRendererError = false
             )
         )
+    }
+
+    @Test
+    fun `cdn playback failures record negative health feedback`() {
+        val initial = CdnCandidateHealth(host = "cn-sh-ct-01-01.bilivideo.com")
+        val timeout = recordCdnHealthEvent(initial, CdnHealthEvent.FIRST_FRAME_TIMEOUT, nowMs = 1_000L)
+        val audioMissing = recordCdnHealthEvent(timeout, CdnHealthEvent.AUDIO_TRACK_MISSING, nowMs = 2_000L)
+        val playerError = recordCdnHealthEvent(audioMissing, CdnHealthEvent.PLAYER_ERROR, nowMs = 3_000L)
+
+        assertEquals(1, playerError.firstFrameTimeoutCount)
+        assertEquals(2, playerError.playbackErrorCount)
+        assertEquals(3_000L, playerError.lastUpdatedAtMs)
+    }
+
+    @Test
+    fun `ready playback records positive health feedback`() {
+        val initial = CdnCandidateHealth(host = "cn-sh-ct-01-01.bilivideo.com")
+        val ready = recordCdnHealthEvent(initial, CdnHealthEvent.PLAYBACK_READY, nowMs = 1_000L)
+
+        assertEquals(1, ready.readyCount)
+        assertEquals(0, ready.playbackErrorCount)
+        assertEquals(1_000L, ready.lastUpdatedAtMs)
     }
 }

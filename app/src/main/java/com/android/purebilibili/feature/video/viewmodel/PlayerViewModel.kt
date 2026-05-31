@@ -33,6 +33,8 @@ import com.android.purebilibili.data.repository.VideoNoteRepository
 import com.android.purebilibili.data.repository.VideoNoteSavePayload
 import com.android.purebilibili.data.repository.ViewGrpcRepository
 import com.android.purebilibili.data.repository.resolveVideoPlaybackAuthState
+import com.android.purebilibili.feature.plugin.CdnHealthEvent
+import com.android.purebilibili.feature.plugin.CdnLineDiagnostic
 import com.android.purebilibili.feature.plugin.PlaybackCdnPlugin
 import com.android.purebilibili.feature.plugin.SponsorBlockInsightStore
 import com.android.purebilibili.feature.plugin.SponsorBlockSkipTrigger
@@ -358,6 +360,8 @@ sealed class PlayerUiState {
         val currentCdnIndex: Int = 0,  // 当前使用的 CDN 索引 (0=主线路)
         val allVideoUrls: List<String> = emptyList(),  // 所有可用视频 URL (主+备用)
         val allAudioUrls: List<String> = emptyList(),   // 所有可用音频 URL (主+备用)
+        val cdnLineDiagnostics: List<CdnLineDiagnostic> = emptyList(),
+        val isCdnProbing: Boolean = false,
         // 🖼️ [新增] 视频预览图数据（用于进度条拖动预览）
         val videoshotData: VideoshotData? = null,
         // 🎞️ [New] Codec & Audio Info
@@ -1177,6 +1181,7 @@ class PlayerViewModel : ViewModel() {
             cachedDashAudios = nextCachedDashAudios,
             allVideoUrls = cdnSelection.allVideoUrls,
             allAudioUrls = cdnSelection.allAudioUrls,
+            cdnLineDiagnostics = cdnSelection.lineDiagnostics,
             currentCdnIndex = 0,
             qualityIds = result.qualityIds.ifEmpty { current.qualityIds },
             qualityLabels = result.qualityLabels.ifEmpty { current.qualityLabels },
@@ -1789,6 +1794,9 @@ class PlayerViewModel : ViewModel() {
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_READY) {
                 markPlaybackCdnReadyIfMediaReady()
+                recordCurrentCdnHealthEvent(CdnHealthEvent.PLAYBACK_READY)
+            } else if (playbackState == Player.STATE_BUFFERING) {
+                recordCurrentCdnHealthEvent(CdnHealthEvent.BUFFERING)
             }
             if (playbackState == Player.STATE_ENDED) {
                 // �️ [修复] 仅当用户主动开始播放后才触发自动连播
@@ -1872,6 +1880,7 @@ class PlayerViewModel : ViewModel() {
 
         override fun onPlayerError(error: PlaybackException) {
             Logger.w("PlayerVM", "Playback error: ${error.errorCodeName}, message=${error.message}")
+            recordCurrentCdnHealthEvent(CdnHealthEvent.PLAYER_ERROR)
             fallbackFromCdnRewrite(reason = "player_error")
         }
     }
@@ -2706,6 +2715,7 @@ class PlayerViewModel : ViewModel() {
                             allVideoUrls = cdnSelection.allVideoUrls,
 
                             allAudioUrls = cdnSelection.allAudioUrls,
+                            cdnLineDiagnostics = cdnSelection.lineDiagnostics,
 
                             // [New] Codec/Audio info
                             videoCodecId = result.videoCodecId,
@@ -6008,7 +6018,8 @@ class PlayerViewModel : ViewModel() {
                         cachedDashAudios = nextCachedDashAudios,
                         currentCdnIndex = 0,
                         allVideoUrls = cdnSelection.allVideoUrls,
-                        allAudioUrls = cdnSelection.allAudioUrls
+                        allAudioUrls = cdnSelection.allAudioUrls,
+                        cdnLineDiagnostics = cdnSelection.lineDiagnostics
                     )
                     monitorPlaybackTransitionPosition(transitionPositionMs)
                     val label = current.qualityLabels.getOrNull(
@@ -6142,7 +6153,8 @@ class PlayerViewModel : ViewModel() {
                             cachedDashAudios = selection.cachedDashAudios,
                             currentCdnIndex = 0,
                             allVideoUrls = cdnSelection.allVideoUrls,
-                            allAudioUrls = cdnSelection.allAudioUrls
+                            allAudioUrls = cdnSelection.allAudioUrls,
+                            cdnLineDiagnostics = cdnSelection.lineDiagnostics
                         )
                         monitorPlaybackTransitionPosition(restoredPosition.coerceAtLeast(0L))
                         startHeartbeat()
@@ -6328,7 +6340,8 @@ class PlayerViewModel : ViewModel() {
                 cachedDashAudios = selection.cachedDashAudios,
                 currentCdnIndex = 0,
                 allVideoUrls = cdnSelection.allVideoUrls,
-                allAudioUrls = cdnSelection.allAudioUrls
+                allAudioUrls = cdnSelection.allAudioUrls,
+                cdnLineDiagnostics = cdnSelection.lineDiagnostics
             )
             loadPlayerInfo(
                 currentBvid,
@@ -6725,6 +6738,7 @@ class PlayerViewModel : ViewModel() {
         val allVideoUrls: List<String>,
         val allAudioUrls: List<String>,
         val regionLabel: String?,
+        val lineDiagnostics: List<CdnLineDiagnostic>,
         val fallbackState: PlaybackCdnFallbackState
     )
 
@@ -6751,10 +6765,10 @@ class PlayerViewModel : ViewModel() {
             cachedDashAudios = cachedDashAudios
         )
 
-        val cdnRewrite = PluginManager
+        val cdnPlugin = PluginManager
             .getEnabledPlugins(PlaybackCdnPlugin::class)
             .firstOrNull()
-            ?.rewritePlaybackCandidates(rawVideoUrls, rawAudioUrls)
+        val cdnRewrite = cdnPlugin?.rewritePlaybackCandidates(rawVideoUrls, rawAudioUrls)
 
         val allVideoUrls = cdnRewrite?.videoUrls ?: rawVideoUrls
         val allAudioUrls = cdnRewrite?.audioUrls ?: rawAudioUrls
@@ -6774,6 +6788,7 @@ class PlayerViewModel : ViewModel() {
             allVideoUrls = allVideoUrls,
             allAudioUrls = allAudioUrls,
             regionLabel = cdnRewrite?.regionLabel,
+            lineDiagnostics = cdnPlugin?.buildPlaybackCdnDiagnostics(allVideoUrls).orEmpty(),
             fallbackState = buildPlaybackCdnFallbackState(
                 selectedVideoUrl = selectedVideoUrl,
                 selectedAudioUrl = selectedAudioUrl,
@@ -6841,6 +6856,7 @@ class PlayerViewModel : ViewModel() {
     private fun markPlaybackCdnReadyIfMediaReady() {
         val state = playbackCdnFallbackState
         if (state.usesCdnRewrite && state.selectedAudioUrl != null && !hasSelectedAudioTrack(exoPlayer)) {
+            recordCurrentCdnHealthEvent(CdnHealthEvent.AUDIO_TRACK_MISSING)
             Logger.d(
                 "PlayerVM",
                 "CDN fallback remains armed: region=${state.regionLabel ?: "unknown"}, " +
@@ -6855,6 +6871,12 @@ class PlayerViewModel : ViewModel() {
     private fun fallbackFromCdnRewrite(reason: String) {
         val state = playbackCdnFallbackState
         if (!shouldFallbackFromCdnRewrite(state, playbackReady = false)) return
+        val event = if (reason == "first_frame_timeout") {
+            CdnHealthEvent.FIRST_FRAME_TIMEOUT
+        } else {
+            CdnHealthEvent.PLAYER_ERROR
+        }
+        recordCurrentCdnHealthEvent(event)
         val fallbackVideoUrl = state.fallbackVideoUrl ?: return
         val currentPos = exoPlayer?.currentPosition?.coerceAtLeast(0L) ?: 0L
         val playWhenReadyAfterFallback = exoPlayer?.let { player ->
@@ -6903,6 +6925,45 @@ class PlayerViewModel : ViewModel() {
     private fun hasSelectedAudioTrack(player: Player?): Boolean {
         return player?.currentTracks?.groups.orEmpty().any { group ->
             group.type == C.TRACK_TYPE_AUDIO && group.isSelected
+        }
+    }
+
+    private fun recordCurrentCdnHealthEvent(event: CdnHealthEvent) {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val plugin = PluginManager.getEnabledPlugins(PlaybackCdnPlugin::class).firstOrNull() ?: return
+        plugin.recordPlaybackCdnEvent(current.playUrl, event)
+        val diagnostics = plugin.buildPlaybackCdnDiagnostics(current.allVideoUrls)
+        if (diagnostics.isNotEmpty()) {
+            _uiState.value = current.copy(cdnLineDiagnostics = diagnostics)
+        }
+    }
+
+    fun probeCurrentCdnCandidates() {
+        val current = _uiState.value as? PlayerUiState.Success ?: return
+        val plugin = PluginManager.getEnabledPlugins(PlaybackCdnPlugin::class).firstOrNull() ?: run {
+            viewModelScope.launch { toast("CDN 优选插件未启用") }
+            return
+        }
+        if (current.allVideoUrls.isEmpty()) {
+            viewModelScope.launch { toast("没有可检测的线路") }
+            return
+        }
+        _uiState.value = current.copy(isCdnProbing = true)
+        viewModelScope.launch {
+            val diagnostics = withContext(Dispatchers.IO) {
+                plugin.probePlaybackCdnCandidates(current.allVideoUrls)
+            }
+            _uiState.update { state ->
+                if (state is PlayerUiState.Success) {
+                    state.copy(
+                        cdnLineDiagnostics = diagnostics,
+                        isCdnProbing = false
+                    )
+                } else {
+                    state
+                }
+            }
+            toast("线路检测完成")
         }
     }
 

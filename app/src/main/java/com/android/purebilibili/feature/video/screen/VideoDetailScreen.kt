@@ -998,8 +998,11 @@ private fun PortraitInlineVideoPlayerHost(
             onReloadVideo = { viewModel.reloadVideo() },
             currentCdnIndex = successState?.currentCdnIndex ?: 0,
             cdnCount = successState?.cdnCount ?: 1,
+            cdnLineDiagnostics = successState?.cdnLineDiagnostics.orEmpty(),
+            isCdnProbing = successState?.isCdnProbing ?: false,
             onSwitchCdn = { viewModel.switchCdn() },
             onSwitchCdnTo = { viewModel.switchCdnTo(it) },
+            onProbeCdnCandidates = { viewModel.probeCurrentCdnCandidates() },
             isAudioOnly = false,
             onAudioOnlyToggle = onNavigateToAudioMode,
             sleepTimerMinutes = sleepTimerMinutes,
@@ -2853,8 +2856,11 @@ fun VideoDetailScreen(
                 onReloadVideo = { viewModel.reloadVideo() },
                 //  [新增] CDN 线路切换
                 cdnCount = (uiState as? PlayerUiState.Success)?.cdnCount ?: 1,
+                cdnLineDiagnostics = (uiState as? PlayerUiState.Success)?.cdnLineDiagnostics.orEmpty(),
+                isCdnProbing = (uiState as? PlayerUiState.Success)?.isCdnProbing ?: false,
                 onSwitchCdn = { viewModel.switchCdn() },
                 onSwitchCdnTo = { viewModel.switchCdnTo(it) },
+                onProbeCdnCandidates = { viewModel.probeCurrentCdnCandidates() },
 
                 // [New] Codec & Audio (Fullscreen)
                 currentCodec = codecPreference,

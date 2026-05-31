@@ -458,8 +458,11 @@ private fun CinemaStagePlayer(
                 onReloadVideo = { viewModel.reloadVideo() },
                 currentCdnIndex = success?.currentCdnIndex ?: 0,
                 cdnCount = success?.cdnCount ?: 1,
+                cdnLineDiagnostics = success?.cdnLineDiagnostics.orEmpty(),
+                isCdnProbing = success?.isCdnProbing ?: false,
                 onSwitchCdn = { viewModel.switchCdn() },
                 onSwitchCdnTo = { viewModel.switchCdnTo(it) },
+                onProbeCdnCandidates = { viewModel.probeCurrentCdnCandidates() },
                 isAudioOnly = false,
                 onAudioOnlyToggle = {
                     viewModel.setAudioMode(true)

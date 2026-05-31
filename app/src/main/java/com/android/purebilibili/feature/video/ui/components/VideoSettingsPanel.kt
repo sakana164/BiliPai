@@ -54,6 +54,7 @@ import com.android.purebilibili.core.ui.rememberAppWifiIcon
 import com.android.purebilibili.core.ui.components.DefaultPlaybackSpeedPreferenceControl
 import com.android.purebilibili.core.ui.components.formatDefaultPlaybackSpeed
 import com.android.purebilibili.data.model.response.AiAudioInfo
+import com.android.purebilibili.feature.plugin.CdnLineDiagnostic
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -176,8 +177,11 @@ fun VideoSettingsPanel(
     //  CDN 线路切换
     currentCdnIndex: Int = 0,
     cdnCount: Int = 1,
+    cdnLineDiagnostics: List<CdnLineDiagnostic> = emptyList(),
+    isCdnProbing: Boolean = false,
     onSwitchCdn: () -> Unit = {},
     onSwitchCdnTo: (Int) -> Unit = {},
+    onProbeCdnCandidates: () -> Unit = {},
 
     // [New] Codec & Audio Quality
     // Passed from PlayerViewModel/SettingsManager
@@ -793,6 +797,7 @@ fun VideoSettingsPanel(
             //  播放线路 (CDN) - 仅在有多个线路时显示
             if (cdnCount > 1) {
                 item {
+                    val diagnosticsByIndex = cdnLineDiagnostics.associateBy { it.index }
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -822,40 +827,25 @@ fun VideoSettingsPanel(
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
-                        // CDN 线路选项
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Button(
+                            enabled = !isCdnProbing,
+                            onClick = onProbeCdnCandidates,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
+                            Text(if (isCdnProbing) "检测中..." else "检测当前候选线路")
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             repeat(cdnCount) { index ->
-                                val isSelected = index == currentCdnIndex
-                                Surface(
-                                    onClick = { 
-                                        if (!isSelected) {
-                                            onSwitchCdnTo(index)
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = if (isSelected) 
-                                        MaterialTheme.colorScheme.primary 
-                                    else 
-                                        MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.height(32.dp)
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.padding(horizontal = 12.dp)
-                                    ) {
-                                        Text(
-                                            text = "线路${index + 1}",
-                                            fontSize = 13.sp,
-                                            color = if (isSelected) 
-                                                MaterialTheme.colorScheme.onPrimary 
-                                            else 
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                val diagnostic = diagnosticsByIndex[index]
+                                CdnLineRow(
+                                    index = index,
+                                    isSelected = index == currentCdnIndex,
+                                    diagnostic = diagnostic,
+                                    onClick = {
+                                        if (index != currentCdnIndex) onSwitchCdnTo(index)
                                     }
-                                }
+                                )
                             }
                         }
                     }
@@ -894,7 +884,6 @@ fun VideoSettingsPanel(
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    // 倍速选项
                     SpeedOptions(
                         currentSpeed = currentSpeed,
                         onSelect = onSpeedChange
@@ -1345,6 +1334,79 @@ private fun SettingsDivider() {
         thickness = 0.5.dp,
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = spec.dividerAlpha)
     )
+}
+
+@Composable
+private fun CdnLineRow(
+    index: Int,
+    isSelected: Boolean,
+    diagnostic: CdnLineDiagnostic?,
+    onClick: () -> Unit
+) {
+    val status = diagnostic?.statusLabel ?: "未检测"
+    val host = diagnostic?.host ?: "线路${index + 1}"
+    val metric = buildString {
+        diagnostic?.latencyMs?.let { append("${it}ms") }
+        diagnostic?.speedKbps?.let {
+            if (isNotEmpty()) append(" · ")
+            append("${it / 1024}Mbps")
+        }
+        if ((diagnostic?.errorCount ?: 0) > 0) {
+            if (isNotEmpty()) append(" · ")
+            append("失败${diagnostic?.errorCount}")
+        }
+        if ((diagnostic?.bufferingCount ?: 0) > 0) {
+            if (isNotEmpty()) append(" · ")
+            append("缓冲${diagnostic?.bufferingCount}")
+        }
+    }.ifBlank { "手动检测后显示延迟/速度" }
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
+        },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "线路${index + 1} · $status",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = host,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = metric,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (isSelected) {
+                Text(
+                    text = "当前",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
 }
 
 /**

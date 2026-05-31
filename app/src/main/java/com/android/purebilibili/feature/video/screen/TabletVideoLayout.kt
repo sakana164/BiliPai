@@ -202,8 +202,11 @@ fun TabletVideoLayout(
                             onDoubleTapLike = { viewModel.toggleLike() },
                             onReloadVideo = { viewModel.reloadVideo() },
                             cdnCount = (uiState as? PlayerUiState.Success)?.cdnCount ?: 1,
+                            cdnLineDiagnostics = (uiState as? PlayerUiState.Success)?.cdnLineDiagnostics.orEmpty(),
+                            isCdnProbing = (uiState as? PlayerUiState.Success)?.isCdnProbing ?: false,
                             onSwitchCdn = { viewModel.switchCdn() },
                             onSwitchCdnTo = { viewModel.switchCdnTo(it) },
+                            onProbeCdnCandidates = { viewModel.probeCurrentCdnCandidates() },
                             isAudioOnly = false,
                             onAudioOnlyToggle = {
                                 viewModel.setAudioMode(true)

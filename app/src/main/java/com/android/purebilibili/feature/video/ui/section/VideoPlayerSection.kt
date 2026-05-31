@@ -351,8 +351,11 @@ fun VideoPlayerSection(
     //  [新增] CDN 线路切换
     currentCdnIndex: Int = 0,
     cdnCount: Int = 1,
+    cdnLineDiagnostics: List<com.android.purebilibili.feature.plugin.CdnLineDiagnostic> = emptyList(),
+    isCdnProbing: Boolean = false,
     onSwitchCdn: () -> Unit = {},
     onSwitchCdnTo: (Int) -> Unit = {},
+    onProbeCdnCandidates: () -> Unit = {},
     
     //  [新增] 音频模式
     isAudioOnly: Boolean = false,
@@ -3955,8 +3958,11 @@ fun VideoPlayerSection(
                 //  [新增] CDN 线路切换
                 currentCdnIndex = currentCdnIndex,
                 cdnCount = cdnCount,
+                cdnLineDiagnostics = cdnLineDiagnostics,
+                isCdnProbing = isCdnProbing,
                 onSwitchCdn = onSwitchCdn,
                 onSwitchCdnTo = onSwitchCdnTo,
+                onProbeCdnCandidates = onProbeCdnCandidates,
                 
                 //  [新增] 音频模式
                 isAudioOnly = isAudioOnly,

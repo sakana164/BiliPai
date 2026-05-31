@@ -54,6 +54,7 @@ import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.data.repository.isCastDashManifestAvailable
 import com.android.purebilibili.data.repository.selectCastDashAudio
 import com.android.purebilibili.data.repository.selectCastDashVideo
+import com.android.purebilibili.feature.plugin.CdnLineDiagnostic
 import com.android.purebilibili.feature.video.playback.dash.buildLocalDashManifest
 import com.android.purebilibili.feature.common.resolveIndexedVideoLazyKey
 import com.android.purebilibili.feature.video.progress.PbpRidgeSample
@@ -502,8 +503,11 @@ fun VideoPlayerOverlay(
     //  [新增] CDN 线路切换
     currentCdnIndex: Int = 0,
     cdnCount: Int = 1,
+    cdnLineDiagnostics: List<CdnLineDiagnostic> = emptyList(),
+    isCdnProbing: Boolean = false,
     onSwitchCdn: () -> Unit = {},
     onSwitchCdnTo: (Int) -> Unit = {},
+    onProbeCdnCandidates: () -> Unit = {},
     // 🖼️ [新增] 视频预览图数据
     videoshotData: com.android.purebilibili.data.model.response.VideoshotData? = null,
     // 📖 [新增] 视频章节数据
@@ -1758,11 +1762,14 @@ fun VideoPlayerOverlay(
                 //  CDN 线路切换
                 currentCdnIndex = currentCdnIndex,
                 cdnCount = cdnCount,
+                cdnLineDiagnostics = cdnLineDiagnostics,
+                isCdnProbing = isCdnProbing,
                 onSwitchCdn = onSwitchCdn,
                 onSwitchCdnTo = { index ->
                     onSwitchCdnTo(index)
                     showVideoSettings = false
                 },
+                onProbeCdnCandidates = onProbeCdnCandidates,
                 // [New] Codec & Audio
                 currentCodec = currentCodec,
                 onCodecChange = { codec ->
