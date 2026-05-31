@@ -1460,6 +1460,7 @@ internal fun resolveBottomBarIndicatorLayerTransform(
     velocityItemsPerSecond: Float,
     isDragging: Boolean = true,
     dragScaleProgress: Float = if (isDragging) 1f else 0f,
+    dragScaleTransform: BottomBarIndicatorLayerTransform? = null,
     motionSpec: com.android.purebilibili.core.ui.motion.BottomBarMotionSpec = resolveBottomBarMotionSpec()
 ): BottomBarIndicatorLayerTransform {
     val clampedProgress = motionProgress.coerceIn(0f, 1f)
@@ -1469,6 +1470,8 @@ internal fun resolveBottomBarIndicatorLayerTransform(
         stop = BOTTOM_BAR_INDICATOR_DRAG_SCALE_TARGET,
         fraction = clampedDragScaleProgress
     )
+    val baseScaleX = dragScaleTransform?.scaleX ?: baseScale
+    val baseScaleY = dragScaleTransform?.scaleY ?: baseScale
     // 对齐 KernelSU FloatingBottomBar 的胶囊速度形变：只复用速度挤压算法,
     // 指示器基础放大倍数仍保持 BiliPai 的 88/56,避免视觉尺寸回退。
     val velocity = if (isDragging || clampedDragScaleProgress > 0f) {
@@ -1481,8 +1484,8 @@ internal fun resolveBottomBarIndicatorLayerTransform(
     val velocityScaleY = (velocity * KSU_INDICATOR_VELOCITY_SCALE_Y_MULTIPLIER)
         .coerceIn(-KSU_INDICATOR_VELOCITY_CLAMP, KSU_INDICATOR_VELOCITY_CLAMP)
     return BottomBarIndicatorLayerTransform(
-        scaleX = baseScale / (1f - velocityScaleX),
-        scaleY = baseScale * (1f - velocityScaleY)
+        scaleX = baseScaleX / (1f - velocityScaleX),
+        scaleY = baseScaleY * (1f - velocityScaleY)
     )
 }
 
@@ -1501,6 +1504,30 @@ internal fun rememberBottomBarIndicatorDragScaleProgress(
         )
     }
     return progress.value
+}
+
+@Composable
+internal fun rememberKernelSuIndicatorDragScaleTransform(
+    active: Boolean
+): BottomBarIndicatorLayerTransform {
+    val scaleX = remember { Animatable(1f, 0.001f) }
+    val scaleY = remember { Animatable(1f, 0.001f) }
+    LaunchedEffect(active) {
+        val target = if (active) BOTTOM_BAR_INDICATOR_DRAG_SCALE_TARGET else 1f
+        launch {
+            scaleX.animateTo(
+                targetValue = target,
+                animationSpec = spring(dampingRatio = 0.6f, stiffness = 250f, visibilityThreshold = 0.001f)
+            )
+        }
+        launch {
+            scaleY.animateTo(
+                targetValue = target,
+                animationSpec = spring(dampingRatio = 0.7f, stiffness = 250f, visibilityThreshold = 0.001f)
+            )
+        }
+    }
+    return BottomBarIndicatorLayerTransform(scaleX = scaleX.value, scaleY = scaleY.value)
 }
 
 internal fun resolveBottomBarVisualIndicatorPosition(
@@ -2805,6 +2832,9 @@ private fun KernelSuAlignedBottomBar(
         isDragging = dampedDragState.isDragging
     )
     val indicatorLayerScaleProgress = maxOf(indicatorDragScaleProgress, effectivePressProgress)
+    val indicatorLayerScaleTransform = rememberKernelSuIndicatorDragScaleTransform(
+        active = dampedDragState.isDragging || effectivePressProgress > 0.001f
+    )
     val materialScrollProgress by animateFloatAsState(
         targetValue = if (isFeedScrollInProgress) 1f else 0f,
         animationSpec = tween(
@@ -3485,6 +3515,7 @@ private fun KernelSuAlignedBottomBar(
                     velocityItemsPerSecond = dampedDragState.deformationVelocityItemsPerSecond,
                     isDragging = dampedDragState.isDragging,
                     indicatorLayerScaleProgress = indicatorLayerScaleProgress,
+                    indicatorLayerScaleTransform = indicatorLayerScaleTransform,
                     bottomBarMotionSpec = bottomBarMotionSpec,
                     isDarkTheme = isDarkTheme
                 )
@@ -3741,6 +3772,7 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
     velocityItemsPerSecond: Float,
     isDragging: Boolean,
     indicatorLayerScaleProgress: Float,
+    indicatorLayerScaleTransform: BottomBarIndicatorLayerTransform? = null,
     bottomBarMotionSpec: com.android.purebilibili.core.ui.motion.BottomBarMotionSpec,
     isDarkTheme: Boolean,
     swapMotionAxes: Boolean = false,
@@ -3753,6 +3785,7 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
             velocityItemsPerSecond = velocityItemsPerSecond,
             isDragging = isDragging,
             dragScaleProgress = indicatorLayerScaleProgress,
+            dragScaleTransform = indicatorLayerScaleTransform,
             motionSpec = bottomBarMotionSpec
         )
     } else {

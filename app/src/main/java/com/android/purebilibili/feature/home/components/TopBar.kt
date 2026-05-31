@@ -895,21 +895,58 @@ private fun LightweightHomeTopTabs(
                 position = topTabIndicatorPosition,
                 isInMotion = indicatorIsInteracting
             )
+        val topTabVelocityPositionTracker = remember { FloatArray(1) { topTabIndicatorPosition } }
+        val topTabVelocityTimeTracker = remember { LongArray(1) { System.nanoTime() } }
+        val topTabPagerVelocityItemsPerSecond = if (topTabDragActive) {
+            0f
+        } else {
+            resolveTopTabPagerVelocityItemsPerSecond(
+                currentPosition = topTabIndicatorPosition,
+                previousPosition = topTabVelocityPositionTracker[0],
+                elapsedNanos = (System.nanoTime() - topTabVelocityTimeTracker[0]).coerceAtLeast(1L)
+            )
+        }
+        SideEffect {
+            topTabVelocityPositionTracker[0] = topTabIndicatorPosition
+            topTabVelocityTimeTracker[0] = System.nanoTime()
+        }
+        val topTabMotionVelocityItemsPerSecond = if (topTabDragActive) {
+            topTabDragState.deformationVelocityItemsPerSecond
+        } else {
+            topTabPagerVelocityItemsPerSecond
+        }
+        val topTabMotionVelocityPxPerSecond = with(density) {
+            if (topTabDragActive) {
+                topTabDragState.velocityPxPerSecond
+            } else {
+                topTabMotionVelocityItemsPerSecond * itemWidth.toPx()
+            }
+        }
         val topTabIndicatorDragScaleProgress = rememberBottomBarIndicatorDragScaleProgress(
             isDragging = topTabShouldStretchIndicator
         )
+        val topTabPressProgress = if (topTabDragActive) {
+            topTabDragState.pressProgress
+        } else if (topTabShouldStretchIndicator) {
+            topTabIndicatorDragScaleProgress
+        } else {
+            0f
+        }
+        val topTabIndicatorLayerScaleTransform = rememberKernelSuIndicatorDragScaleTransform(
+            active = topTabShouldStretchIndicator || topTabPressProgress > 0.001f
+        )
         val topTabIndicatorLayerTransform = resolveBottomBarIndicatorLayerTransform(
-            motionProgress = if (topTabDragActive) topTabDragState.pressProgress else 0f,
-            velocityItemsPerSecond = topTabDragState.deformationVelocityItemsPerSecond,
-            isDragging = topTabDragActive,
+            motionProgress = topTabPressProgress,
+            velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
+            isDragging = topTabShouldStretchIndicator,
             dragScaleProgress = topTabIndicatorDragScaleProgress,
+            dragScaleTransform = topTabIndicatorLayerScaleTransform,
             motionSpec = topTabDragMotionSpec
         )
-        val topTabPressProgress = if (topTabDragActive) topTabDragState.pressProgress else 0f
         val topTabRefractionMotionProfile = resolveBottomBarRefractionMotionProfile(
             position = topTabIndicatorPosition,
-            velocity = topTabDragState.velocityPxPerSecond,
-            isDragging = topTabDragActive,
+            velocity = topTabMotionVelocityPxPerSecond,
+            isDragging = indicatorIsInteracting,
             motionSpec = topTabDragMotionSpec
         )
         val topTabMotionProgress = resolveSegmentedControlMotionProgress(
@@ -1118,9 +1155,10 @@ private fun LightweightHomeTopTabs(
                             ),
                             glassEnabled = true,
                             motionProgress = topTabMotionProgress,
-                            velocityItemsPerSecond = topTabDragState.deformationVelocityItemsPerSecond,
+                            velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
                             isDragging = topTabShouldStretchIndicator,
                             indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
+                            indicatorLayerScaleTransform = topTabIndicatorLayerScaleTransform,
                             bottomBarMotionSpec = topTabDragMotionSpec,
                             isDarkTheme = isDarkTheme
                         )
@@ -1174,9 +1212,10 @@ private fun LightweightHomeTopTabs(
                         ),
                         glassEnabled = true,
                         motionProgress = topTabMotionProgress,
-                        velocityItemsPerSecond = topTabDragState.deformationVelocityItemsPerSecond,
+                        velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
                         isDragging = topTabShouldStretchIndicator,
                         indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
+                        indicatorLayerScaleTransform = topTabIndicatorLayerScaleTransform,
                         bottomBarMotionSpec = topTabDragMotionSpec,
                         isDarkTheme = isDarkTheme
                     )
@@ -1207,9 +1246,10 @@ private fun LightweightHomeTopTabs(
                         },
                         glassEnabled = true,
                         motionProgress = topTabMotionProgress,
-                        velocityItemsPerSecond = topTabDragState.deformationVelocityItemsPerSecond,
+                        velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
                         isDragging = topTabShouldStretchIndicator,
                         indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
+                        indicatorLayerScaleTransform = topTabIndicatorLayerScaleTransform,
                         bottomBarMotionSpec = topTabDragMotionSpec,
                         isDarkTheme = isDarkTheme
                     )
@@ -1328,9 +1368,10 @@ private fun LightweightHomeTopTabs(
                             indicatorIdleSurfaceColor = indicatorColor.copy(alpha = 0.42f),
                             glassEnabled = true,
                             motionProgress = topTabMotionProgress,
-                            velocityItemsPerSecond = topTabDragState.deformationVelocityItemsPerSecond,
+                            velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
                             isDragging = topTabShouldStretchIndicator,
                             indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
+                            indicatorLayerScaleTransform = topTabIndicatorLayerScaleTransform,
                             bottomBarMotionSpec = topTabDragMotionSpec,
                             isDarkTheme = isDarkTheme,
                             indicatorAlignment = Alignment.BottomStart
@@ -1831,6 +1872,17 @@ internal fun resolveTopTabIndicatorVelocity(
 ): Float {
     // 顶部指示器仅响应横向分页滑动，避免页面纵向滚动触发胶囊形变。
     return horizontalVelocityPxPerSecond.coerceIn(-4200f, 4200f)
+}
+
+internal fun resolveTopTabPagerVelocityItemsPerSecond(
+    currentPosition: Float,
+    previousPosition: Float,
+    elapsedNanos: Long
+): Float {
+    if (elapsedNanos <= 0L) return 0f
+    val elapsedSeconds = elapsedNanos / 1_000_000_000f
+    if (elapsedSeconds <= 0f) return 0f
+    return ((currentPosition - previousPosition) / elapsedSeconds).coerceIn(-12f, 12f)
 }
 
 internal fun shouldTopTabIndicatorBeInteracting(

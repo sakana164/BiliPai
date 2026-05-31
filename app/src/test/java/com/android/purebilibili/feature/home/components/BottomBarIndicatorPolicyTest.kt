@@ -747,6 +747,21 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
+    fun `indicator drag scale uses KernelSU separate axis springs`() {
+        val source = listOf(
+            java.io.File("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt"),
+            java.io.File("src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
+        ).first { it.exists() }.readText()
+
+        assertTrue(source.contains("rememberKernelSuIndicatorDragScaleTransform("))
+        assertTrue(source.contains("scaleX.animateTo("))
+        assertTrue(source.contains("scaleY.animateTo("))
+        assertTrue(source.contains("dampingRatio = 0.6f"))
+        assertTrue(source.contains("dampingRatio = 0.7f"))
+        assertTrue(source.contains("target = if (active) BOTTOM_BAR_INDICATOR_DRAG_SCALE_TARGET else 1f"))
+    }
+
+    @Test
     fun `settle rebound transform is subtle and returns to neutral`() {
         val compressed = resolveBottomBarSettleReboundTransform(progress = 0.1f)
         val rebound = resolveBottomBarSettleReboundTransform(progress = 0.46f)

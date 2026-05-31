@@ -90,6 +90,7 @@ import com.android.purebilibili.feature.home.components.resolveBottomBarLiquidGl
 import com.android.purebilibili.feature.home.components.resolveBottomBarRefractionMotionProfile
 import com.android.purebilibili.feature.home.components.resolveSharedBottomBarCapsuleShape
 import com.android.purebilibili.feature.home.components.rememberBottomBarIndicatorDragScaleProgress
+import com.android.purebilibili.feature.home.components.rememberKernelSuIndicatorDragScaleTransform
 import com.android.purebilibili.feature.home.components.normalizeTopTabLabelMode
 import com.android.purebilibili.feature.home.components.resolveSegmentedControlMotionProgress
 import com.android.purebilibili.feature.home.components.resolveSegmentedControlMotionSpec
@@ -551,6 +552,9 @@ private fun PartitionSideRailMovingIndicator(
     val indicatorDragScaleProgress = rememberBottomBarIndicatorDragScaleProgress(
         isDragging = dragState.isDragging
     )
+    val indicatorLayerScaleTransform = rememberKernelSuIndicatorDragScaleTransform(
+        active = dragState.isDragging || pressProgress > 0.001f
+    )
     val backdropPresetProgress = resolveBottomBarBackdropPresetProgress(
         motionProgress = motionProgress,
         verticalProgress = 0f,
@@ -596,6 +600,7 @@ private fun PartitionSideRailMovingIndicator(
             velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
             isDragging = dragState.isDragging,
             indicatorLayerScaleProgress = indicatorDragScaleProgress,
+            indicatorLayerScaleTransform = indicatorLayerScaleTransform,
             bottomBarMotionSpec = motionSpec,
             isDarkTheme = isDarkTheme,
             swapMotionAxes = true,

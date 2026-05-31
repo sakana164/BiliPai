@@ -37,6 +37,28 @@ class TopTabMotionVelocityTest {
     }
 
     @Test
+    fun `pager position velocity feeds capsule deformation`() {
+        val velocity = resolveTopTabPagerVelocityItemsPerSecond(
+            currentPosition = 2.4f,
+            previousPosition = 2.0f,
+            elapsedNanos = 100_000_000L
+        )
+
+        assertEquals(4f, velocity, 0.001f)
+    }
+
+    @Test
+    fun `pager position velocity is clamped for capsule deformation`() {
+        val velocity = resolveTopTabPagerVelocityItemsPerSecond(
+            currentPosition = 4f,
+            previousPosition = 0f,
+            elapsedNanos = 100_000_000L
+        )
+
+        assertEquals(12f, velocity, 0.001f)
+    }
+
+    @Test
     fun `vertical motion alone does not mark interacting when liquid glass enabled`() {
         val interacting = shouldTopTabIndicatorBeInteracting(
             pagerIsScrolling = false,
