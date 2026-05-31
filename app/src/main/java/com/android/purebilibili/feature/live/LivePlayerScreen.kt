@@ -788,6 +788,7 @@ fun LivePlayerScreen(
                 onToggleBackgroundPlayback = { toggleBackgroundPlayback() },
                 onOpenShutdownTimer = { showShutdownTimerDialog = true },
                 onOpenPlayerInfo = { showPlayerInfoDialog = true },
+                onOpenSend = { showSendDanmakuSheet = true },
                 videoFitDesc = videoAspectRatio.displayName,
                 onVideoFitClick = { showVideoFitMenu = true },
                 currentQualityDesc = currentQualityDesc,
