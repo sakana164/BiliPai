@@ -3756,9 +3756,12 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
     visible: Boolean,
     dockContentAlpha: Float,
     indicatorTranslationXPx: Float,
+    indicatorTranslationYPx: Float = 0f,
     indicatorPanelOffsetPx: Float,
+    indicatorPanelOffsetYPx: Float = 0f,
     indicatorSettleReboundTransform: BottomBarClickPulseTransform,
     indicatorWidth: Dp,
+    indicatorHeight: Dp = 56.dp,
     shellShape: androidx.compose.ui.graphics.Shape,
     liquidGlassPreset: BottomBarLiquidGlassPreset,
     contentBackdrop: Backdrop?,
@@ -3775,10 +3778,11 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
     isDragging: Boolean,
     indicatorLayerScaleProgress: Float,
     bottomBarMotionSpec: com.android.purebilibili.core.ui.motion.BottomBarMotionSpec,
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean,
+    swapMotionAxes: Boolean = false
 ) {
     if (!visible) return
-    val indicatorLayerTransform = if (glassEnabled) {
+    val rawIndicatorLayerTransform = if (glassEnabled) {
         resolveBottomBarIndicatorLayerTransform(
             motionProgress = motionProgress,
             velocityItemsPerSecond = velocityItemsPerSecond,
@@ -3789,14 +3793,24 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
     } else {
         BottomBarIndicatorLayerTransform(scaleX = 1f, scaleY = 1f)
     }
+    val indicatorLayerTransform = if (swapMotionAxes) {
+        BottomBarIndicatorLayerTransform(
+            scaleX = rawIndicatorLayerTransform.scaleY,
+            scaleY = rawIndicatorLayerTransform.scaleX
+        )
+    } else {
+        rawIndicatorLayerTransform
+    }
     val indicatorLayerWidth = indicatorWidth * indicatorLayerTransform.scaleX
-    val indicatorLayerHeight = 56.dp * indicatorLayerTransform.scaleY
+    val indicatorLayerHeight = indicatorHeight * indicatorLayerTransform.scaleY
     Box(
         modifier = Modifier
             .alpha(dockContentAlpha)
             .graphicsLayer {
                 translationX = indicatorTranslationXPx + indicatorPanelOffsetPx -
                     ((indicatorLayerWidth - indicatorWidth) / 2f).toPx()
+                translationY = indicatorTranslationYPx + indicatorPanelOffsetYPx -
+                    ((indicatorLayerHeight - indicatorHeight) / 2f).toPx()
                 scaleX = indicatorSettleReboundTransform.scaleX
                 scaleY = indicatorSettleReboundTransform.scaleY
             }

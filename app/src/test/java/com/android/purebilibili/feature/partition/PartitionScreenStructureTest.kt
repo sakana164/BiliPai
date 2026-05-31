@@ -19,7 +19,7 @@ class PartitionScreenStructureTest {
         assertTrue(source.contains("PartitionVideoRow("))
         assertTrue(source.contains("SettingsManager.getHomeSettings(context)"))
         assertTrue(source.contains("resolveEffectiveLiquidGlassEnabled("))
-        assertTrue(source.contains("BottomBarLiquidIndicatorSurface("))
+        assertTrue(source.contains("KernelSuBottomBarIndicatorLayer("))
         assertTrue(source.contains("liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled"))
         assertFalse(source.contains("partitionSideRailSweepSelection("))
         assertTrue(source.contains("CardPositionManager.recordVideoCardPosition("))
@@ -101,7 +101,8 @@ class PartitionScreenStructureTest {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/partition/PartitionScreen.kt")
 
         assertTrue(source.contains("indicatorOffsetPxProvider: () -> Float"))
-        assertTrue(source.contains(".offset {\n                IntOffset("))
+        assertTrue(source.contains("indicatorTranslationYPx = indicatorOffsetPxProvider()"))
+        assertTrue(source.contains("swapMotionAxes = true"))
         assertFalse(source.contains("translationY = panelOffsetPx"))
         assertFalse(source.contains("val panelOffsetPx"))
     }

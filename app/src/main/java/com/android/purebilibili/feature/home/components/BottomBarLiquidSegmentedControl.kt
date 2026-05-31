@@ -583,7 +583,8 @@ fun BottomBarLiquidSegmentedControl(
         )
         val indicatorGlowAlpha = resolveBottomBarIndicatorGlowAlpha(
             glassEnabled = liquidGlassEnabled,
-            pressProgress = tapPressProgress
+            pressProgress = tapPressProgress,
+            motionProgress = motionProgress
         )
 
         Box(
@@ -658,39 +659,31 @@ fun BottomBarLiquidSegmentedControl(
             )
         }
 
-        BottomBarLiquidIndicatorSurface(
-            modifier = Modifier
-                .offset(x = indicatorOffset)
-                .graphicsLayer {
-                    translationX = panelOffsetPx
-                    scaleX = clickPulseTransform.scaleX
-                    scaleY = clickPulseTransform.scaleY
-                }
-                .width(indicatorWidth)
-                .height(resolvedIndicatorHeight)
-                .align(Alignment.CenterStart),
-            shape = indicatorShape,
-            liquidGlassEnabled = liquidGlassEnabled,
-            backdrop = contentBackdrop,
-            hasExternalBackdrop = backdrop != null,
+        KernelSuBottomBarIndicatorLayer(
+            visible = true,
+            dockContentAlpha = 1f,
+            indicatorTranslationXPx = with(density) { indicatorOffset.toPx() },
+            indicatorPanelOffsetPx = panelOffsetPx,
+            indicatorSettleReboundTransform = clickPulseTransform,
+            indicatorWidth = indicatorWidth,
+            indicatorHeight = resolvedIndicatorHeight,
+            shellShape = indicatorShape,
+            liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset,
+            contentBackdrop = contentBackdrop,
+            backdrop = backdrop,
             indicatorLensSpec = indicatorLensSpec,
+            refractionMotionProfile = refractionMotionProfile,
             indicatorHighlightAlpha = indicatorHighlightAlpha,
             indicatorGlowAlpha = indicatorGlowAlpha,
+            effectivePressProgress = tapPressProgress,
+            indicatorIdleSurfaceColor = if (isDarkTheme) Color.White.copy(0.1f) else Color.Black.copy(0.1f),
+            glassEnabled = liquidGlassEnabled,
             motionProgress = motionProgress,
-            idleSurfaceColor = if (isDarkTheme) Color.White.copy(0.1f) else Color.Black.copy(0.1f),
-            layerBlock = {
-                if (liquidGlassEnabled) {
-                    val indicatorLayerTransform = resolveBottomBarIndicatorLayerTransform(
-                        motionProgress = motionProgress,
-                        velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
-                        isDragging = dragState.isDragging,
-                        dragScaleProgress = indicatorLayerScaleProgress,
-                        motionSpec = motionSpec
-                    )
-                    scaleX = indicatorLayerTransform.scaleX
-                    scaleY = indicatorLayerTransform.scaleY
-                }
-            }
+            velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
+            isDragging = dragState.isDragging,
+            indicatorLayerScaleProgress = indicatorLayerScaleProgress,
+            bottomBarMotionSpec = motionSpec,
+            isDarkTheme = isDarkTheme
         )
 
         BottomBarLiquidSegmentedLabels(

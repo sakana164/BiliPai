@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -68,6 +67,7 @@ import com.android.purebilibili.core.util.responsiveContentWidth
 import com.android.purebilibili.core.ui.rememberAppBackIcon
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.store.HomeSettings
+import com.android.purebilibili.core.store.BottomBarLiquidGlassPreset
 import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.store.resolveEffectiveLiquidGlassEnabled
 import com.android.purebilibili.core.theme.LocalUiPreset
@@ -80,11 +80,11 @@ import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.feature.common.resolveIndexedVideoLazyKey
-import com.android.purebilibili.feature.home.components.BottomBarLiquidIndicatorSurface
+import com.android.purebilibili.feature.home.components.BottomBarClickPulseTransform
+import com.android.purebilibili.feature.home.components.KernelSuBottomBarIndicatorLayer
 import com.android.purebilibili.feature.home.components.resolveAndroidNativeIdleIndicatorSurfaceColor
 import com.android.purebilibili.feature.home.components.resolveBottomBarBackdropPresetIndicatorLens
 import com.android.purebilibili.feature.home.components.resolveBottomBarBackdropPresetProgress
-import com.android.purebilibili.feature.home.components.resolveBottomBarIndicatorLayerTransform
 import com.android.purebilibili.feature.home.components.resolveBottomBarIndicatorGlowAlpha
 import com.android.purebilibili.feature.home.components.resolveBottomBarLiquidGlassHighlightAlpha
 import com.android.purebilibili.feature.home.components.resolveBottomBarRefractionMotionProfile
@@ -564,43 +564,43 @@ private fun PartitionSideRailMovingIndicator(
     )
     val indicatorGlowAlpha = resolveBottomBarIndicatorGlowAlpha(
         glassEnabled = liquidGlassIndicatorEnabled,
-        pressProgress = pressProgress
+        pressProgress = pressProgress,
+        motionProgress = motionProgress
     )
 
-    BottomBarLiquidIndicatorSurface(
-        modifier = Modifier
-            .offset {
-                IntOffset(
-                    x = 0,
-                    y = indicatorOffsetPxProvider().roundToInt()
-                )
-            }
-            .fillMaxWidth()
-            .padding(start = horizontalPadding.start, end = horizontalPadding.end)
-            .height(PartitionSideRailItemHeight),
-        shape = shape,
-        liquidGlassEnabled = liquidGlassIndicatorEnabled,
-        backdrop = backdrop,
-        indicatorLensSpec = indicatorLensSpec,
-        indicatorHighlightAlpha = indicatorHighlightAlpha,
-        indicatorGlowAlpha = indicatorGlowAlpha,
-        motionProgress = motionProgress,
-        idleSurfaceColor = resolveAndroidNativeIdleIndicatorSurfaceColor(darkTheme = isDarkTheme),
-        layerBlock = {
-            if (liquidGlassIndicatorEnabled) {
-                val indicatorLayerTransform = resolveBottomBarIndicatorLayerTransform(
-                    motionProgress = motionProgress,
-                    velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
-                    isDragging = dragState.isDragging,
-                    dragScaleProgress = indicatorDragScaleProgress,
-                    motionSpec = motionSpec
-                )
-                // 侧栏是纵向移动，交换底栏的横向形变轴。
-                scaleX = indicatorLayerTransform.scaleY
-                scaleY = indicatorLayerTransform.scaleX
-            }
-        }
-    )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val density = LocalDensity.current
+        val indicatorWidth = (maxWidth - horizontalPadding.start - horizontalPadding.end)
+            .coerceAtLeast(0.dp)
+        KernelSuBottomBarIndicatorLayer(
+            visible = true,
+            dockContentAlpha = 1f,
+            indicatorTranslationXPx = with(density) { horizontalPadding.start.toPx() },
+            indicatorTranslationYPx = indicatorOffsetPxProvider(),
+            indicatorPanelOffsetPx = 0f,
+            indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
+            indicatorWidth = indicatorWidth,
+            indicatorHeight = PartitionSideRailItemHeight,
+            shellShape = shape,
+            liquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+            contentBackdrop = backdrop,
+            backdrop = backdrop,
+            indicatorLensSpec = indicatorLensSpec,
+            refractionMotionProfile = refractionMotionProfile,
+            indicatorHighlightAlpha = indicatorHighlightAlpha,
+            indicatorGlowAlpha = indicatorGlowAlpha,
+            effectivePressProgress = pressProgress,
+            indicatorIdleSurfaceColor = resolveAndroidNativeIdleIndicatorSurfaceColor(darkTheme = isDarkTheme),
+            glassEnabled = liquidGlassIndicatorEnabled,
+            motionProgress = motionProgress,
+            velocityItemsPerSecond = dragState.deformationVelocityItemsPerSecond,
+            isDragging = dragState.isDragging,
+            indicatorLayerScaleProgress = indicatorDragScaleProgress,
+            bottomBarMotionSpec = motionSpec,
+            isDarkTheme = isDarkTheme,
+            swapMotionAxes = true
+        )
+    }
 }
 
 @Composable
