@@ -132,6 +132,13 @@ internal fun resolveVideoCardCoverCacheKey(
     return "cover_${normalizedIdentity}_${qualityTag}"
 }
 
+private data class VideoCardTexts(
+    val durationText: String,
+    val primaryStatText: String,
+    val secondaryStatText: String?,
+    val durationBadgeMinWidth: androidx.compose.ui.unit.Dp
+)
+
 internal data class HomeVideoCardMetadataColors(
     val upNameColor: Color,
     val upMetaColor: Color,
@@ -212,24 +219,25 @@ fun ElegantVideoCard(
     val cardCornerRadius = 12.dp * cornerRadiusScale  // HIG 标准圆角
     val smallCornerRadius = iOSCornerRadius.Tiny * cornerRadiusScale  // 4.dp * scale
     val durationBadgeStyle = remember { resolveVideoCardDurationBadgeVisualStyle() }
-    val durationText = remember(video.duration) { FormatUtils.formatDuration(video.duration) }
-    val primaryStatText = remember(video.stat.view, video.progress, video.duration) {
-        if (video.stat.view > 0) {
+    val cardTexts = remember(video.duration, video.stat.view, video.stat.reply, video.stat.danmaku, video.progress) {
+        val durationText = FormatUtils.formatDuration(video.duration)
+        val primaryStatText = if (video.stat.view > 0) {
             FormatUtils.formatStat(video.stat.view.toLong())
         } else {
             FormatUtils.formatProgress(video.progress, video.duration)
         }
-    }
-    val secondaryStatText = remember(video.stat.reply, video.stat.danmaku) {
         val commentCount = video.stat.reply.takeIf { it > 0 } ?: video.stat.danmaku
-        commentCount.takeIf { it > 0 }?.let { FormatUtils.formatStat(it.toLong()) }
-    }
-    val durationBadgeMinWidth = remember(durationText, durationBadgeStyle) {
-        resolveVideoCardDurationBadgeMinWidthDp(
+        val secondaryStatText = commentCount.takeIf { it > 0 }?.let { FormatUtils.formatStat(it.toLong()) }
+        val durationBadgeMinWidth = resolveVideoCardDurationBadgeMinWidthDp(
             durationText = durationText,
             style = durationBadgeStyle
         ).dp
+        VideoCardTexts(durationText, primaryStatText, secondaryStatText, durationBadgeMinWidth)
     }
+    val durationText = cardTexts.durationText
+    val primaryStatText = cardTexts.primaryStatText
+    val secondaryStatText = cardTexts.secondaryStatText
+    val durationBadgeMinWidth = cardTexts.durationBadgeMinWidth
     val coverPillColors = rememberHomeGlassPillColors(
         glassEnabled = glassEnabled,
         blurEnabled = blurEnabled,
@@ -301,41 +309,45 @@ fun ElegantVideoCard(
     var showUnfavoriteDialog by remember { mutableStateOf(false) }
     
     val useLowQualityCover = isDataSaverActive && preferLowQualityCover
-    val coverCacheKey = remember(video, useLowQualityCover) {
-        resolveVideoCardCoverCacheKey(
-            video = video,
-            useLowQualityCover = useLowQualityCover
+    val coverCacheKey: String
+    val coverUrl: String
+    val premiumBadgeLabel: String?
+    remember(video, useLowQualityCover) {
+        Triple(
+            resolveVideoCardCoverCacheKey(video = video, useLowQualityCover = useLowQualityCover),
+            FormatUtils.resolveVideoCoverUrl(
+                if (video.pic.startsWith("//")) "https:${video.pic}" else video.pic,
+                useLowQuality = useLowQualityCover
+            ),
+            resolveVideoPremiumBadgeLabel(video.rights)
         )
-    }
-    val coverUrl = remember(video.bvid, useLowQualityCover) {
-        FormatUtils.resolveVideoCoverUrl(
-            if (video.pic.startsWith("//")) "https:${video.pic}" else video.pic,
-            useLowQuality = useLowQualityCover
-        )
-    }
-    val premiumBadgeLabel = remember(video.rights) {
-        resolveVideoPremiumBadgeLabel(video.rights)
+    }.let { (cache, url, badge) ->
+        coverCacheKey = cache
+        coverUrl = url
+        premiumBadgeLabel = badge
     }
     val onlineCount = rememberVideoCardOnlineCount(
         video = video,
         showOnlineCount = showOnlineCount
     )
-    val publishTimeRowText = remember(showPublishTime, video.pubdate, video.title) {
+    val publishTimeRowText: String
+    val emphasizePublishTime: Boolean
+    remember(showPublishTime, video.pubdate, video.title) {
         if (!showPublishTime) {
-            ""
+            "" to false
         } else {
             resolvePublishTimeRowText(
                 pubdate = video.pubdate,
                 partitionName = "",
                 title = video.title
+            ) to shouldEmphasizePrecisePublishTime(
+                partitionName = "",
+                title = video.title
             )
         }
-    }
-    val emphasizePublishTime = remember(showPublishTime, video.title) {
-        showPublishTime && shouldEmphasizePrecisePublishTime(
-            partitionName = "",
-            title = video.title
-        )
+    }.let { (text, emphasize) ->
+        publishTimeRowText = text
+        emphasizePublishTime = emphasize
     }
     
     //  判断是否为竖屏视频（通过封面图 URL 中的尺寸信息或默认不显示）
@@ -345,13 +357,20 @@ fun ElegantVideoCard(
     //  获取屏幕尺寸用于计算归一化坐标
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-    val screenWidthPx = remember(configuration.screenWidthDp, density) {
-        with(density) { configuration.screenWidthDp.dp.toPx() }
+    val screenWidthPx: Float
+    val screenHeightPx: Float
+    val densityValue: Float
+    remember(configuration.screenWidthDp, configuration.screenHeightDp, density) {
+        Triple(
+            with(density) { configuration.screenWidthDp.dp.toPx() },
+            with(density) { configuration.screenHeightDp.dp.toPx() },
+            density.density
+        )
+    }.let { (w, h, d) ->
+        screenWidthPx = w
+        screenHeightPx = h
+        densityValue = d
     }
-    val screenHeightPx = remember(configuration.screenHeightDp, density) {
-        with(density) { configuration.screenHeightDp.dp.toPx() }
-    }
-    val densityValue = density.density  //  [新增] 屏幕密度值
     
     //  记录卡片位置（非 Compose State，避免滚动时触发高频重组）
     //  [性能优化] 存储 LayoutCoordinates 引用而非 Rect，boundsInRoot() 仅在交互时惰性计算，
@@ -446,18 +465,24 @@ fun ElegantVideoCard(
         }
         val useCoverOnlySharedBounds = coverSharedEnabled && !effectiveSharedElementSourceRoute.isNullOrBlank()
         val connectedCardShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
-        val cardContainerModifier = if (infoSurfaceAppearance.useTintedSurface) {
-            Modifier
-                .fillMaxWidth()
-                .shadow(
-                    elevation = coverShadowElevation,
-                    shape = connectedCardShape,
-                    ambientColor = Color.Black.copy(alpha = 0.08f),
-                    spotColor = Color.Black.copy(alpha = 0.10f),
-                    clip = false
-                )
-        } else {
-            Modifier.fillMaxWidth()
+        val cardContainerModifier = remember(
+            infoSurfaceAppearance.useTintedSurface,
+            coverShadowElevation,
+            connectedCardShape
+        ) {
+            if (infoSurfaceAppearance.useTintedSurface) {
+                Modifier
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = coverShadowElevation,
+                        shape = connectedCardShape,
+                        ambientColor = Color.Black.copy(alpha = 0.08f),
+                        spotColor = Color.Black.copy(alpha = 0.10f),
+                        clip = false
+                    )
+            } else {
+                Modifier.fillMaxWidth()
+            }
         }
         Column(
             modifier = cardContainerModifier

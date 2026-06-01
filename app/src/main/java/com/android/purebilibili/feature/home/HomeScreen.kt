@@ -1297,7 +1297,7 @@ fun HomeScreen(
                     // [Fix] Re-enabled default overscroll for better feedback
                         HorizontalPager(
                             state = pagerState,
-                            beyondViewportPageCount = 1, // [Optimization] Preload adjacent pages to prevent swipe lag
+                            beyondViewportPageCount = 0,
                             modifier = Modifier.fillMaxSize(),
                             key = { index -> resolveHomeTopTabEntryKey(topTabEntries, index) }
                         ) { page ->
@@ -1647,7 +1647,7 @@ fun HomeScreen(
 
                                      HorizontalPager(
                                          state = popularPagerState,
-                                         beyondViewportPageCount = 1,
+                                         beyondViewportPageCount = 0,
                                          modifier = Modifier.fillMaxSize(),
                                          key = { index -> popularSubCategories[index].name }
                                      ) { subPage ->
