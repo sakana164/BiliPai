@@ -4,8 +4,9 @@ package com.android.purebilibili.core.ui.animation
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatorMutex
-import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -18,17 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.AwaitPointerEventScope
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerId
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.PointerInputScope
-import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.util.fastCoerceIn
-import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastRoundToInt
 import com.android.purebilibili.core.ui.motion.BottomBarMotionSpec
 import com.android.purebilibili.core.ui.motion.resolveBottomBarMotionSpec
@@ -320,96 +313,51 @@ internal fun Modifier.horizontalDragGesture(
     settleIndex,
     notifyIndexChanged
 ) {
-    inspectDragGestures(
-        onDragStart = { dragState.onDrag(0f, itemWidthPx) },
-        onDragEnd = {
-            dragState.onDragEnd(
-                velocityX = 0f,
-                itemWidthPx = itemWidthPx,
-                settleIndex = settleIndex,
-                notifyIndexChanged = notifyIndexChanged
-            )
-        },
-        onDragCancel = {
-            dragState.onDragEnd(
-                velocityX = 0f,
-                itemWidthPx = itemWidthPx,
-                settleIndex = settleIndex,
-                notifyIndexChanged = notifyIndexChanged
-            )
-        }
-    ) { change, dragAmount ->
-        if (consumePointerChanges) {
-            change.consume()
-        }
-        dragState.onDrag(dragAmount.x, itemWidthPx)
-    }
-}
+    val velocityTracker = VelocityTracker()
 
-internal suspend fun PointerInputScope.inspectDragGestures(
-    onDragStart: (down: PointerInputChange) -> Unit = {},
-    onDragEnd: (change: PointerInputChange) -> Unit = {},
-    onDragCancel: () -> Unit = {},
-    onDrag: (change: PointerInputChange, dragAmount: Offset) -> Unit
-) {
-    awaitEachGesture {
-        val initialDown = awaitFirstDown(false, PointerEventPass.Initial)
-        val down = awaitFirstDown(false)
+    awaitPointerEventScope {
+        while (true) {
+            // BiliPai 的底栏输入层叠在可点击 tab 上，必须允许从已消费的 DOWN 开始识别拖拽。
+            val down = awaitFirstDown(requireUnconsumed = false)
+            velocityTracker.resetTracking()
+            velocityTracker.addPosition(down.uptimeMillis, down.position)
 
-        onDragStart(down)
-        onDrag(initialDown, Offset.Zero)
-        val upEvent = drag(
-            pointerId = initialDown.id,
-            onDrag = { onDrag(it, it.positionChange()) }
-        )
-        if (upEvent == null) {
-            onDragCancel()
-        } else {
-            onDragEnd(upEvent)
-        }
-    }
-}
-
-private suspend inline fun AwaitPointerEventScope.drag(
-    pointerId: PointerId,
-    onDrag: (PointerInputChange) -> Unit
-): PointerInputChange? {
-    val isPointerUp = currentEvent.changes.fastFirstOrNull { it.id == pointerId }?.pressed != true
-    if (isPointerUp) {
-        return null
-    }
-    var pointer = pointerId
-    while (true) {
-        val change = awaitDragOrUp(pointer) ?: return null
-        if (change.isConsumed) {
-            return null
-        }
-        if (change.changedToUpIgnoreConsumed()) {
-            return change
-        }
-        onDrag(change)
-        pointer = change.id
-    }
-}
-
-private suspend inline fun AwaitPointerEventScope.awaitDragOrUp(
-    pointerId: PointerId
-): PointerInputChange? {
-    var pointer = pointerId
-    while (true) {
-        val event = awaitPointerEvent()
-        val dragEvent = event.changes.fastFirstOrNull { it.id == pointer } ?: return null
-        if (dragEvent.changedToUpIgnoreConsumed()) {
-            val otherDown = event.changes.fastFirstOrNull { it.pressed }
-            if (otherDown == null) {
-                return dragEvent
-            } else {
-                pointer = otherDown.id
+            val dragStart = awaitHorizontalTouchSlopOrCancellation(down.id) { change, over ->
+                if (consumePointerChanges) {
+                    change.consume()
+                }
+                dragState.onDrag(over, itemWidthPx)
             }
-        } else {
-            val hasDragged = dragEvent.previousPosition != dragEvent.position
-            if (hasDragged) {
-                return dragEvent
+
+            if (dragStart != null) {
+                velocityTracker.addPosition(dragStart.uptimeMillis, dragStart.position)
+                var isCancelled = false
+
+                try {
+                    horizontalDrag(dragStart.id) { change ->
+                        if (consumePointerChanges) {
+                            change.consume()
+                        }
+                        velocityTracker.addPosition(change.uptimeMillis, change.position)
+                        val dragAmount = change.position.x - change.previousPosition.x
+                        val velocity = velocityTracker.calculateVelocity()
+                        dragState.onDrag(dragAmount, itemWidthPx, velocity.x)
+                    }
+                } catch (_: Exception) {
+                    isCancelled = true
+                }
+
+                val velocity = if (isCancelled) {
+                    0f
+                } else {
+                    velocityTracker.calculateVelocity().x
+                }
+                dragState.onDragEnd(
+                    velocityX = velocity,
+                    itemWidthPx = itemWidthPx,
+                    settleIndex = settleIndex,
+                    notifyIndexChanged = notifyIndexChanged
+                )
             }
         }
     }
