@@ -3,6 +3,7 @@ package com.android.purebilibili.feature.dynamic
 import com.android.purebilibili.core.util.appendDistinctByKey
 import com.android.purebilibili.core.util.prependDistinctByKey
 import com.android.purebilibili.data.model.response.DynamicItem
+import kotlinx.collections.immutable.toImmutableList
 
 private const val DynamicTopBarReservedHeightDp = 60
 private const val DynamicHorizontalExpandedHeaderReservedHeightDp = 184
@@ -153,8 +154,8 @@ internal fun resolveDynamicStateAfterAuthorUnfollow(
 ): DynamicUiState {
     if (authorMid <= 0L) return currentState
     return currentState.copy(
-        items = currentState.items.filterNot { it.modules.module_author?.mid == authorMid },
-        userItems = currentState.userItems.filterNot { it.modules.module_author?.mid == authorMid }
+        items = currentState.items.filterNot { it.modules.module_author?.mid == authorMid }.toImmutableList(),
+        userItems = currentState.userItems.filterNot { it.modules.module_author?.mid == authorMid }.toImmutableList()
     )
 }
 
@@ -257,7 +258,7 @@ internal fun resolveDynamicFeedStateAfterSuccess(
         )
     }
     return currentState.copy(
-        items = mergedItems,
+        items = mergedItems.toImmutableList(),
         isLoading = false,
         error = null,
         errorSource = DynamicFeedErrorSource.NONE,

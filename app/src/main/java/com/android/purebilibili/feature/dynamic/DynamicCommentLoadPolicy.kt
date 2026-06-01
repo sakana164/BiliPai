@@ -6,6 +6,7 @@ import com.android.purebilibili.data.model.response.ReplyItem
 import com.android.purebilibili.feature.dynamic.components.DynamicCardPrimaryAction
 import com.android.purebilibili.feature.dynamic.components.resolveDynamicCardPrimaryAction
 import com.android.purebilibili.feature.video.viewmodel.SubReplyUiState
+import kotlinx.collections.immutable.toImmutableList
 
 internal data class DynamicCommentPayload(
     val replies: List<ReplyItem>,
@@ -88,7 +89,7 @@ internal fun resolveDynamicSubReplyStateAfterSuccess(
         (currentState.items + newItems).distinctBy { it.rpid }
     }
     return currentState.copy(
-        items = mergedItems,
+        items = mergedItems.toImmutableList(),
         isLoading = false,
         page = page,
         isEnd = isEnd,

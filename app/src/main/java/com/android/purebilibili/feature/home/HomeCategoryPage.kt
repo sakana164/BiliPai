@@ -156,7 +156,9 @@ internal fun HomeCategoryPageContent(
     uiSkinDecoration: HomeUiSkinDecoration? = null,
     modifier: Modifier = Modifier,
 ) {
-    val scrollLiteModeEnabled = false
+    val scrollLiteModeEnabled by remember(gridState) {
+        derivedStateOf { gridState.isScrollInProgress }
+    }
     val context = LocalContext.current
     val showOnlineCount by SettingsManager
         .getShowOnlineCount(context)

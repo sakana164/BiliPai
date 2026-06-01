@@ -21,6 +21,7 @@ import com.android.purebilibili.core.store.withDislikedVideoFeedback
 import com.android.purebilibili.core.util.appendDistinctByKey
 import com.android.purebilibili.core.util.Logger
 import com.android.purebilibili.core.util.prependDistinctByKey
+import com.android.purebilibili.data.model.response.LiveRoom
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.data.repository.HistoryRepository
 import com.android.purebilibili.data.repository.MessageRepository
@@ -41,6 +42,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.collections.immutable.toImmutableSet
 
 // 状态类已移至 HomeUiState.kt
 
@@ -117,7 +121,7 @@ internal fun applyHomeRefreshUndoSnapshot(
     snapshot: HomeRefreshUndoSnapshot
 ): CategoryContent {
     return oldState.copy(
-        videos = snapshot.videos,
+        videos = snapshot.videos.toImmutableList(),
         pageIndex = snapshot.pageIndex,
         hasMore = snapshot.hasMore,
         isLoading = false,
@@ -160,9 +164,9 @@ private fun RecommendationResult.toTodayWatchPlan(): TodayWatchPlan {
     val creatorGroup = groups.firstOrNull { it.id == "preferred_creators" }
     return TodayWatchPlan(
         mode = mode.toTodayWatchMode(),
-        upRanks = creatorGroup.toTodayUpRanks(),
-        videoQueue = items.map { it.video },
-        explanationByBvid = items.associate { it.video.bvid to it.explanation },
+        upRanks = creatorGroup.toTodayUpRanks().toImmutableList(),
+        videoQueue = items.map { it.video }.toImmutableList(),
+        explanationByBvid = items.associate { it.video.bvid to it.explanation }.toImmutableMap(),
         historySampleCount = historySampleCount,
         nightSignalUsed = sceneSignals.eyeCareNightActive,
         generatedAt = generatedAt
@@ -201,8 +205,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         HomeUiState(
             isLoading = true,
             // 初始化所有分类的状态
-            categoryStates = HomeCategory.entries.associateWith { CategoryContent() },
-            popularCategoryStates = PopularSubCategory.entries.associateWith { CategoryContent() }
+            categoryStates = HomeCategory.entries.associateWith { CategoryContent() }.toImmutableMap(),
+            popularCategoryStates = PopularSubCategory.entries.associateWith { CategoryContent() }.toImmutableMap()
         )
     )
     val uiState = _uiState.asStateFlow()
@@ -354,12 +358,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val oldState = _uiState.value
         val newCategoryStates = oldState.categoryStates.mapValues { (_, content) ->
             content.copy(
-                videos = filterHomeFeedbackVideos(content.videos.filter { it.owner.mid !in blockedMids }),
+                videos = filterHomeFeedbackVideos(content.videos.filter { it.owner.mid !in blockedMids }).toImmutableList(),
                 // Filter live rooms if possible (assuming uid matches mid)
-                liveRooms = content.liveRooms.filter { it.uid !in blockedMids },
-                followedLiveRooms = content.followedLiveRooms.filter { it.uid !in blockedMids }
+                liveRooms = content.liveRooms.filter { it.uid !in blockedMids }.toImmutableList(),
+                followedLiveRooms = content.followedLiveRooms.filter { it.uid !in blockedMids }.toImmutableList()
             )
-        }
+        }.toImmutableMap()
         
         var newState = oldState.copy(categoryStates = newCategoryStates)
         
@@ -682,7 +686,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     //  [新增] 开始消散动画（触发 UI 播放粒子动画）
     fun startVideoDissolve(bvid: String) {
         _uiState.value = _uiState.value.copy(
-            dissolvingVideos = _uiState.value.dissolvingVideos + bvid
+            dissolvingVideos = (_uiState.value.dissolvingVideos + bvid).toImmutableSet()
         )
     }
     
@@ -693,12 +697,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val shouldRefilterAfterRemove = pendingNotInterestedRefilterBvids.remove(bvid)
         
         // Update global dissolving list
-        val newDissolving = _uiState.value.dissolvingVideos - bvid
+        val newDissolving = (_uiState.value.dissolvingVideos - bvid).toImmutableSet()
         
         // Update category state
         updateCategoryState(currentCategory) { oldState ->
             oldState.copy(
-                videos = oldState.videos.filterNot { it.bvid == bvid }
+                videos = oldState.videos.filterNot { it.bvid == bvid }.toImmutableList()
             )
         }
         
@@ -750,7 +754,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 liveSubCategory = subCategory,
-                liveRooms = emptyList(),
+                liveRooms = emptyList<LiveRoom>().toImmutableList(),
                 isLoading = true,
                 error = null
             )
@@ -769,7 +773,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val nextCategoryStates = current.categoryStates.toMutableMap()
             nextCategoryStates[HomeCategory.POPULAR] = targetState
             nextState = nextState.copy(
-                categoryStates = nextCategoryStates,
+                categoryStates = nextCategoryStates.toImmutableMap(),
                 videos = targetState.videos,
                 isLoading = targetState.isLoading,
                 error = targetState.error
@@ -1249,18 +1253,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 var addedCount = 0
                 val updateContent: (CategoryContent) -> CategoryContent = { oldState ->
                     val mergedVideos = when {
-                        isLoadMore -> appendDistinctByKey(oldState.videos, incomingVideos, ::videoItemKey)
+                        isLoadMore -> appendDistinctByKey(oldState.videos, incomingVideos, ::videoItemKey).toImmutableList()
                         useIncrementalRecommendRefresh -> {
                             val merged = prependDistinctByKey(oldState.videos, incomingVideos, ::videoItemKey)
                             addedCount = (merged.size - oldState.videos.size).coerceAtLeast(0)
-                            merged
+                            merged.toImmutableList()
                         }
-                        else -> incomingVideos
+                        else -> incomingVideos.toImmutableList()
                     }
 
                     oldState.copy(
                         videos = mergedVideos,
-                        liveRooms = emptyList(),
+                        liveRooms = emptyList<LiveRoom>().toImmutableList(),
                         isLoading = false,
                         error = null,
                         pageIndex = if (isLoadMore) oldState.pageIndex + 1 else if (useIncrementalRecommendRefresh) oldState.pageIndex else 1,
@@ -1348,12 +1352,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val newPopularStates = current.popularCategoryStates.toMutableMap()
         newPopularStates[subCategory] = newSubCategoryState
 
-        var newState = current.copy(popularCategoryStates = newPopularStates)
+        var newState = current.copy(popularCategoryStates = newPopularStates.toImmutableMap())
         if (current.currentCategory == HomeCategory.POPULAR && current.popularSubCategory == subCategory) {
             val newCategoryStates = current.categoryStates.toMutableMap()
             newCategoryStates[HomeCategory.POPULAR] = newSubCategoryState
             newState = newState.copy(
-                categoryStates = newCategoryStates,
+                categoryStates = newCategoryStates.toImmutableMap(),
                 videos = newSubCategoryState.videos,
                 liveRooms = newSubCategoryState.liveRooms,
                 followedLiveRooms = newSubCategoryState.followedLiveRooms,
@@ -1376,7 +1380,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         // Or if we fully migrated UI, we don't need to update legacy fields 'videos', 'liveRooms' etc in HomeUiState root.
         // But HomeScreen.kt still uses `state.videos`. So we MUST sync variables.
         
-        var newState = _uiState.value.copy(categoryStates = newStates)
+        var newState = _uiState.value.copy(categoryStates = newStates.toImmutableMap())
         
         if (category == newState.currentCategory) {
             newState = newState.copy(
@@ -1401,7 +1405,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 oldState.copy(
                     isLoading = false,
                     error = "未登录，请先登录以查看关注内容",
-                    videos = emptyList() // Ensure empty to trigger error state
+                    videos = emptyList<VideoItem>().toImmutableList() // Ensure empty to trigger error state
                 )
             }
             return null
@@ -1458,9 +1462,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             updateCategoryState(HomeCategory.FOLLOW) { oldState ->
                 val oldSize = oldState.videos.size
                 val mergedVideos = when {
-                    isLoadMore -> appendDistinctByKey(oldState.videos, videos, ::videoItemKey)
-                    incrementalTimelineRefreshEnabled -> prependDistinctByKey(oldState.videos, videos, ::videoItemKey)
-                    else -> videos
+                    isLoadMore -> appendDistinctByKey(oldState.videos, videos, ::videoItemKey).toImmutableList()
+                    incrementalTimelineRefreshEnabled -> prependDistinctByKey(oldState.videos, videos, ::videoItemKey).toImmutableList()
+                    else -> videos.toImmutableList()
                 }
                 if (isManualRefresh && !isLoadMore) {
                     addedCount = if (incrementalTimelineRefreshEnabled) {
@@ -1471,7 +1475,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 oldState.copy(
                     videos = mergedVideos,
-                    liveRooms = emptyList(),
+                    liveRooms = emptyList<LiveRoom>().toImmutableList(),
                     isLoading = false,
                     error = if (!isLoadMore && mergedVideos.isEmpty()) "暂无关注动态，请先关注一些UP主" else null,
                     hasMore = com.android.purebilibili.data.repository.DynamicRepository.hasMoreData(
@@ -1548,9 +1552,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 if (rooms.isNotEmpty() || followedRooms.isNotEmpty()) {
                     updateCategoryState(HomeCategory.LIVE) { oldState ->
                         oldState.copy(
-                            followedLiveRooms = followedRooms,
-                            liveRooms = rooms,
-                            videos = emptyList(),
+                            followedLiveRooms = followedRooms.toImmutableList(),
+                            liveRooms = rooms.toImmutableList(),
+                            videos = emptyList<VideoItem>().toImmutableList(),
                             isLoading = false,
                             error = null,
                             hasMore = true
@@ -1568,7 +1572,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }.onFailure { e ->
                  updateCategoryState(HomeCategory.LIVE) { oldState ->
                     oldState.copy(
-                        followedLiveRooms = followedRooms,
+                        followedLiveRooms = followedRooms.toImmutableList(),
                         isLoading = false,
                         error = if (followedRooms.isEmpty()) e.message ?: "网络错误" else null
                     )
@@ -1594,7 +1598,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     
                     updateCategoryState(HomeCategory.LIVE) { oldState ->
                         oldState.copy(
-                            liveRooms = oldState.liveRooms + newRooms,
+                            liveRooms = (oldState.liveRooms + newRooms).toImmutableList(),
                             isLoading = false,
                             error = null,
                             hasMore = true
@@ -1653,7 +1657,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 _uiState.value = _uiState.value.copy(
                     user = UserState(isLogin = false),
-                    followingMids = emptySet(),
+                    followingMids = emptySet<Long>().toImmutableSet(),
                     messageUnreadCount = 0
                 )
             }
@@ -1674,7 +1678,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val cachedMids = prefs.getStringSet(cacheKey, null)
             if (!cachedMids.isNullOrEmpty()) {
                 val mids = cachedMids.mapNotNull { it.toLongOrNull() }.toSet()
-                _uiState.value = _uiState.value.copy(followingMids = mids)
+                _uiState.value = _uiState.value.copy(followingMids = mids.toImmutableSet())
                 com.android.purebilibili.core.util.Logger.d("HomeVM", " Loaded ${mids.size} following mids from cache")
                 return
             }
@@ -1717,7 +1721,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 .putLong(cacheTimeKey, System.currentTimeMillis())
                 .apply()
             
-            _uiState.value = _uiState.value.copy(followingMids = allMids.toSet())
+            _uiState.value = _uiState.value.copy(followingMids = allMids.toImmutableSet())
             com.android.purebilibili.core.util.Logger.d("HomeVM", " Total following mids fetched and cached: ${allMids.size}")
         } catch (e: Exception) {
             com.android.purebilibili.core.util.Logger.e("HomeVM", " Error fetching following list", e)

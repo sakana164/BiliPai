@@ -478,7 +478,7 @@ class AppTopLevelNavigationPolicyTest {
     }
 
     @Test
-    fun bottomPagerPreload_waitsUntilContentReady() {
+    fun bottomPagerPreload_staysOffUntilNavigation() {
         assertEquals(
             0,
             resolveBottomPagerBeyondViewportPageCount(
@@ -489,7 +489,7 @@ class AppTopLevelNavigationPolicyTest {
             )
         )
         assertEquals(
-            3,
+            0,
             resolveBottomPagerBeyondViewportPageCount(
                 contentReady = true,
                 isNavigating = false,
@@ -500,7 +500,7 @@ class AppTopLevelNavigationPolicyTest {
     }
 
     @Test
-    fun bottomPagerPreload_expandsDuringNavigationToKeepTargetComposed() {
+    fun bottomPagerPreload_expandsOnlyToNavigationDistance() {
         assertEquals(
             3,
             resolveBottomPagerBeyondViewportPageCount(
@@ -511,7 +511,7 @@ class AppTopLevelNavigationPolicyTest {
             )
         )
         assertEquals(
-            3,
+            1,
             resolveBottomPagerBeyondViewportPageCount(
                 contentReady = true,
                 isNavigating = true,
@@ -575,7 +575,7 @@ class AppTopLevelNavigationPolicyTest {
     }
 
     @Test
-    fun bottomPagerDuringNavigation_composesIntermediatePagesAfterReady() {
+    fun bottomPagerDuringNavigation_composesOnlyCurrentStartAndTargetAfterReady() {
         assertTrue(
             shouldComposeBottomPagerPage(
                 item = BottomNavItem.DYNAMIC,
@@ -587,7 +587,7 @@ class AppTopLevelNavigationPolicyTest {
                 contentReady = true
             )
         )
-        assertTrue(
+        assertFalse(
             shouldComposeBottomPagerPage(
                 item = BottomNavItem.HISTORY,
                 page = 2,
@@ -606,6 +606,17 @@ class AppTopLevelNavigationPolicyTest {
             shouldComposeBottomPagerPage(
                 item = BottomNavItem.PROFILE,
                 page = 3,
+                currentPage = 3,
+                selectedPage = 3,
+                isNavigating = false,
+                navigationStartPage = 3,
+                contentReady = true
+            )
+        )
+        assertFalse(
+            shouldComposeBottomPagerPage(
+                item = BottomNavItem.HOME,
+                page = 0,
                 currentPage = 3,
                 selectedPage = 3,
                 isNavigating = false,

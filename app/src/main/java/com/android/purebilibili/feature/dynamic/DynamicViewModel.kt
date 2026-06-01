@@ -42,6 +42,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -202,7 +205,7 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
             .onSuccess { items ->
                 if (items.isNotEmpty()) {
                     _uiState.value = _uiState.value.copy(
-                        items = items,
+                        items = items.toImmutableList(),
                         isLoading = false,
                         error = null
                     )
@@ -476,7 +479,7 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
                 localMatchCount = localMatchCount
             )
             _uiState.value = _uiState.value.copy(
-                userItems = emptyList(),
+                userItems = emptyList<DynamicItem>().toImmutableList(),
                 hasUserMore = true,
                 userIsLoading = false,
                 userError = null
@@ -498,7 +501,7 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
             userDynamicsJob?.cancel()
             activeUserDynamicsRequestToken += 1L
             _uiState.value = _uiState.value.copy(
-                userItems = emptyList(),
+                userItems = emptyList<DynamicItem>().toImmutableList(),
                 hasUserMore = true,
                 userIsLoading = false,
                 userError = null
@@ -537,7 +540,7 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
                     val currentItems = if (refresh) emptyList() else currentState.userItems
                     val mergedItems = currentItems + items
                     _uiState.value = _uiState.value.copy(
-                        userItems = mergedItems,
+                        userItems = mergedItems.toImmutableList(),
                         userIsLoading = false,
                         userError = null,
                         hasUserMore = DynamicRepository.userHasMoreData(uid)
@@ -709,7 +712,7 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
                     } else {
                         DynamicFeedErrorSource.INITIAL_LOAD
                     },
-                    items = emptyList()
+                    items = emptyList<DynamicItem>().toImmutableList()
                 )
                 return
             }
@@ -1086,8 +1089,8 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
         _subReplyState.value = SubReplyUiState(
             visible = true,
             rootReply = rootReply,
-            items = items,
-            baseItems = items,
+            items = items.toImmutableList(),
+            baseItems = items.toImmutableList(),
             totalCount = resolveSubReplyLoadedTotalCount(rootReply, items.size, remoteTotalCount),
             isLoading = false,
             page = 1,
@@ -1221,12 +1224,12 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
                             items = currentState.items,
                             dynamicId = dynamicId,
                             toLiked = toLiked
-                        ),
+                        ).toImmutableList(),
                         userItems = applyDynamicLikeCountChange(
                             items = currentState.userItems,
                             dynamicId = dynamicId,
                             toLiked = toLiked
-                        )
+                        ).toImmutableList()
                     )
 
                     onResult(true, if (toLiked) "已点赞" else "已取消")
@@ -1323,8 +1326,8 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
     private fun removeDynamicFromUiState(dynamicId: String) {
         val currentState = _uiState.value
         _uiState.value = currentState.copy(
-            items = currentState.items.filterNot { it.id_str == dynamicId },
-            userItems = currentState.userItems.filterNot { it.id_str == dynamicId }
+            items = currentState.items.filterNot { it.id_str == dynamicId }.toImmutableList(),
+            userItems = currentState.userItems.filterNot { it.id_str == dynamicId }.toImmutableList()
         )
     }
 
@@ -1360,8 +1363,8 @@ data class SidebarUser(
  * 动态页面 UI 状态
  */
 data class DynamicUiState(
-    val items: List<DynamicItem> = emptyList(),
-    val userItems: List<DynamicItem> = emptyList(), //  [新增] 选中 UP主的动态
+    val items: ImmutableList<DynamicItem> = persistentListOf(),
+    val userItems: ImmutableList<DynamicItem> = persistentListOf(), //  [新增] 选中 UP主的动态
     val timelineRequestType: String = "all",
     val isLoading: Boolean = false,
     val error: String? = null,

@@ -1,6 +1,8 @@
 package com.android.purebilibili.feature.home
 
 import com.android.purebilibili.data.model.response.VideoItem
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -139,11 +141,11 @@ class HomeRefreshPolicyTest {
         val snapshot = buildHomeRefreshUndoSnapshot(
             refreshingCategory = HomeCategory.POPULAR,
             recommendCategoryState = CategoryContent(
-                videos = listOf(VideoItem(bvid = "BV1")),
+                videos = listOf(VideoItem(bvid = "BV1")).toImmutableList(),
                 pageIndex = 3,
                 hasMore = false
             ),
-            fallbackVideos = listOf(VideoItem(bvid = "BV2"))
+            fallbackVideos = listOf(VideoItem(bvid = "BV2")).toImmutableList()
         )
 
         assertEquals(null, snapshot)
@@ -153,8 +155,8 @@ class HomeRefreshPolicyTest {
     fun buildHomeRefreshUndoSnapshot_returnsNull_whenRecommendListEmpty() {
         val snapshot = buildHomeRefreshUndoSnapshot(
             refreshingCategory = HomeCategory.RECOMMEND,
-            recommendCategoryState = CategoryContent(videos = emptyList()),
-            fallbackVideos = emptyList()
+            recommendCategoryState = CategoryContent(videos = persistentListOf()),
+            fallbackVideos = persistentListOf()
         )
 
         assertEquals(null, snapshot)
@@ -166,11 +168,11 @@ class HomeRefreshPolicyTest {
         val snapshot = buildHomeRefreshUndoSnapshot(
             refreshingCategory = HomeCategory.RECOMMEND,
             recommendCategoryState = CategoryContent(
-                videos = videos,
+                videos = videos.toImmutableList(),
                 pageIndex = 4,
                 hasMore = false
             ),
-            fallbackVideos = emptyList()
+            fallbackVideos = persistentListOf()
         )
 
         assertEquals(20, snapshot?.videos?.size)
@@ -183,7 +185,7 @@ class HomeRefreshPolicyTest {
     @Test
     fun applyHomeRefreshUndoSnapshot_restoresVideosAndPagingState() {
         val oldState = CategoryContent(
-            videos = listOf(VideoItem(bvid = "NEW")),
+            videos = listOf(VideoItem(bvid = "NEW")).toImmutableList(),
             pageIndex = 8,
             hasMore = true
         )

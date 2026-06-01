@@ -1,6 +1,8 @@
 package com.android.purebilibili.feature.home
 
 import com.android.purebilibili.data.model.response.VideoItem
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlin.math.ln
 
 private data class CreatorAgg(
@@ -148,9 +150,9 @@ internal fun buildTodayWatchPlan(
 
     return TodayWatchPlan(
         mode = mode,
-        upRanks = rankedUp,
-        videoQueue = queue,
-        explanationByBvid = explanationByBvid,
+        upRanks = rankedUp.toImmutableList(),
+        videoQueue = queue.toImmutableList(),
+        explanationByBvid = explanationByBvid.toImmutableMap(),
         historySampleCount = cleanedHistory.size,
         nightSignalUsed = eyeCareNightActive,
         generatedAt = System.currentTimeMillis()

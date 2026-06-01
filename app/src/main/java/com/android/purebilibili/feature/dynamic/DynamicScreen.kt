@@ -944,7 +944,11 @@ private fun DynamicList(
     ) {
         // 空状态
         if (filteredItems.isEmpty() && !activeLoading && activeError == null) {
-            item(span = StaggeredGridItemSpan.FullLine) {
+            item(
+                key = "dynamic_empty_state",
+                contentType = "dynamic_empty_state",
+                span = StaggeredGridItemSpan.FullLine
+            ) {
                 EmptyState(
                     message = if (selectedTab == 4 && !isSelectedUserTabActive) "选择一个UP查看专属动态" else "暂无动态",
                     actionText = if (selectedTab == 4 && !isSelectedUserTabActive) "从左侧或顶部 UP 列表中选择一个用户" else "登录后查看关注 UP主 的动态",
@@ -957,11 +961,16 @@ private fun DynamicList(
         if (oldContentDividerIndex in 0..filteredItems.size) {
             items(
                 count = oldContentDividerIndex,
-                key = { index -> "dynamic_${dynamicFeedItemKey(filteredItems[index])}" }
+                key = { index -> "dynamic_${dynamicFeedItemKey(filteredItems[index])}" },
+                contentType = { "dynamic_card" }
             ) { index ->
                 dynamicCard(filteredItems[index])
             }
-            item(span = StaggeredGridItemSpan.FullLine, key = "old_content_divider") {
+            item(
+                span = StaggeredGridItemSpan.FullLine,
+                key = "old_content_divider",
+                contentType = "dynamic_old_content_divider"
+            ) {
                 OldContentDivider(label = oldContentDividerLabel)
             }
             items(
@@ -969,14 +978,16 @@ private fun DynamicList(
                 key = { offset ->
                     val index = oldContentDividerIndex + offset
                     "dynamic_${dynamicFeedItemKey(filteredItems[index])}"
-                }
+                },
+                contentType = { "dynamic_card" }
             ) { offset ->
                 dynamicCard(filteredItems[oldContentDividerIndex + offset])
             }
         } else {
             items(
                 count = filteredItems.size,
-                key = { index -> "dynamic_${dynamicFeedItemKey(filteredItems[index])}" }
+                key = { index -> "dynamic_${dynamicFeedItemKey(filteredItems[index])}" },
+                contentType = { "dynamic_card" }
             ) { index ->
                 dynamicCard(filteredItems[index])
             }
@@ -984,7 +995,11 @@ private fun DynamicList(
 
         // 加载中
         if (shouldShowDynamicLoadingFooter(isLoading = activeLoading, activeItemsCount = filteredItems.size)) {
-            item(span = StaggeredGridItemSpan.FullLine) {
+            item(
+                key = "dynamic_loading_footer",
+                contentType = "dynamic_loading_footer",
+                span = StaggeredGridItemSpan.FullLine
+            ) {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     contentAlignment = Alignment.Center
@@ -996,7 +1011,11 @@ private fun DynamicList(
 
         // 没有更多
         if (shouldShowDynamicNoMoreFooter(hasMore = hasMore, activeItemsCount = filteredItems.size)) {
-            item(span = StaggeredGridItemSpan.FullLine) {
+            item(
+                key = "dynamic_no_more_footer",
+                contentType = "dynamic_no_more_footer",
+                span = StaggeredGridItemSpan.FullLine
+            ) {
                 Text(
                     "没有更多了",
                     modifier = Modifier.fillMaxWidth().padding(16.dp),

@@ -13,6 +13,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 
 internal const val VIDEO_COMMENT_TYPE = 1
 
@@ -78,7 +84,7 @@ internal fun shouldApplyConversationReplyResult(
 
 // 评论状态
 data class CommentUiState(
-    val replies: List<ReplyItem> = emptyList(),
+    val replies: ImmutableList<ReplyItem> = persistentListOf(),
     val isRepliesLoading: Boolean = false,
     val replyCount: Int = 0,
     val repliesError: String? = null,
@@ -92,10 +98,10 @@ data class CommentUiState(
     val isSending: Boolean = false,
     val sendError: String? = null,
     val replyTarget: ReplyItem? = null,  // 回复目标评论（为空则是一级评论）
-    val likedComments: Set<Long> = emptySet(),  // 已点赞的评论 rpid 集合
-    val hatedComments: Set<Long> = emptySet(),   // 已点踩的评论 rpid 集合
+    val likedComments: ImmutableSet<Long> = persistentSetOf(),  // 已点赞的评论 rpid 集合
+    val hatedComments: ImmutableSet<Long> = persistentSetOf(),   // 已点踩的评论 rpid 集合
     // [新增] 删除与动画状态
-    val dissolvingIds: Set<Long> = emptySet(), // 正在播放消散动画的评论 ID
+    val dissolvingIds: ImmutableSet<Long> = persistentSetOf(), // 正在播放消散动画的评论 ID
     // [新增] 当前登录用户 Mid (直接暴露以便 UI 判断是否显示删除按钮)
     val currentMid: Long = 0,
     // [新增] 评论输入控制
@@ -104,7 +110,7 @@ data class CommentUiState(
     val canUploadImage: Boolean = true,
     val canInputComment: Boolean = true,
     val showUpFlag: Boolean = false,
-    val pinnedReplyIds: Set<Long> = emptySet(),
+    val pinnedReplyIds: ImmutableSet<Long> = persistentSetOf(),
     val grpcNextOffset: String? = null,
     // [新增] 评论反诈检测状态
     val isDetectingFraud: Boolean = false,
@@ -116,8 +122,8 @@ data class CommentUiState(
 data class SubReplyUiState(
     val visible: Boolean = false,
     val rootReply: ReplyItem? = null,
-    val items: List<ReplyItem> = emptyList(),
-    val baseItems: List<ReplyItem> = emptyList(),
+    val items: ImmutableList<ReplyItem> = persistentListOf(),
+    val baseItems: ImmutableList<ReplyItem> = persistentListOf(),
     val totalCount: Int = 0,
     val isLoading: Boolean = false,
     val page: Int = 1,
@@ -131,7 +137,7 @@ data class SubReplyUiState(
     val conversationAnchor: ReplyItem? = null,
     val targetReplyId: Long = 0,
     // [新增] 消散动画状态
-    val dissolvingIds: Set<Long> = emptySet()
+    val dissolvingIds: ImmutableSet<Long> = persistentSetOf()
 )
 
 internal fun resolveSubReplyLoadedTotalCount(
@@ -294,13 +300,13 @@ class VideoCommentViewModel : ViewModel() {
             
             _commentState.value = currentState.copy(
                 upOnlyFilter = true,
-                replies = filteredReplies
+                replies = filteredReplies.toImmutableList()
             )
         } else {
             //  关闭 UP 筛选时，恢复显示所有评论
             _commentState.value = currentState.copy(
                 upOnlyFilter = false,
-                replies = allReplies
+                replies = allReplies.toImmutableList()
             )
         }
     }
@@ -374,7 +380,7 @@ class VideoCommentViewModel : ViewModel() {
                 }
                 
                 _commentState.value = current.copy(
-                    replies = filteredReplies,
+                    replies = filteredReplies.toImmutableList(),
                     replyCount = totalCount,
                     isRepliesLoading = false,
                     repliesError = null,
@@ -385,7 +391,7 @@ class VideoCommentViewModel : ViewModel() {
                     canUploadImage = data.control?.canUploadPicture ?: current.canUploadImage,
                     canInputComment = data.control?.inputDisable?.not() ?: current.canInputComment,
                     showUpFlag = data.config?.showUpFlag ?: current.showUpFlag,
-                    pinnedReplyIds = pinnedReplyIds,
+                    pinnedReplyIds = pinnedReplyIds.toImmutableSet(),
                     grpcNextOffset = data.grpcNextOffset.takeIf { it.isNotBlank() }
                 )
             }.onFailure { e ->
@@ -485,8 +491,8 @@ class VideoCommentViewModel : ViewModel() {
                 _subReplyState.value = SubReplyUiState(
                     visible = true,
                     rootReply = rootReply,
-                    items = items,
-                    baseItems = items,
+                    items = items.toImmutableList(),
+                    baseItems = items.toImmutableList(),
                     totalCount = totalCount,
                     isLoading = false,
                     page = 1,
@@ -536,7 +542,7 @@ class VideoCommentViewModel : ViewModel() {
         if (newReply == null) {
             if (subState.visible && activeRootReply != null) {
                 _subReplyState.value = subState.copy(
-                    items = emptyList(),
+                    items = emptyList<ReplyItem>().toImmutableList(),
                     page = 1,
                     isEnd = false,
                     isLoading = true,
@@ -592,14 +598,14 @@ class VideoCommentViewModel : ViewModel() {
             updatedAllReplies
         }
         _commentState.value = current.copy(
-            replies = filteredReplies,
+            replies = filteredReplies.toImmutableList(),
             replyCount = current.replyCount + 1
         )
 
         if (subState.visible && activeRootReply != null && newReply.root == activeRootReply.rpid) {
             val updatedItems = (listOf(newReply) + subState.items).distinctBy { it.rpid }
             _subReplyState.value = subState.copy(
-                items = updatedItems,
+                items = updatedItems.toImmutableList(),
                 totalCount = resolveSubReplyLoadedTotalCount(
                     rootReply = activeRootReply,
                     loadedReplyCount = updatedItems.size,
@@ -636,8 +642,8 @@ class VideoCommentViewModel : ViewModel() {
             subReplies = baseItems
         )
         _subReplyState.value = current.copy(
-            items = localConversationItems,
-            baseItems = baseItems,
+            items = localConversationItems.toImmutableList(),
+            baseItems = baseItems.toImmutableList(),
             basePage = current.page,
             baseIsEnd = current.isEnd,
             baseGrpcNextOffset = current.grpcNextOffset,
@@ -711,8 +717,8 @@ class VideoCommentViewModel : ViewModel() {
                 )
 
                 _subReplyState.value = current.copy(
-                    items = updatedItems,
-                    baseItems = updatedItems,
+                    items = updatedItems.toImmutableList(),
+                    baseItems = updatedItems.toImmutableList(),
                     totalCount = totalCount,
                     isLoading = false,
                     page = page,
@@ -790,7 +796,7 @@ class VideoCommentViewModel : ViewModel() {
                 _subReplyState.value = current.copy(
                     items = updatedItems.ifEmpty {
                         resolveLocalConversationItems(anchorReply, current.baseItems)
-                    },
+                    }.toImmutableList(),
                     isLoading = false,
                     page = page,
                     isEnd = data.cursor.isEnd || newItems.isEmpty() || nextOffset == null,
@@ -813,7 +819,7 @@ class VideoCommentViewModel : ViewModel() {
                 _subReplyState.value = current.copy(
                     items = current.items.ifEmpty {
                         resolveLocalConversationItems(anchorReply, current.baseItems)
-                    },
+                    }.toImmutableList(),
                     isLoading = false,
                     isEnd = true,
                     error = error.message
@@ -907,7 +913,7 @@ class VideoCommentViewModel : ViewModel() {
                         val updatedReplies = listOf(newReply) + allReplies
                         allReplies = updatedReplies
                         _commentState.value = current.copy(
-                            replies = updatedReplies,
+                            replies = updatedReplies.toImmutableList(),
                             isSending = false,
                             sendError = null,
                             replyTarget = null,
@@ -924,7 +930,7 @@ class VideoCommentViewModel : ViewModel() {
                         // 重置并重新加载
                         allReplies = emptyList()
                         _commentState.value = _commentState.value.copy(
-                            replies = emptyList(),
+                            replies = emptyList<ReplyItem>().toImmutableList(),
                             nextPage = 1,
                             isRepliesEnd = false
                         )
@@ -937,7 +943,7 @@ class VideoCommentViewModel : ViewModel() {
                         // 有返回评论对象，直接添加到列表顶部
                         val currentSub = _subReplyState.value
                         _subReplyState.value = currentSub.copy(
-                            items = listOf(newReply) + currentSub.items,
+                            items = (listOf(newReply) + currentSub.items).toImmutableList(),
                         )
                     } else {
                         // [修复] newReply 为 null 时，重新加载二级评论列表
@@ -945,7 +951,7 @@ class VideoCommentViewModel : ViewModel() {
                         val currentSub = _subReplyState.value
                         currentSub.rootReply?.let { root ->
                             _subReplyState.value = currentSub.copy(
-                                items = emptyList(),
+                                items = emptyList<ReplyItem>().toImmutableList(),
                                 page = 1,
                                 isEnd = false,
                                 isLoading = true,
@@ -995,7 +1001,10 @@ class VideoCommentViewModel : ViewModel() {
         val isCurrentlyLiked = rpid in currentState.likedComments
         val newLikedComments = if (isCurrentlyLiked) currentState.likedComments - rpid else currentState.likedComments + rpid
         val newHatedComments = currentState.hatedComments - rpid
-        _commentState.value = currentState.copy(likedComments = newLikedComments, hatedComments = newHatedComments)
+        _commentState.value = currentState.copy(
+            likedComments = newLikedComments.toImmutableSet(),
+            hatedComments = newHatedComments.toImmutableSet()
+        )
         
         viewModelScope.launch {
             CommentRepository.likeComment(currentAid, rpid, !isCurrentlyLiked).onFailure {
@@ -1009,7 +1018,10 @@ class VideoCommentViewModel : ViewModel() {
         val isCurrentlyHated = rpid in currentState.hatedComments
         val newHatedComments = if (isCurrentlyHated) currentState.hatedComments - rpid else currentState.hatedComments + rpid
         val newLikedComments = currentState.likedComments - rpid
-        _commentState.value = currentState.copy(likedComments = newLikedComments, hatedComments = newHatedComments)
+        _commentState.value = currentState.copy(
+            likedComments = newLikedComments.toImmutableSet(),
+            hatedComments = newHatedComments.toImmutableSet()
+        )
         
         viewModelScope.launch {
             CommentRepository.hateComment(currentAid, rpid, !isCurrentlyHated).onFailure {
@@ -1100,7 +1112,7 @@ class VideoCommentViewModel : ViewModel() {
      */
     fun startDissolve(rpid: Long) {
         val current = _commentState.value
-        _commentState.value = current.copy(dissolvingIds = current.dissolvingIds + rpid)
+        _commentState.value = current.copy(dissolvingIds = (current.dissolvingIds + rpid).toImmutableSet())
     }
 
     /**
@@ -1114,9 +1126,9 @@ class VideoCommentViewModel : ViewModel() {
         
         // 移除 dissolvingId
         _commentState.value = current.copy(
-            replies = current.replies.filter { it.rpid != rpid },
+            replies = current.replies.filter { it.rpid != rpid }.toImmutableList(),
             replyCount = maxOf(0, current.replyCount - 1),
-            dissolvingIds = current.dissolvingIds - rpid
+            dissolvingIds = (current.dissolvingIds - rpid).toImmutableSet()
         )
 
         // 发起网络请求
@@ -1135,7 +1147,7 @@ class VideoCommentViewModel : ViewModel() {
      */
     fun startSubDissolve(rpid: Long) {
         val current = _subReplyState.value
-        _subReplyState.value = current.copy(dissolvingIds = current.dissolvingIds + rpid)
+        _subReplyState.value = current.copy(dissolvingIds = (current.dissolvingIds + rpid).toImmutableSet())
     }
     
     /**
@@ -1146,8 +1158,8 @@ class VideoCommentViewModel : ViewModel() {
         // 从二级评论列表中移除
         val updatedItems = current.items.filter { it.rpid != rpid }
         _subReplyState.value = current.copy(
-            items = updatedItems,
-            dissolvingIds = current.dissolvingIds - rpid
+            items = updatedItems.toImmutableList(),
+            dissolvingIds = (current.dissolvingIds - rpid).toImmutableSet()
         )
         
         android.util.Log.d("CommentVM", " deleteSubComment: rpid=$rpid, remaining=${updatedItems.size}")
@@ -1164,7 +1176,7 @@ class VideoCommentViewModel : ViewModel() {
     private fun reloadCommentsFromStart() {
         allReplies = emptyList()
         _commentState.value = _commentState.value.copy(
-            replies = emptyList(),
+            replies = emptyList<ReplyItem>().toImmutableList(),
             nextPage = 1,
             isRepliesEnd = false,
             isRepliesLoading = false,

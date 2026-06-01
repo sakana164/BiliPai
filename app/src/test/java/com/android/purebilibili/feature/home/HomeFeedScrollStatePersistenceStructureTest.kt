@@ -70,6 +70,18 @@ class HomeFeedScrollStatePersistenceStructureTest {
     }
 
     @Test
+    fun `home feed enables scroll lite mode only from grid scroll state`() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/HomeCategoryPage.kt")
+        val pageFunctionSource = source
+            .substringAfter("internal fun HomeCategoryPageContent(")
+            .substringBefore("val context = LocalContext.current")
+
+        assertTrue(pageFunctionSource.contains("val scrollLiteModeEnabled by remember(gridState)"))
+        assertTrue(pageFunctionSource.contains("derivedStateOf { gridState.isScrollInProgress }"))
+        assertFalse(pageFunctionSource.contains("val scrollLiteModeEnabled = false"))
+    }
+
+    @Test
     fun `home follow refresh preserves dynamic update baseline for incremental content`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/HomeViewModel.kt")
         val followFeedSource = source

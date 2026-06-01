@@ -3,6 +3,7 @@ package com.android.purebilibili.feature.dynamic
 import com.android.purebilibili.data.model.response.DynamicAuthorModule
 import com.android.purebilibili.data.model.response.DynamicItem
 import com.android.purebilibili.data.model.response.DynamicModules
+import kotlinx.collections.immutable.toImmutableList
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -139,11 +140,11 @@ class DynamicScreenStatePolicyTest {
             items = listOf(
                 buildDynamicItem(id = "100", authorMid = 11L),
                 buildDynamicItem(id = "101", authorMid = 12L)
-            ),
+            ).toImmutableList(),
             userItems = listOf(
                 buildDynamicItem(id = "200", authorMid = 11L),
                 buildDynamicItem(id = "201", authorMid = 13L)
-            )
+            ).toImmutableList()
         )
 
         val updated = resolveDynamicStateAfterAuthorUnfollow(state, authorMid = 11L)
@@ -376,7 +377,7 @@ class DynamicScreenStatePolicyTest {
 
     @Test
     fun `incremental refresh prepends new items without dropping current list`() {
-        val existing = listOf(buildDynamicItem("old_a"), buildDynamicItem("old_b"))
+        val existing = listOf(buildDynamicItem("old_a"), buildDynamicItem("old_b")).toImmutableList()
         val result = resolveDynamicFeedStateAfterSuccess(
             currentState = DynamicUiState(items = existing),
             incomingItems = listOf(buildDynamicItem("new_1"), buildDynamicItem("new_2")),
@@ -401,7 +402,7 @@ class DynamicScreenStatePolicyTest {
         val existing = listOf(
             buildDynamicItem(id = "today_0900", pubTs = 1_800L),
             buildDynamicItem(id = "yesterday_2300", pubTs = 900L)
-        )
+        ).toImmutableList()
         val result = resolveDynamicFeedStateAfterSuccess(
             currentState = DynamicUiState(
                 items = existing,
@@ -428,7 +429,7 @@ class DynamicScreenStatePolicyTest {
         val existing = listOf(
             buildDynamicItem(id = "newer", pubTs = 2_000L),
             buildDynamicItem(id = "older", pubTs = 1_000L)
-        )
+        ).toImmutableList()
         val result = resolveDynamicFeedStateAfterSuccess(
             currentState = DynamicUiState(items = existing),
             incomingItems = listOf(
@@ -451,7 +452,7 @@ class DynamicScreenStatePolicyTest {
     fun `incremental refresh does not merge items from a different dynamic feed type`() {
         val result = resolveDynamicFeedStateAfterSuccess(
             currentState = DynamicUiState(
-                items = listOf(buildDynamicItem("pgc_old")),
+                items = listOf(buildDynamicItem("pgc_old")).toImmutableList(),
                 timelineRequestType = "pgc"
             ),
             incomingItems = listOf(buildDynamicItem("all_new")),
@@ -469,7 +470,7 @@ class DynamicScreenStatePolicyTest {
 
     @Test
     fun `pagination failure preserves existing items and marks append error`() {
-        val existing = listOf(buildDynamicItem("keep_me"))
+        val existing = listOf(buildDynamicItem("keep_me")).toImmutableList()
         val result = resolveDynamicFeedStateAfterFailure(
             currentState = DynamicUiState(items = existing),
             errorMessage = "网络错误",
@@ -496,7 +497,7 @@ class DynamicScreenStatePolicyTest {
     @Test
     fun `refresh failure with existing items is not treated as append failure`() {
         val result = resolveDynamicFeedStateAfterFailure(
-            currentState = DynamicUiState(items = listOf(buildDynamicItem("keep_me"))),
+            currentState = DynamicUiState(items = listOf(buildDynamicItem("keep_me")).toImmutableList()),
             errorMessage = "刷新失败",
             refresh = true
         )
