@@ -1326,7 +1326,7 @@ internal fun resolveAndroidNativeIdleIndicatorSurfaceColor(
     return if (darkTheme) {
         Color.White.copy(alpha = 0.1f)
     } else {
-        Color.Black.copy(alpha = 0.1f)
+        iOSSystemGray6.copy(alpha = 0.34f)
     }
 }
 
@@ -1340,7 +1340,7 @@ internal fun resolveBottomBarIdleIndicatorSurfaceColor(
         BottomBarLiquidGlassPreset.IOS26_REFINED -> if (darkTheme) {
             iOSSystemGray6.copy(alpha = 0.28f)
         } else {
-            Color.Black.copy(alpha = 0.12f)
+            iOSSystemGray6.copy(alpha = 0.38f)
         }
     }
 }

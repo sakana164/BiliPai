@@ -442,7 +442,7 @@ class BottomBarSurfaceColorPolicyTest {
     }
 
     @Test
-    fun `android native idle glass indicator keeps neutral gray capsule`() {
+    fun `android native idle glass indicator uses gray white capsule in light mode`() {
         val themeIndicator = resolveAndroidNativeIndicatorColor(
             themeColor = Color(0xFF00A1D6),
             darkTheme = false
@@ -451,10 +451,10 @@ class BottomBarSurfaceColorPolicyTest {
             darkTheme = false
         )
 
-        assertEquals(Color.Black.red, idleIndicator.red, 0.001f)
-        assertEquals(Color.Black.green, idleIndicator.green, 0.001f)
-        assertEquals(Color.Black.blue, idleIndicator.blue, 0.001f)
-        assertEquals(0.1f, idleIndicator.alpha, 0.003f)
+        assertTrue(idleIndicator.red > 0.9f)
+        assertTrue(idleIndicator.green > 0.9f)
+        assertTrue(idleIndicator.blue > 0.9f)
+        assertTrue(idleIndicator.alpha > 0.3f)
         assertFalse(
             idleIndicator.red == themeIndicator.red &&
                 idleIndicator.green == themeIndicator.green &&
@@ -479,6 +479,22 @@ class BottomBarSurfaceColorPolicyTest {
         assertEquals(movingDark.green, ios26Dark.green, 0.001f)
         assertEquals(movingDark.blue, ios26Dark.blue, 0.001f)
         assertTrue(ios26Dark.alpha > tunedDark.alpha)
+    }
+
+    @Test
+    fun `ios26 idle glass indicator uses gray white capsule in light mode`() {
+        val tunedLight = resolveBottomBarIdleIndicatorSurfaceColor(
+            preset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
+            darkTheme = false
+        )
+        val ios26Light = resolveBottomBarIdleIndicatorSurfaceColor(
+            preset = BottomBarLiquidGlassPreset.IOS26_REFINED,
+            darkTheme = false
+        )
+
+        assertTrue(tunedLight.red > 0.9f)
+        assertTrue(ios26Light.red > 0.9f)
+        assertTrue(ios26Light.alpha > tunedLight.alpha)
     }
 
     @Test
