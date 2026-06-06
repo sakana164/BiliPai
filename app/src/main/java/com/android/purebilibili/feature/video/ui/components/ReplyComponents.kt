@@ -64,7 +64,9 @@ import com.android.purebilibili.data.repository.VideoRepository
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewTextContent
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewTextPlacement
 import com.android.purebilibili.feature.dynamic.components.ImagePreviewCommentContext
+import com.android.purebilibili.feature.dynamic.components.ImageDecodeTarget
 import com.android.purebilibili.feature.dynamic.components.resolveCommentImageOriginalSizeLabel
+import com.android.purebilibili.feature.dynamic.components.resolveImageDecodeSize
 import androidx.compose.ui.layout.ContentScale
 import com.android.purebilibili.core.ui.common.CopySelectionDialog
 import com.android.purebilibili.core.ui.common.copyOnLongPress
@@ -2515,6 +2517,9 @@ fun CommentPictures(
     }
     val context = LocalContext.current
     val totalCount = pictures.size  //  [优化] 保存总图片数用于角标显示
+    val thumbnailDecodeSize = remember {
+        resolveImageDecodeSize(ImageDecodeTarget.COMMENT_THUMBNAIL)
+    }
     
     //  GIF 图片加载器
     val gifImageLoader = context.imageLoader
@@ -2551,7 +2556,7 @@ fun CommentPictures(
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(imageUrls[0])
-                        .size(coil.size.Size.ORIGINAL)  //  强制加载原图，避免模糊
+                        .size(thumbnailDecodeSize.widthPx, thumbnailDecodeSize.heightPx)
                         .addHeader("Referer", "https://www.bilibili.com/")  //  必需
                         .crossfade(true)
                         .build(),
@@ -2592,7 +2597,7 @@ fun CommentPictures(
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
                                         .data(imageUrls[globalIndex])
-                                        .size(coil.size.Size.ORIGINAL)  //  强制加载原图，避免模糊
+                                        .size(thumbnailDecodeSize.widthPx, thumbnailDecodeSize.heightPx)
                                         .addHeader("Referer", "https://www.bilibili.com/")  //  必需
                                         .crossfade(true)
                                         .build(),

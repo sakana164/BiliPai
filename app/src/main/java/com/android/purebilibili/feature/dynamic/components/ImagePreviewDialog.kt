@@ -606,11 +606,15 @@ private fun ImagePreviewOverlayContent(
                         val imageUrl = remember(images.getOrNull(page)) {
                             normalizeImageUrl(images.getOrNull(page) ?: "")
                         }
+                        val decodeSize = remember {
+                            resolveImageDecodeSize(ImageDecodeTarget.FULLSCREEN_PREVIEW)
+                        }
                         
                         ZoomableImage(
                             model = ImageRequest.Builder(context)
                                 .data(imageUrl)
-                                .size(coil.size.Size.ORIGINAL)  //  强制加载原图，避免模糊
+                                // 预览必须采样解码，避免超大原图超过 Canvas 单位图绘制上限。
+                                .size(decodeSize.widthPx, decodeSize.heightPx)
                                 .addHeader("Referer", "https://www.bilibili.com/")
                                 .crossfade(300)
                                 .build(),
