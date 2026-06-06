@@ -15,7 +15,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Version-9.1.0-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.1.0" />
+  <img src="https://img.shields.io/badge/Version-9.1.2-007AFF?style=flat-square&labelColor=ffffff" alt="Version 9.1.2" />
   <img src="https://img.shields.io/badge/Android-8.0%2B-34C759?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/Kotlin-100%25-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-FF3B30?style=flat-square" alt="GPL-3.0" />
@@ -37,7 +37,7 @@
   </a>
 </p>
 
-<sub>README 更新：2026-06-05 · 当前构建版本以 app/build.gradle.kts 为准 · 发布记录以 <a href="CHANGELOG.md">CHANGELOG.md</a> 为准</sub>
+<sub>README 更新：2026-06-06 · 当前构建版本以 app/build.gradle.kts 为准 · 发布记录以 <a href="CHANGELOG.md">CHANGELOG.md</a> 为准</sub>
 
 </div>
 
@@ -182,11 +182,11 @@ cd BiliPai
 
 ## 最近更新
 
-当前仓库版本号已更新到 `9.1.0 / versionCode 221`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.1.0`：
+当前仓库版本号已更新到 `9.1.2 / versionCode 223`。公开发布说明请以 [CHANGELOG.md](CHANGELOG.md) 为准；最新完整记录为 `v9.1.2`：
 
-- 修复底栏指示器滑动时搜索入口跟随放大的问题。
-- 修复空间背景大图可能触发的超大 bitmap 绘制闪退。
-- 优化个人空间签名、IP 属地和隐私兜底在深浅色下的可读性。
+- 修复楼中楼评论数量与分页不完整，以及超大图片预览崩溃。
+- 修复动态角标折射、历史页顶栏毛玻璃和热门视频返回后的顶栏选中态。
+- 增大平板字幕，并恢复 Android 平板横屏设置页滚动。
 
 ## 路线图
 
