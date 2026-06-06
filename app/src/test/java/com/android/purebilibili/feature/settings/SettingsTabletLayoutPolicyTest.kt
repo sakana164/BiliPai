@@ -1,5 +1,6 @@
 package com.android.purebilibili.feature.settings
 
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -41,5 +42,24 @@ class SettingsTabletLayoutPolicyTest {
     fun splitLayout_threshold_isExpanded_only() {
         assertEquals(false, shouldUseSettingsSplitLayout(widthDp = 720))
         assertEquals(true, shouldUseSettingsSplitLayout(widthDp = 1024))
+    }
+
+    @Test
+    fun tabletLandscape_keepsMasterAndDetailContentScrollable() {
+        val source = listOf(
+            File("app/src/main/java/com/android/purebilibili/feature/settings/screen/TabletSettingsLayout.kt"),
+            File("src/main/java/com/android/purebilibili/feature/settings/screen/TabletSettingsLayout.kt")
+        ).first { it.exists() }.readText()
+
+        val masterPane = source
+            .substringAfter("// Master List")
+            .substringBefore("secondaryContent =")
+        val detailPane = source.substringAfter("// Detail Content")
+
+        assertTrue(masterPane.contains("LazyColumn("))
+        assertTrue(masterPane.contains(".weight(1f)"))
+        assertTrue(detailPane.contains(".testTag(\"settings_detail_panel\")"))
+        assertTrue(detailPane.contains(".weight(1f)"))
+        assertTrue(detailPane.contains("AnimatedContent(\n                        modifier = Modifier.fillMaxSize()"))
     }
 }

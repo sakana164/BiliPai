@@ -264,39 +264,50 @@ fun TabletSettingsLayout(
                     onQueryChange = onSearchQueryChange
                 )
 
-                categoryOrder.forEach { category ->
-                    val isSelected = category == selectedCategory
-                    val categoryVisual = rememberSettingsEntryVisual(category.searchTarget, uiPreset)
-                    val categoryIcon = categoryVisual.icon ?: fallbackCategoryIcon
-                    NavigationDrawerItem(
-                        label = { Text(category.title) },
-                        selected = isSelected,
-                        onClick = { 
-                            selectedCategory = category 
-                            activeDetail = null // Reset detail when category changes
-                        },
-                        icon = { 
-                            Icon(
-                                categoryIcon,
-                                contentDescription = null,
-                                tint = if (isSelected) {
-                                    MaterialTheme.colorScheme.onSecondaryContainer
-                                } else {
-                                    categoryVisual.iconTint
-                                }
-                            ) 
-                        },
-                        modifier = Modifier
-                            .padding(vertical = 4.dp)
-                            .testTag("settings_category_${category.name}")
-                            .focusable(),
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            unselectedContainerColor = Color.Transparent,
-                            selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(
+                        count = categoryOrder.size,
+                        key = { index -> categoryOrder[index].name }
+                    ) { index ->
+                        val category = categoryOrder[index]
+                        val isSelected = category == selectedCategory
+                        val categoryVisual = rememberSettingsEntryVisual(category.searchTarget, uiPreset)
+                        val categoryIcon = categoryVisual.icon ?: fallbackCategoryIcon
+                        NavigationDrawerItem(
+                            label = { Text(category.title) },
+                            selected = isSelected,
+                            onClick = {
+                                selectedCategory = category
+                                activeDetail = null
+                            },
+                            icon = {
+                                Icon(
+                                    categoryIcon,
+                                    contentDescription = null,
+                                    tint = if (isSelected) {
+                                        MaterialTheme.colorScheme.onSecondaryContainer
+                                    } else {
+                                        categoryVisual.iconTint
+                                    }
+                                )
+                            },
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .testTag("settings_category_${category.name}")
+                                .focusable(),
+                            colors = NavigationDrawerItemDefaults.colors(
+                                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                unselectedContainerColor = Color.Transparent,
+                                selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         )
-                    )
+                    }
                 }
             }
         },
@@ -311,14 +322,17 @@ fun TabletSettingsLayout(
             ) {
                 Box(
                     modifier = Modifier
+                        .fillMaxSize()
                         .testTag("settings_detail_panel")
                 ) {
                 // If we have an active detail, show it. Otherwise show Category Root.
                 val detail = activeDetail
                 if (searchQuery.isNotBlank()) {
                     Column(modifier = Modifier
+                        .fillMaxSize()
                         .widthIn(max = layoutPolicy.detailMaxWidthDp.dp)
                         .statusBarsPadding()
+                        .verticalScroll(rememberScrollState())
                     ) {
                         SettingsSearchResultsSection(
                             results = searchResults,
@@ -352,6 +366,7 @@ fun TabletSettingsLayout(
                 } else if (detail != null) {
                     // Sub-page Content
                     Column(modifier = Modifier
+                        .fillMaxSize()
                         .widthIn(max = layoutPolicy.detailMaxWidthDp.dp)
                         .statusBarsPadding()
                     ) {
@@ -377,6 +392,11 @@ fun TabletSettingsLayout(
                             Text("返回", color = MaterialTheme.colorScheme.primary)
                         }
                         
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        ) {
                         when (detail) {
                             SettingsDetail.APPEARANCE -> AppearanceSettingsContent(
                                 state = state,
@@ -532,7 +552,7 @@ fun TabletSettingsLayout(
                                     var description by remember(plugin) { mutableStateOf(plugin.description) }
                                     var rules by remember(plugin) { mutableStateOf(plugin.rules) }
                                     
-                                    Column {
+                                    Column(modifier = Modifier.fillMaxSize()) {
                                         // Custom Header for Editor
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically, 
@@ -564,7 +584,9 @@ fun TabletSettingsLayout(
                                         }
                                         
                                         JsonPluginEditorContent(
-                                            modifier = Modifier.fillMaxSize(),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .weight(1f),
                                             name = name,
                                             onNameChange = { newName: String -> name = newName },
                                             description = description,
@@ -585,10 +607,12 @@ fun TabletSettingsLayout(
                                 }
                             }
                         }
+                        }
                     }
                 } else {
                     // Category Root
                     AnimatedContent(
+                        modifier = Modifier.fillMaxSize(),
                         targetState = selectedCategory,
                         transitionSpec = {
                             (slideInVertically { height -> height } + fadeIn()).togetherWith(
@@ -597,6 +621,7 @@ fun TabletSettingsLayout(
                         label = "SettingsDetailTransition"
                     ) { category ->
                         Column(modifier = Modifier
+                            .fillMaxSize()
                             .widthIn(max = layoutPolicy.rootPanelMaxWidthDp.dp)
                             .verticalScroll(rememberScrollState())
                         ) {
