@@ -58,6 +58,7 @@ import com.android.purebilibili.feature.video.subtitle.SubtitleDisplayMode
 import com.android.purebilibili.feature.video.subtitle.SubtitleTrackOption
 import com.android.purebilibili.feature.video.subtitle.resolveSubtitleDisplayOptions
 import com.android.purebilibili.feature.video.playback.policy.resolveDisplayedPlaybackTransitionPosition
+import com.android.purebilibili.core.store.PlayerProgressPlacement
 import kotlin.math.roundToInt
 
 /**
@@ -375,6 +376,7 @@ fun BottomControlBar(
     onPlayModeClick: () -> Unit = {},
     playbackOrderLabel: String = "",
     onPlaybackOrderClick: () -> Unit = {},
+    progressPlacement: PlayerProgressPlacement = PlayerProgressPlacement.ABOVE_CONTROLS,
     onPipClick: () -> Unit = {},
     
     modifier: Modifier = Modifier
@@ -545,20 +547,7 @@ fun BottomControlBar(
     }
 
     val displayedPositionMs = seekPositionMs.coerceAtLeast(0L)
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = layoutPolicy.bottomPaddingDp.dp)
-            .then(
-                if (shouldApplyNavigationBarPaddingToBottomControlBar(isFullscreen = isFullscreen)) {
-                    Modifier.navigationBarsPadding()
-                } else {
-                    Modifier
-                }
-            )
-    ) {
-        // 1. Progress Bar (Top of controls)
+    val progressBarContent: @Composable () -> Unit = {
         VideoProgressBar(
             currentPosition = progress.current,
             displayPositionMs = displayedPositionMs,
@@ -578,8 +567,24 @@ fun BottomControlBar(
             currentChapter = currentChapter,
             onChapterClick = onChapterClick
         )
+    }
 
-        Spacer(modifier = Modifier.height(layoutPolicy.progressSpacingDp.dp))
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = layoutPolicy.bottomPaddingDp.dp)
+            .then(
+                if (shouldApplyNavigationBarPaddingToBottomControlBar(isFullscreen = isFullscreen)) {
+                    Modifier.navigationBarsPadding()
+                } else {
+                    Modifier
+                }
+            )
+    ) {
+        if (progressPlacement == PlayerProgressPlacement.ABOVE_CONTROLS) {
+            progressBarContent()
+            Spacer(modifier = Modifier.height(layoutPolicy.progressSpacingDp.dp))
+        }
 
         // 2. Control Row
         Row(
@@ -814,6 +819,10 @@ fun BottomControlBar(
                     )
                 }
             }
+        }
+        if (progressPlacement == PlayerProgressPlacement.BOTTOM_EDGE) {
+            Spacer(modifier = Modifier.height(layoutPolicy.progressSpacingDp.dp))
+            progressBarContent()
         }
     }
 

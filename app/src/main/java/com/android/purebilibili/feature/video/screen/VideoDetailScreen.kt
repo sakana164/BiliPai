@@ -4220,6 +4220,7 @@ fun VideoDetailScreen(
             .getDanmakuSendFontSize(context)
             .collectAsStateWithLifecycle(initialValue = 25
         )
+        val composerDrafts by viewModel.composerDrafts.collectAsStateWithLifecycle()
         com.android.purebilibili.feature.video.ui.components.DanmakuSendDialog(
             visible = showDanmakuDialog,
             onDismiss = { viewModel.hideDanmakuSendDialog() },
@@ -4231,6 +4232,9 @@ fun VideoDetailScreen(
             initialColor = rememberedDanmakuSendColor,
             initialMode = rememberedDanmakuSendMode,
             initialFontSize = rememberedDanmakuSendFontSize,
+            initialText = composerDrafts.danmaku.text,
+            initialAttentionCommand = composerDrafts.danmaku.attentionCommand,
+            onDraftChange = viewModel::updateDanmakuDraft,
             onSelectionChange = { color, mode, fontSize ->
                 danmakuSendPreferenceScope.launch {
                     com.android.purebilibili.core.store.SettingsManager.setDanmakuSendColor(context, color)
@@ -4246,6 +4250,10 @@ fun VideoDetailScreen(
         val replyingToComment by viewModel.replyingToComment.collectAsStateWithLifecycle()
         val emotePackages by viewModel.emotePackages.collectAsStateWithLifecycle() // [新增]
         val mentionSearchState by viewModel.commentMentionSearchState.collectAsStateWithLifecycle()
+        val commentDraftKey = com.android.purebilibili.feature.video.viewmodel
+            .commentComposerDraftKey(replyingToComment?.rpid)
+        val commentDraft = composerDrafts.comments[commentDraftKey]
+            ?: com.android.purebilibili.feature.video.viewmodel.CommentComposerDraft()
         
         com.android.purebilibili.feature.video.ui.components.CommentInputDialog(
             visible = showCommentInput,
@@ -4260,6 +4268,10 @@ fun VideoDetailScreen(
             isMentionSearching = mentionSearchState.isLoading,
             mentionSearchError = mentionSearchState.errorMessage,
             onMentionSearchQueryChange = viewModel::searchCommentMentionUsers,
+            initialText = commentDraft.text,
+            initialImageUris = commentDraft.imageUris,
+            initialSyncToDynamic = commentDraft.syncToDynamic,
+            onDraftChange = viewModel::updateCommentDraft,
             currentVideoPositionMsProvider = { playerState.player.currentPosition.coerceAtLeast(0L) },
             onSend = { message, imageUris, syncToDynamic ->
                 viewModel.sendComment(message, imageUris, syncToDynamic)

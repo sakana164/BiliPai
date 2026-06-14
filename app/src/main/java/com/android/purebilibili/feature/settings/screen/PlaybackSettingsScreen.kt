@@ -1624,6 +1624,16 @@ private fun PlaybackFullscreenGestureSettingsSection(
         val bottomProgressBehavior by com.android.purebilibili.core.store.SettingsManager
             .getBottomProgressBehavior(context)
             .collectAsStateWithLifecycle(initialValue = BottomProgressBehavior.ALWAYS_SHOW)
+        val playerControlVisibility by SettingsManager
+            .getPlayerControlVisibilitySettings(context)
+            .collectAsStateWithLifecycle(
+                initialValue = com.android.purebilibili.core.store.PlayerControlVisibilitySettings()
+            )
+        val playerProgressPlacement by SettingsManager
+            .getPlayerProgressPlacement(context)
+            .collectAsStateWithLifecycle(
+                initialValue = com.android.purebilibili.core.store.PlayerProgressPlacement.ABOVE_CONTROLS
+            )
         val isLargeScreenDevice = context.resources.configuration.smallestScreenWidthDp >= 600
         val horizontalAdaptationEnabled by com.android.purebilibili.core.store.SettingsManager
             .getHorizontalAdaptationEnabled(context)
@@ -1677,6 +1687,32 @@ private fun PlaybackFullscreenGestureSettingsSection(
                 }
             },
             iconTint = com.android.purebilibili.core.theme.iOSBlue
+        )
+        IOSDivider()
+        IOSSwitchItem(
+            icon = rememberSettingsSemanticIcon(SettingsIconRole.PLAYER_ACTIONS),
+            title = "显示投屏按钮",
+            subtitle = "同时控制半屏、横屏全屏和竖屏全屏的投屏入口",
+            checked = playerControlVisibility.showCastButton,
+            onCheckedChange = {
+                scope.launch {
+                    SettingsManager.setShowPlayerCastButton(context, it)
+                }
+            },
+            iconTint = com.android.purebilibili.core.theme.iOSBlue
+        )
+        IOSDivider()
+        IOSSwitchItem(
+            icon = rememberSettingsSemanticIcon(SettingsIconRole.LIKE_INTERACTION),
+            title = "显示关注按钮",
+            subtitle = "关闭后保留 UP 主头像、名称和主页入口",
+            checked = playerControlVisibility.showFollowButton,
+            onCheckedChange = {
+                scope.launch {
+                    SettingsManager.setShowVideoFollowButton(context, it)
+                }
+            },
+            iconTint = com.android.purebilibili.core.theme.iOSPink
         )
         IOSDivider()
         IOSSlidingSegmentedSetting(
@@ -1925,6 +1961,27 @@ private fun PlaybackFullscreenGestureSettingsSection(
                 scope.launch {
                     com.android.purebilibili.core.store.SettingsManager
                         .setBottomProgressBehavior(context, behavior)
+                }
+            }
+        )
+        IOSDivider()
+        IOSSlidingSegmentedSetting(
+            title = "控制栏进度条位置：${playerProgressPlacement.label}",
+            subtitle = "可将可拖动进度条放到控制按钮下方的视频最底部",
+            options = listOf(
+                PlaybackSegmentOption(
+                    com.android.purebilibili.core.store.PlayerProgressPlacement.ABOVE_CONTROLS,
+                    "控制栏上方"
+                ),
+                PlaybackSegmentOption(
+                    com.android.purebilibili.core.store.PlayerProgressPlacement.BOTTOM_EDGE,
+                    "视频最底部"
+                )
+            ),
+            selectedValue = playerProgressPlacement,
+            onSelectionChange = { placement ->
+                scope.launch {
+                    SettingsManager.setPlayerProgressPlacement(context, placement)
                 }
             }
         )

@@ -801,6 +801,16 @@ fun VideoPlayerOverlay(
         .getBottomProgressBehavior(context)
         .collectAsStateWithLifecycle(initialValue = BottomProgressBehavior.ALWAYS_SHOW
         )
+    val playerControlVisibility by SettingsManager
+        .getPlayerControlVisibilitySettings(context)
+        .collectAsStateWithLifecycle(
+            initialValue = com.android.purebilibili.core.store.PlayerControlVisibilitySettings()
+        )
+    val progressPlacement by SettingsManager
+        .getPlayerProgressPlacement(context)
+        .collectAsStateWithLifecycle(
+            initialValue = com.android.purebilibili.core.store.PlayerProgressPlacement.ABOVE_CONTROLS
+        )
     val displayedOnlineCount = remember(onlineCount, showOnlineCount) {
         resolveDisplayedOnlineCount(
             onlineCount = onlineCount,
@@ -1202,6 +1212,7 @@ fun VideoPlayerOverlay(
                             }
                         },
                         onCastClick = onCastClickAction,
+                        showCastButton = playerControlVisibility.showCastButton,
                         onMoreClick = {
                             endDrawerInitialTab = 0
                             showEndDrawer = true
@@ -1225,6 +1236,7 @@ fun VideoPlayerOverlay(
                         isAudioOnly = isAudioOnly,
                         //  [新增] 投屏按钮
                         onCastClick = onCastClickAction,
+                        showCastButton = playerControlVisibility.showCastButton,
                         modifier = Modifier.align(Alignment.TopStart)
                     )
                 }
@@ -1296,6 +1308,7 @@ fun VideoPlayerOverlay(
                         compact = !isFullscreen
                     ),
                     onPlaybackOrderClick = { showPlaybackOrderSheet = true },
+                    progressPlacement = progressPlacement,
                     //  [修复] 传入 modifier 确保在底部
                     modifier = Modifier.align(Alignment.BottomStart)
                 )
@@ -2045,6 +2058,7 @@ private fun PortraitTopBar(
     isAudioOnly: Boolean,
     // 📺 [新增] 投屏
     onCastClick: () -> Unit = {},
+    showCastButton: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
@@ -2129,17 +2143,18 @@ private fun PortraitTopBar(
                 )
             }
 
-            // 📺 投屏按钮 - 无背景
-            IconButton(
-                onClick = onCastClick,
-                modifier = Modifier.size(layoutPolicy.buttonSizeDp.dp)
-            ) {
-                Icon(
-                    imageVector = io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Default.Tv,
-                    contentDescription = "投屏",
-                    tint = Color.White,
-                    modifier = Modifier.size(layoutPolicy.iconSizeDp.dp)
-                )
+            if (showCastButton) {
+                IconButton(
+                    onClick = onCastClick,
+                    modifier = Modifier.size(layoutPolicy.buttonSizeDp.dp)
+                ) {
+                    Icon(
+                        imageVector = io.github.alexzhirkevich.cupertino.icons.CupertinoIcons.Default.Tv,
+                        contentDescription = "投屏",
+                        tint = Color.White,
+                        modifier = Modifier.size(layoutPolicy.iconSizeDp.dp)
+                    )
+                }
             }
             
             //  设置按钮 - 无背景

@@ -102,6 +102,9 @@ fun DanmakuSendDialog(
     initialColor: Int = 16777215,
     initialMode: Int = 1,
     initialFontSize: Int = 25,
+    initialText: String = "",
+    initialAttentionCommand: Boolean = false,
+    onDraftChange: (String, Boolean) -> Unit = { _, _ -> },
     onSelectionChange: (color: Int, mode: Int, fontSize: Int) -> Unit = { _, _, _ -> },
     topReservedSpace: Dp = 0.dp,
     modifier: Modifier = Modifier
@@ -115,7 +118,10 @@ fun DanmakuSendDialog(
         imeBottomPx = imeBottomPx
     )
     val maxSheetHeight = remember(configuration.screenHeightDp, topReservedSpace) {
-        (configuration.screenHeightDp.dp - topReservedSpace).coerceAtLeast(1.dp)
+        minOf(
+            configuration.screenHeightDp.dp * 0.5f,
+            (configuration.screenHeightDp.dp - topReservedSpace).coerceAtLeast(1.dp)
+        )
     }
 
     // 弹幕预设颜色 (十进制 RGB)
@@ -146,17 +152,25 @@ fun DanmakuSendDialog(
     )
 
     // 状态
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(initialText) }
     var selectedColor by remember { mutableIntStateOf(initialColor) }
     var selectedMode by remember { mutableIntStateOf(initialMode) }
     var selectedFontSize by remember { mutableIntStateOf(initialFontSize) }
-    var attentionCommandChecked by remember { mutableStateOf(false) }
+    var attentionCommandChecked by remember { mutableStateOf(initialAttentionCommand) }
+    var showSettings by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     // 重置状态
-    LaunchedEffect(visible, initialColor, initialMode, initialFontSize) {
+    LaunchedEffect(
+        visible,
+        initialColor,
+        initialMode,
+        initialFontSize,
+        initialText,
+        initialAttentionCommand
+    ) {
         if (visible) {
             val selection = resolveDanmakuSendSelectionState(
                 initialColor = initialColor,
@@ -166,11 +180,12 @@ fun DanmakuSendDialog(
                 modeOptions = modeOptions.map { it.first },
                 fontSizeOptions = fontSizeOptions.map { it.first }
             )
-            text = ""
+            text = initialText
             selectedColor = selection.color
             selectedMode = selection.mode
             selectedFontSize = selection.fontSize
-            attentionCommandChecked = false
+            attentionCommandChecked = initialAttentionCommand
+            showSettings = false
             delay(100)
             focusRequester.requestFocus()
             keyboardController?.show()
@@ -275,7 +290,12 @@ fun DanmakuSendDialog(
                         ) {
                             BasicTextField(
                                 value = text,
-                                onValueChange = { if (it.length <= 100) text = it },
+                                onValueChange = {
+                                    if (it.length <= 100) {
+                                        text = it
+                                        onDraftChange(it, attentionCommandChecked)
+                                    }
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .focusRequester(focusRequester),
@@ -316,6 +336,14 @@ fun DanmakuSendDialog(
                             textAlign = TextAlign.End
                         )
 
+                        TextButton(
+                            onClick = { showSettings = !showSettings },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text(if (showSettings) "收起弹幕设置" else "颜色、位置与大小")
+                        }
+
+                        if (showSettings) {
                         // 颜色选择
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
@@ -381,13 +409,19 @@ fun DanmakuSendDialog(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f))
-                                .clickable { attentionCommandChecked = !attentionCommandChecked }
+                                .clickable {
+                                    attentionCommandChecked = !attentionCommandChecked
+                                    onDraftChange(text, attentionCommandChecked)
+                                }
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Checkbox(
                                 checked = attentionCommandChecked,
-                                onCheckedChange = { attentionCommandChecked = it }
+                                onCheckedChange = {
+                                    attentionCommandChecked = it
+                                    onDraftChange(text, it)
+                                }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
@@ -475,6 +509,7 @@ fun DanmakuSendDialog(
                                     }
                                 }
                             }
+                        }
                         }
 
                         // 发送按钮

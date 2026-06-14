@@ -2228,6 +2228,11 @@ private fun VideoPageItem(
             val replyingToComment by viewModel.replyingToComment.collectAsStateWithLifecycle()
             val emotePackages by viewModel.emotePackages.collectAsStateWithLifecycle()
             val mentionSearchState by viewModel.commentMentionSearchState.collectAsStateWithLifecycle()
+            val composerDrafts by viewModel.composerDrafts.collectAsStateWithLifecycle()
+            val commentDraftKey = com.android.purebilibili.feature.video.viewmodel
+                .commentComposerDraftKey(replyingToComment?.rpid)
+            val commentDraft = composerDrafts.comments[commentDraftKey]
+                ?: com.android.purebilibili.feature.video.viewmodel.CommentComposerDraft()
             val commentState by commentViewModel.commentState.collectAsStateWithLifecycle()
             val commentFraudDetectionEnabled by com.android.purebilibili.core.store.SettingsManager
                 .getCommentFraudDetectionEnabled(context)
@@ -2257,6 +2262,10 @@ private fun VideoPageItem(
                 isMentionSearching = mentionSearchState.isLoading,
                 mentionSearchError = mentionSearchState.errorMessage,
                 onMentionSearchQueryChange = viewModel::searchCommentMentionUsers,
+                initialText = commentDraft.text,
+                initialImageUris = commentDraft.imageUris,
+                initialSyncToDynamic = commentDraft.syncToDynamic,
+                onDraftChange = viewModel::updateCommentDraft,
                 currentVideoPositionMsProvider = { exoPlayer.currentPosition.coerceAtLeast(0L) },
                 onSend = { message, imageUris, syncToDynamic ->
                     viewModel.sendComment(

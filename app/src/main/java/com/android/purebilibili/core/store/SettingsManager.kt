@@ -327,6 +327,25 @@ enum class BottomProgressBehavior(
     }
 }
 
+enum class PlayerProgressPlacement(
+    val value: Int,
+    val label: String
+) {
+    ABOVE_CONTROLS(0, "控制栏上方"),
+    BOTTOM_EDGE(1, "视频最底部");
+
+    companion object {
+        fun fromValue(value: Int): PlayerProgressPlacement {
+            return entries.find { it.value == value } ?: ABOVE_CONTROLS
+        }
+    }
+}
+
+data class PlayerControlVisibilitySettings(
+    val showCastButton: Boolean = true,
+    val showFollowButton: Boolean = true
+)
+
 internal fun normalizeDanmakuDisplayArea(value: Float): Float {
     val normalized = value.coerceIn(0.25f, 1.0f)
     val supportedOptions = floatArrayOf(0.25f, 0.5f, 0.75f, 1.0f)
@@ -848,6 +867,9 @@ object SettingsManager {
     private val KEY_SLIDE_VOLUME_BRIGHTNESS_ENABLED = booleanPreferencesKey("slide_volume_brightness_enabled")
     private val KEY_SET_SYSTEM_BRIGHTNESS = booleanPreferencesKey("set_system_brightness")
     private val KEY_PIP_NO_DANMAKU = booleanPreferencesKey("pip_no_danmaku")
+    private val KEY_SHOW_PLAYER_CAST_BUTTON = booleanPreferencesKey("show_player_cast_button")
+    private val KEY_SHOW_VIDEO_FOLLOW_BUTTON = booleanPreferencesKey("show_video_follow_button")
+    private val KEY_PLAYER_PROGRESS_PLACEMENT = intPreferencesKey("player_progress_placement")
     private val KEY_SEARCH_HOT_SECTION_ENABLED = booleanPreferencesKey("search_hot_section_enabled")
     private val KEY_SEARCH_DISCOVER_SECTION_ENABLED = booleanPreferencesKey("search_discover_section_enabled")
     //  [新增] 双击跳转秒数 (可分开设置快进和后退)
@@ -1189,6 +1211,40 @@ object SettingsManager {
         context.settingsDataStore.data
             .map(::mapPlayerInteractionSettingsFromPreferences)
             .distinctUntilChanged()
+
+    fun getPlayerControlVisibilitySettings(
+        context: Context
+    ): Flow<PlayerControlVisibilitySettings> = context.settingsDataStore.data
+        .map { preferences ->
+            PlayerControlVisibilitySettings(
+                showCastButton = preferences[KEY_SHOW_PLAYER_CAST_BUTTON] ?: true,
+                showFollowButton = preferences[KEY_SHOW_VIDEO_FOLLOW_BUTTON] ?: true
+            )
+        }
+        .distinctUntilChanged()
+
+    suspend fun setShowPlayerCastButton(context: Context, visible: Boolean) {
+        context.settingsDataStore.edit { it[KEY_SHOW_PLAYER_CAST_BUTTON] = visible }
+    }
+
+    suspend fun setShowVideoFollowButton(context: Context, visible: Boolean) {
+        context.settingsDataStore.edit { it[KEY_SHOW_VIDEO_FOLLOW_BUTTON] = visible }
+    }
+
+    fun getPlayerProgressPlacement(context: Context): Flow<PlayerProgressPlacement> =
+        context.settingsDataStore.data.map { preferences ->
+            PlayerProgressPlacement.fromValue(
+                preferences[KEY_PLAYER_PROGRESS_PLACEMENT]
+                    ?: PlayerProgressPlacement.ABOVE_CONTROLS.value
+            )
+        }.distinctUntilChanged()
+
+    suspend fun setPlayerProgressPlacement(
+        context: Context,
+        placement: PlayerProgressPlacement
+    ) {
+        context.settingsDataStore.edit { it[KEY_PLAYER_PROGRESS_PLACEMENT] = placement.value }
+    }
 
     // --- Auto Play on Enter (Click to Play) ---
     private val KEY_CLICK_TO_PLAY = booleanPreferencesKey("click_to_play")

@@ -671,6 +671,11 @@ fun UpInfoSection(
     isQuickReturnLimitedForSharedElements: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val playerControlVisibility by com.android.purebilibili.core.store.SettingsManager
+        .getPlayerControlVisibilitySettings(LocalContext.current)
+        .collectAsStateWithLifecycle(
+            initialValue = com.android.purebilibili.core.store.PlayerControlVisibilitySettings()
+        )
     //  尝试获取共享元素作用域
     val sharedTransitionScope = com.android.purebilibili.core.ui.LocalSharedTransitionScope.current
     val animatedVisibilityScope = com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope.current
@@ -815,55 +820,56 @@ fun UpInfoSection(
                 }
             }
 
-            var followActionModifier = Modifier.height(36.dp)
-            if (metadataSharedEnabled) {
-                with(requireNotNull(sharedTransitionScope)) {
-                    followActionModifier = followActionModifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoUpActionSharedElementKey(info.bvid)),
-                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                        boundsTransform = { _, _ ->
-                            videoSharedElementBoundsTransformSpec(metadataSharedTransitionMotionSpec)
-                        },
-                        clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(16.dp))
-                    )
-                }
-            }
-
-            // Follow button
-            val followVisualPolicy = remember(isFollowing) {
-                resolveVideoFollowVisualPolicy(isFollowing = isFollowing)
-            }
-            Surface(
-                onClick = onFollowClick,
-                color = when (followVisualPolicy.detailButtonTone) {
-                    FollowButtonTone.PRIMARY -> MaterialTheme.colorScheme.primary
-                    FollowButtonTone.PRIMARY_CONTAINER -> MaterialTheme.colorScheme.primaryContainer
-                },
-                shape = RoundedCornerShape(18.dp),
-                modifier = followActionModifier
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                ) {
-                    if (!isFollowing) {
-                        Icon(
-                            CupertinoIcons.Default.Plus,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(14.dp)
+            if (playerControlVisibility.showFollowButton) {
+                var followActionModifier = Modifier.height(36.dp)
+                if (metadataSharedEnabled) {
+                    with(requireNotNull(sharedTransitionScope)) {
+                        followActionModifier = followActionModifier.sharedBounds(
+                            sharedContentState = rememberSharedContentState(key = com.android.purebilibili.core.ui.transition.videoUpActionSharedElementKey(info.bvid)),
+                            animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+                            boundsTransform = { _, _ ->
+                                videoSharedElementBoundsTransformSpec(metadataSharedTransitionMotionSpec)
+                            },
+                            clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(16.dp))
                         )
-                        Spacer(Modifier.width(2.dp))
                     }
-                    Text(
-                        text = if (isFollowing) "\u5df2\u5173\u6ce8" else "\u5173\u6ce8",
-                        fontSize = 13.sp,
-                        color = when (followVisualPolicy.detailTextTone) {
-                            FollowTextTone.ON_PRIMARY -> MaterialTheme.colorScheme.onPrimary
-                            FollowTextTone.ON_PRIMARY_CONTAINER -> MaterialTheme.colorScheme.onPrimaryContainer
-                        },
-                        fontWeight = FontWeight.Medium
-                    )
+                }
+
+                val followVisualPolicy = remember(isFollowing) {
+                    resolveVideoFollowVisualPolicy(isFollowing = isFollowing)
+                }
+                Surface(
+                    onClick = onFollowClick,
+                    color = when (followVisualPolicy.detailButtonTone) {
+                        FollowButtonTone.PRIMARY -> MaterialTheme.colorScheme.primary
+                        FollowButtonTone.PRIMARY_CONTAINER -> MaterialTheme.colorScheme.primaryContainer
+                    },
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = followActionModifier
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        if (!isFollowing) {
+                            Icon(
+                                CupertinoIcons.Default.Plus,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(2.dp))
+                        }
+                        Text(
+                            text = if (isFollowing) "\u5df2\u5173\u6ce8" else "\u5173\u6ce8",
+                            fontSize = 13.sp,
+                            color = when (followVisualPolicy.detailTextTone) {
+                                FollowTextTone.ON_PRIMARY -> MaterialTheme.colorScheme.onPrimary
+                                FollowTextTone.ON_PRIMARY_CONTAINER -> MaterialTheme.colorScheme.onPrimaryContainer
+                            },
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }

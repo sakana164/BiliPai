@@ -136,6 +136,10 @@ fun CommentInputDialog(
     isMentionSearching: Boolean = false,
     mentionSearchError: String? = null,
     onMentionSearchQueryChange: (String) -> Unit = {},
+    initialText: String = "",
+    initialImageUris: List<Uri> = emptyList(),
+    initialSyncToDynamic: Boolean = false,
+    onDraftChange: (String, List<Uri>, Boolean) -> Unit = { _, _, _ -> },
     emotePackages: List<com.android.purebilibili.data.model.response.EmotePackage> = emptyList() // [新增] 表情包列表
 ) {
     val configuration = LocalConfiguration.current
@@ -145,13 +149,13 @@ fun CommentInputDialog(
     }
 
     // 状态
-    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
-    var isForwardToDynamic by remember { mutableStateOf(false) } // 转发到动态
+    var textFieldValue by remember { mutableStateOf(TextFieldValue(initialText)) }
+    var isForwardToDynamic by remember { mutableStateOf(initialSyncToDynamic) } // 转发到动态
     var showEmojiPanel by remember { mutableStateOf(false) }    // 表情面板
     var showMentionPanel by remember { mutableStateOf(false) }
     var mentionSearchText by remember { mutableStateOf("") }
     var currentTab by remember { mutableStateOf(0) } // 0=Kaomoji, 1=Emoji, 2+=API Packages
-    var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var selectedImageUris by remember { mutableStateOf(initialImageUris) }
     val text = textFieldValue.text
     
     val focusRequester = remember { FocusRequester() }
@@ -171,12 +175,14 @@ fun CommentInputDialog(
             selectedImageUris = (selectedImageUris + uris)
                 .distinct()
                 .take(9)
+            onDraftChange(textFieldValue.text, selectedImageUris, isForwardToDynamic)
         }
     }
 
     fun updateTextFieldValue(nextValue: TextFieldValue) {
         if (nextValue.text.length > 1000) return
         textFieldValue = nextValue
+        onDraftChange(nextValue.text, selectedImageUris, isForwardToDynamic)
         val mentionQuery = resolveActiveCommentMentionQuery(
             text = nextValue.text,
             cursor = nextValue.selection.end
@@ -207,14 +213,20 @@ fun CommentInputDialog(
     }
     
     // 重置状态
-    LaunchedEffect(visible, canInputComment) {
+    LaunchedEffect(
+        visible,
+        canInputComment,
+        initialText,
+        initialImageUris,
+        initialSyncToDynamic
+    ) {
         if (visible) {
-            textFieldValue = TextFieldValue("")
-            isForwardToDynamic = false
+            textFieldValue = TextFieldValue(initialText)
+            isForwardToDynamic = initialSyncToDynamic
             showEmojiPanel = false
             showMentionPanel = false
             mentionSearchText = ""
-            selectedImageUris = emptyList()
+            selectedImageUris = initialImageUris
         }
     }
     
@@ -410,6 +422,11 @@ fun CommentInputDialog(
                                                 .padding(3.dp)
                                                 .clickable {
                                                     selectedImageUris = selectedImageUris.filterNot { it == uri }
+                                                    onDraftChange(
+                                                        textFieldValue.text,
+                                                        selectedImageUris,
+                                                        isForwardToDynamic
+                                                    )
                                                 }
                                         ) {
                                             Icon(
@@ -445,7 +462,14 @@ fun CommentInputDialog(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(4.dp))
-                                        .clickable(enabled = canInputComment && !isSending) { isForwardToDynamic = !isForwardToDynamic }
+                                        .clickable(enabled = canInputComment && !isSending) {
+                                            isForwardToDynamic = !isForwardToDynamic
+                                            onDraftChange(
+                                                textFieldValue.text,
+                                                selectedImageUris,
+                                                isForwardToDynamic
+                                            )
+                                        }
                                         .padding(horizontal = 4.dp, vertical = 4.dp)
                                 ) {
                                     // 模拟 RadioButton/Checkbox

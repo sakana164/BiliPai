@@ -3437,6 +3437,15 @@ class PlayerViewModel : ViewModel() {
     
     private val _showCommentDialog = MutableStateFlow(false)
     val showCommentDialog = _showCommentDialog.asStateFlow()
+    private val _composerDrafts = MutableStateFlow(VideoComposerDraftState())
+    val composerDrafts = _composerDrafts.asStateFlow()
+
+    private fun ensureComposerDraftVideo() {
+        val videoId = (_uiState.value as? PlayerUiState.Success)?.info?.bvid.orEmpty()
+        if (_composerDrafts.value.videoId != videoId) {
+            _composerDrafts.value = VideoComposerDraftState(videoId = videoId)
+        }
+    }
 
     // 表情包数据
     private val _emotePackages = MutableStateFlow<List<com.android.purebilibili.data.model.response.EmotePackage>>(emptyList())
@@ -3458,6 +3467,7 @@ class PlayerViewModel : ViewModel() {
     
     fun showCommentInputDialog() {
         android.util.Log.d("PlayerViewModel", "📝 showCommentInputDialog called")
+        ensureComposerDraftVideo()
         _showCommentDialog.value = true
         // 懒加载表情包
         loadEmotes()
@@ -3483,11 +3493,32 @@ class PlayerViewModel : ViewModel() {
     val isSendingDanmaku = _isSendingDanmaku.asStateFlow()
     
     fun showDanmakuSendDialog() {
+        ensureComposerDraftVideo()
         _showDanmakuDialog.value = true
     }
     
     fun hideDanmakuSendDialog() {
         _showDanmakuDialog.value = false
+    }
+
+    fun updateDanmakuDraft(text: String, attentionCommand: Boolean) {
+        ensureComposerDraftVideo()
+        _composerDrafts.update {
+            it.copy(danmaku = DanmakuComposerDraft(text, attentionCommand))
+        }
+    }
+
+    fun updateCommentDraft(
+        text: String,
+        imageUris: List<Uri>,
+        syncToDynamic: Boolean
+    ) {
+        ensureComposerDraftVideo()
+        val key = commentComposerDraftKey(_replyingToComment.value?.rpid)
+        val draft = CommentComposerDraft(text, imageUris, syncToDynamic)
+        _composerDrafts.update { state ->
+            state.copy(comments = state.comments + (key to draft))
+        }
     }
     
     /**
@@ -3550,6 +3581,9 @@ class PlayerViewModel : ViewModel() {
                 .onSuccess {
                     toast("发送成功")
                     _showDanmakuDialog.value = false
+                    _composerDrafts.update {
+                        it.copy(danmaku = DanmakuComposerDraft())
+                    }
                     
                     // 本地即时显示弹幕
                     // 注意：这需要在 Composable 中通过 DanmakuManager 调用
@@ -3868,6 +3902,10 @@ class PlayerViewModel : ViewModel() {
                 .onSuccess { reply ->
                     toast(if (replyTo != null) "回复成功" else "评论成功")
                     _commentInput.value = ""
+                    val sentDraftKey = commentComposerDraftKey(replyTo?.rpid)
+                    _composerDrafts.update { state ->
+                        state.copy(comments = state.comments - sentDraftKey)
+                    }
                     _replyingToComment.value = null
                     
                     // 通知 UI 刷新评论列表

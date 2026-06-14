@@ -143,6 +143,7 @@ fun TopControlBar(
     onCoinClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onCastClick: () -> Unit = {}, // Added Cast callback
+    showCastButton: Boolean = true,
     onMoreClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -300,15 +301,16 @@ fun TopControlBar(
                     )
                 }
 
-                // Cast (Added back)
-                ActionIcon(
-                    icon = Icons.Outlined.Cast,
-                    contentDescription = "投屏",
-                    isActive = false,
-                    onClick = onCastClick,
-                    buttonSizeDp = layoutPolicy.buttonSizeDp,
-                    iconSizeDp = layoutPolicy.iconSizeDp
-                )
+                if (showCastButton) {
+                    ActionIcon(
+                        icon = Icons.Outlined.Cast,
+                        contentDescription = "投屏",
+                        isActive = false,
+                        onClick = onCastClick,
+                        buttonSizeDp = layoutPolicy.buttonSizeDp,
+                        iconSizeDp = layoutPolicy.iconSizeDp
+                    )
+                }
                 
                 // More (Three dots)
                 IconButton(
