@@ -73,6 +73,7 @@
 # VideoDetailScreen entrypoint. Keep this class unoptimized while preserving
 # R8 for the rest of the release build.
 -keep class com.android.purebilibili.feature.video.screen.VideoDetailScreenKt { *; }
+-keep class com.android.purebilibili.feature.video.screen.VideoDetailScreenKt$* { *; }
 
 # Release-only player overlay regressions are hard to diagnose because gestures
 # can keep working while Compose control layers stop rendering. Keep the

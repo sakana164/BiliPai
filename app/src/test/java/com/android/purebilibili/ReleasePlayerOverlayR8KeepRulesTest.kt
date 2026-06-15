@@ -15,6 +15,16 @@ class ReleasePlayerOverlayR8KeepRulesTest {
 
         assertTrue(
             rules.contains(
+                "-keep class com.android.purebilibili.feature.video.screen.VideoDetailScreenKt { *; }"
+            )
+        )
+        assertTrue(
+            rules.contains(
+                "-keep class com.android.purebilibili.feature.video.screen.VideoDetailScreenKt\$* { *; }"
+            )
+        )
+        assertTrue(
+            rules.contains(
                 "-keep class com.android.purebilibili.feature.video.ui.section.** { *; }"
             )
         )
