@@ -913,6 +913,11 @@ internal fun resolveAndroidNativeBottomBarGlassEnabled(
     blurEnabled: Boolean
 ): Boolean = liquidGlassEnabled
 
+internal fun resolveBottomBarIndicatorEffectsEnabled(
+    liquidGlassEnabled: Boolean,
+    blurEnabled: Boolean
+): Boolean = liquidGlassEnabled || blurEnabled
+
 internal fun shouldUseAndroidNativeFloatingHazeBlur(
     blurEnabled: Boolean,
     glassEnabled: Boolean,
@@ -2917,6 +2922,10 @@ private fun KernelSuAlignedBottomBar(
     } else {
         containerColor
     }
+    val indicatorEffectsEnabled = resolveBottomBarIndicatorEffectsEnabled(
+        liquidGlassEnabled = glassEnabled,
+        blurEnabled = blurEnabled
+    )
     val density = LocalDensity.current
     val bottomBarMotionSpec = remember {
         resolveBottomBarMotionSpec(profile = BottomBarMotionProfile.ANDROID_NATIVE_FLOATING)
@@ -3230,7 +3239,7 @@ private fun KernelSuAlignedBottomBar(
                 dampedDragState.isRunning ||
                 dampedDragState.pressProgress > BottomBarTransientAlphaThreshold
             val shouldRenderRefractionCaptureRaw = shouldRenderBottomBarRefractionCapture(
-                glassEnabled = glassEnabled,
+                glassEnabled = indicatorEffectsEnabled,
                 hasBackdrop = miuixBackdrop != null,
                 captureProgress = effectiveCaptureProgress,
                 isTransitionRunning = isTransitionRunning,
@@ -3238,7 +3247,7 @@ private fun KernelSuAlignedBottomBar(
                 isBottomBarInteractionActive = isBottomBarInteractionActive
             )
             val shouldRenderIndicatorBackdropRaw = shouldRenderBottomBarIndicatorBackdrop(
-                glassEnabled = glassEnabled,
+                glassEnabled = indicatorEffectsEnabled,
                 hasContentBackdrop = miuixBackdrop != null,
                 indicatorProgress = effectiveIndicatorEffectProgress,
                 isTransitionRunning = isTransitionRunning,
@@ -3252,7 +3261,7 @@ private fun KernelSuAlignedBottomBar(
             // 交互状态增删这些层,切换瞬间 tabsBackdrop 为空,指示器会直接采样到
             // 原始内容(首页视频画面)。常驻后 tabsBackdrop 始终有录制内容,
             // 由 progress 连续驱动 effects/surface,彻底消除该瞬态。
-            val glassLayersAlwaysOn = glassEnabled && miuixBackdrop != null
+            val glassLayersAlwaysOn = indicatorEffectsEnabled && miuixBackdrop != null
             val shouldRenderRefractionCapture =
                 glassLayersAlwaysOn || shouldRenderRefractionCaptureRaw
             val shouldRenderIndicatorBackdrop =
@@ -3595,6 +3604,7 @@ private fun KernelSuAlignedBottomBar(
                     effectivePressProgress = effectivePressProgress,
                     indicatorIdleSurfaceColor = indicatorIdleSurfaceColor,
                     glassEnabled = glassEnabled,
+                    indicatorEffectsEnabled = indicatorEffectsEnabled,
                     motionProgress = motionProgress,
                     velocityItemsPerSecond = dampedDragState.deformationVelocityItemsPerSecond,
                     isDragging = dampedDragState.isDragging,
@@ -3821,6 +3831,7 @@ private fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
     effectivePressProgress: Float,
     indicatorIdleSurfaceColor: Color,
     glassEnabled: Boolean,
+    indicatorEffectsEnabled: Boolean = glassEnabled,
     motionProgress: Float,
     velocityItemsPerSecond: Float,
     isDragging: Boolean,
@@ -3832,7 +3843,7 @@ private fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
     indicatorAlignment: Alignment = Alignment.CenterStart
 ) {
     if (!visible) return
-    val rawIndicatorLayerTransform = if (glassEnabled) {
+    val rawIndicatorLayerTransform = if (indicatorEffectsEnabled) {
         resolveBottomBarIndicatorLayerTransform(
             motionProgress = motionProgress,
             velocityItemsPerSecond = velocityItemsPerSecond,
@@ -3902,7 +3913,7 @@ private fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
                             }
                         },
                         layerBlock = {
-                            if (glassEnabled) {
+                            if (indicatorEffectsEnabled) {
                                 scaleX = indicatorLayerTransform.scaleX
                                 scaleY = indicatorLayerTransform.scaleY
                             }
@@ -3945,6 +3956,7 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
     effectivePressProgress: Float,
     indicatorIdleSurfaceColor: Color,
     glassEnabled: Boolean,
+    indicatorEffectsEnabled: Boolean = glassEnabled,
     motionProgress: Float,
     velocityItemsPerSecond: Float,
     isDragging: Boolean,
@@ -3956,7 +3968,7 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
     indicatorAlignment: Alignment = Alignment.CenterStart
 ) {
     if (!visible) return
-    val rawIndicatorLayerTransform = if (glassEnabled) {
+    val rawIndicatorLayerTransform = if (indicatorEffectsEnabled) {
         resolveBottomBarIndicatorLayerTransform(
             motionProgress = motionProgress,
             velocityItemsPerSecond = velocityItemsPerSecond,
@@ -4036,7 +4048,7 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
                             )
                         },
                         layerBlock = {
-                            if (glassEnabled) {
+                            if (indicatorEffectsEnabled) {
                                 scaleX = indicatorLayerTransform.scaleX
                                 scaleY = indicatorLayerTransform.scaleY
                             }

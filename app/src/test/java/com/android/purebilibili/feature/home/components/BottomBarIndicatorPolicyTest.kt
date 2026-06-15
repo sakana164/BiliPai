@@ -627,6 +627,40 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
+    fun `indicator effects remain enabled when liquid glass is off but blur is on`() {
+        assertTrue(
+            resolveBottomBarIndicatorEffectsEnabled(
+                liquidGlassEnabled = false,
+                blurEnabled = true
+            )
+        )
+        assertTrue(
+            resolveBottomBarIndicatorEffectsEnabled(
+                liquidGlassEnabled = true,
+                blurEnabled = false
+            )
+        )
+        assertFalse(
+            resolveBottomBarIndicatorEffectsEnabled(
+                liquidGlassEnabled = false,
+                blurEnabled = false
+            )
+        )
+
+        val source = listOf(
+            java.io.File("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt"),
+            java.io.File("src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
+        ).first { it.exists() }.readText()
+        val rendererSource = source
+            .substringAfter("private fun KernelSuAlignedBottomBar(")
+            .substringBefore("@Composable\nprivate fun KernelSuBottomBarShell(")
+
+        assertTrue(rendererSource.contains("glassEnabled = indicatorEffectsEnabled"))
+        assertTrue(rendererSource.contains("val glassLayersAlwaysOn = indicatorEffectsEnabled"))
+        assertTrue(rendererSource.contains("indicatorEffectsEnabled = indicatorEffectsEnabled"))
+    }
+
+    @Test
     fun `home vertical scroll does not scale bottom bar shell or capture layers`() {
         val progress = resolveBottomBarBackdropPresetProgress(
             motionProgress = 0f,
