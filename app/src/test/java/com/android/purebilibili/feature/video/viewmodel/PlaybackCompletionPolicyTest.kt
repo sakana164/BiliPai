@@ -78,7 +78,7 @@ class PlaybackCompletionPolicyTest {
     }
 
     @Test
-    fun `auto continue uses legacy autoplay gate for normal videos`() {
+    fun `auto mode stops for normal videos even when autoplay switch is on`() {
         assertEquals(
             PlaybackEndAction.STOP,
             resolvePlaybackEndAction(
@@ -89,12 +89,26 @@ class PlaybackCompletionPolicyTest {
             )
         )
         assertEquals(
-            PlaybackEndAction.AUTO_CONTINUE,
+            PlaybackEndAction.STOP,
             resolvePlaybackEndAction(
                 behavior = PlaybackCompletionBehavior.CONTINUE_CURRENT_LOGIC,
                 autoPlayEnabled = true,
                 isExternalPlaylist = false,
                 externalPlaylistAutoContinueEnabled = false
+            )
+        )
+    }
+
+    @Test
+    fun `auto mode continues when current video has next page or season episode`() {
+        assertEquals(
+            PlaybackEndAction.AUTO_CONTINUE,
+            resolvePlaybackEndAction(
+                behavior = PlaybackCompletionBehavior.CONTINUE_CURRENT_LOGIC,
+                autoPlayEnabled = false,
+                isExternalPlaylist = false,
+                externalPlaylistAutoContinueEnabled = false,
+                hasNextPageOrSeasonTarget = true
             )
         )
     }

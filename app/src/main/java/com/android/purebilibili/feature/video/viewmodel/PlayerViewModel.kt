@@ -1843,13 +1843,15 @@ class PlayerViewModel : ViewModel() {
 
                 val behavior = com.android.purebilibili.core.store.SettingsManager
                     .getPlaybackCompletionBehaviorSync(context)
+                val (hasNextPage, hasNextSeasonEpisode, _) = resolveCurrentNextAvailability()
                 val action = playbackCoordinator.resolvePlaybackEnded(
                     behavior = behavior,
                     autoPlayEnabled = autoPlayEnabled,
                     isExternalPlaylist = PlaylistManager.isExternalPlaylist.value,
                     externalPlaylistAutoContinueEnabled = externalPlaylistAutoContinueEnabled,
                     externalPlaylistSource = PlaylistManager.externalPlaylistSource.value,
-                    playMode = PlaylistManager.playMode.value
+                    playMode = PlaylistManager.playMode.value,
+                    hasNextPageOrSeasonTarget = hasNextPage || hasNextSeasonEpisode
                 )
                 val outcome = playbackCoordinator.executePlaybackEndAction(
                     action = action,

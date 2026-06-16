@@ -590,7 +590,8 @@ fun PortraitVideoPager(
                     behavior = playbackCompletionBehavior,
                     autoPlayEnabled = autoPlayEnabled,
                     isExternalPlaylist = isExternalPlaylist,
-                    externalPlaylistAutoContinueEnabled = externalPlaylistAutoContinueEnabled
+                    externalPlaylistAutoContinueEnabled = externalPlaylistAutoContinueEnabled,
+                    hasNextPageOrSeasonTarget = false
                 )
                 when (playbackEndAction) {
                     PlaybackEndAction.STOP -> return

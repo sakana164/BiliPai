@@ -1033,9 +1033,9 @@ private fun PlaybackInteractionSettingsSection(
         IOSDivider()
         //  [新增] 自动播放下一个视频
 	        IOSSwitchItem(
-	            icon = rememberSettingsSemanticIcon(SettingsIconRole.AUTO_PLAY_NEXT),
+            icon = rememberSettingsSemanticIcon(SettingsIconRole.AUTO_PLAY_NEXT),
             title = "自动播放下一个",
-            subtitle = "普通视频结束后自动播放推荐视频",
+            subtitle = "分P/合集自动播放下一集，普通单视频播完暂停",
             checked = autoPlayEnabled,
             onCheckedChange = {
                 scope.launch {
@@ -1075,7 +1075,7 @@ private fun PlaybackInteractionSettingsSection(
             )
             IOSSlidingSegmentedSetting(
                 title = "选择播放顺序：${playbackCompletionBehavior.label}",
-                subtitle = "稍后再看推荐选择“顺序播放”",
+                subtitle = "自动模式下普通单视频暂停，分P/合集继续下一集",
                 options = playbackOrderOptions,
                 selectedValue = playbackCompletionBehavior,
                 onSelectionChange = { behavior ->
@@ -1086,7 +1086,7 @@ private fun PlaybackInteractionSettingsSection(
                 }
             )
             Text(
-                text = "稍后再看推荐选择“顺序播放”即可连续播放下一条，不需要退出重选。",
+                text = "稍后再看、收藏夹等列表推荐选择“顺序播放”即可连续播放下一条；自动模式不会把普通单视频跳到推荐视频。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
