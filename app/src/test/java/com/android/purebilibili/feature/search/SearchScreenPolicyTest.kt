@@ -318,13 +318,28 @@ class SearchScreenPolicyTest {
         val full = resolveSearchResultContentMotionSpec(reducedMotion = false)
         val reduced = resolveSearchResultContentMotionSpec(reducedMotion = true)
 
-        assertTrue(full.slideDurationMillis >= 240)
-        assertEquals(1, full.slideDistanceDivisor)
+        assertTrue(full.slideDurationMillis >= 300)
+        assertEquals(4, full.slideDistanceDivisor)
         assertTrue(full.fadeInDurationMillis > full.fadeOutDurationMillis)
 
         assertTrue(reduced.slideDurationMillis < full.slideDurationMillis)
         assertTrue(reduced.slideDistanceDivisor > full.slideDistanceDivisor)
         assertTrue(reduced.fadeOutDurationMillis <= 80)
+    }
+
+    @Test
+    fun searchResultTransition_keepsFilterBarOutsideAnimatedContent() {
+        val searchSource = loadSource("app/src/main/java/com/android/purebilibili/feature/search/SearchScreen.kt")
+        val resultTransitionStart = searchSource.lastIndexOf(
+            "AnimatedContent(",
+            searchSource.indexOf("label = \"searchResultTypeTransition\"")
+        )
+        val filterBarBeforeTransition = searchSource.lastIndexOf("SearchFilterBar(", resultTransitionStart)
+        val filterBarDeclaration = searchSource.indexOf("fun SearchFilterBar(")
+        val resultTransitionBody = searchSource.substring(resultTransitionStart, filterBarDeclaration)
+
+        assertTrue(filterBarBeforeTransition > 0)
+        assertFalse(resultTransitionBody.contains("SearchFilterBar("))
     }
 
     @Test

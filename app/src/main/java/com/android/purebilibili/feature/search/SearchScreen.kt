@@ -368,17 +368,17 @@ internal fun resolveSearchResultContentMotionSpec(
 ): SearchResultContentMotionSpec {
     return if (reducedMotion) {
         SearchResultContentMotionSpec(
-            slideDurationMillis = 90,
-            fadeInDurationMillis = 70,
-            fadeOutDurationMillis = 60,
+            slideDurationMillis = 120,
+            fadeInDurationMillis = 90,
+            fadeOutDurationMillis = 80,
             slideDistanceDivisor = 6
         )
     } else {
         SearchResultContentMotionSpec(
-            slideDurationMillis = 260,
-            fadeInDurationMillis = 170,
-            fadeOutDurationMillis = 150,
-            slideDistanceDivisor = 1
+            slideDurationMillis = 320,
+            fadeInDurationMillis = 220,
+            fadeOutDurationMillis = 180,
+            slideDistanceDivisor = 4
         )
     }
 }
@@ -739,33 +739,52 @@ fun SearchScreen(
                                 currentType = state.searchType,
                                 onTypeChange = viewModel::setSearchType
                             )
-                    ) {
-                        //  搜索彩蛋消息横幅
-                        val easterEggMsg = state.easterEggMessage
-                        if (easterEggMsg != null) {
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Row(
+                        ) {
+                            Spacer(modifier = Modifier.height(contentTopPadding + 8.dp))
+                            //  搜索彩蛋消息横幅
+                            val easterEggMsg = state.easterEggMessage
+                            if (easterEggMsg != null) {
+                                Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Text(
-                                        text = easterEggMsg,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = easterEggMsg,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                             }
-                        }
+                            SearchFilterBar(
+                                currentType = state.searchType,
+                                currentOrder = state.searchOrder,
+                                currentDurations = state.searchDurations,
+                                currentVideoTid = state.videoTid,
+                                currentUpOrder = state.upOrder,
+                                currentUpOrderSort = state.upOrderSort,
+                                currentUpUserType = state.upUserType,
+                                currentLiveOrder = state.liveOrder,
+                                onTypeChange = { viewModel.setSearchType(it) },
+                                onOrderChange = { viewModel.setSearchOrder(it) },
+                                onDurationToggle = { viewModel.toggleSearchDuration(it) },
+                                onVideoTidChange = { viewModel.setVideoTid(it) },
+                                onUpOrderChange = { viewModel.setUpOrder(it) },
+                                onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
+                                onUpUserTypeChange = { viewModel.setUpUserType(it) },
+                                onLiveOrderChange = { viewModel.setLiveOrder(it) }
+                            )
                         //  根据搜索类型显示不同结果；切换方向按标签顺序计算，贴近横向分页手感。
                         AnimatedContent(
                             targetState = state.searchType,
@@ -838,7 +857,7 @@ fun SearchScreen(
                                     columns = GridCells.Adaptive(minSize = searchLayoutPolicy.resultGridMinItemWidthDp.dp),
                                     state = resultGridState,
                                     contentPadding = PaddingValues(
-                                        top = contentTopPadding + 8.dp,
+                                        top = 0.dp,
                                         bottom = resultBottomPadding,
                                         start = cardLayout.outerPaddingDp.dp,
                                         end = cardLayout.outerPaddingDp.dp
@@ -849,28 +868,6 @@ fun SearchScreen(
                                     .fillMaxSize()
                                     .then(if (searchHazeEnabled) Modifier.hazeSourceCompat(state = hazeState) else Modifier)
                         ) {
-                                    // ✨ Filter Bar inside Grid
-                                    item(span = { GridItemSpan(maxLineSpan) }) {
-                                         SearchFilterBar(
-                                            currentType = targetSearchType,
-                                            currentOrder = state.searchOrder,
-                                            currentDurations = state.searchDurations,
-                                            currentVideoTid = state.videoTid,
-                                            currentUpOrder = state.upOrder,
-                                            currentUpOrderSort = state.upOrderSort,
-                                            currentUpUserType = state.upUserType,
-                                            currentLiveOrder = state.liveOrder,
-                                            onTypeChange = { viewModel.setSearchType(it) },
-                                            onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
-                                            onVideoTidChange = { viewModel.setVideoTid(it) },
-                                            onUpOrderChange = { viewModel.setUpOrder(it) },
-                                            onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
-                                            onUpUserTypeChange = { viewModel.setUpUserType(it) },
-                                            onLiveOrderChange = { viewModel.setLiveOrder(it) }
-                                        )
-                                    }
-                                
                                 itemsIndexed(
                                     state.searchResults,
                                     key = { index, video ->
@@ -992,34 +989,13 @@ fun SearchScreen(
                             com.android.purebilibili.data.model.response.SearchType.UP -> {
                                 //  UP主搜索结果
                                 LazyColumn(
-                                    contentPadding = PaddingValues(top = contentTopPadding + 8.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
+                                    contentPadding = PaddingValues(top = 0.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                     state = resultListState,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .then(if (searchHazeEnabled) Modifier.hazeSourceCompat(state = hazeState) else Modifier)
                                 ) {
-                                    item {
-                                        SearchFilterBar(
-                                            currentType = targetSearchType,
-                                            currentOrder = state.searchOrder,
-                                            currentDurations = state.searchDurations,
-                                            currentVideoTid = state.videoTid,
-                                            currentUpOrder = state.upOrder,
-                                            currentUpOrderSort = state.upOrderSort,
-                                            currentUpUserType = state.upUserType,
-                                            currentLiveOrder = state.liveOrder,
-                                            onTypeChange = { viewModel.setSearchType(it) },
-                                            onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
-                                            onVideoTidChange = { viewModel.setVideoTid(it) },
-                                            onUpOrderChange = { viewModel.setUpOrder(it) },
-                                            onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
-                                            onUpUserTypeChange = { viewModel.setUpUserType(it) },
-                                            onLiveOrderChange = { viewModel.setLiveOrder(it) }
-                                        )
-                                    }
-
                                     itemsIndexed(
                                         state.upResults,
                                         key = { index, upItem ->
@@ -1089,34 +1065,13 @@ fun SearchScreen(
                             com.android.purebilibili.data.model.response.SearchType.MEDIA_FT -> {
                                 //  番剧/影视搜索结果
                                 LazyColumn(
-                                    contentPadding = PaddingValues(top = contentTopPadding + 8.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
+                                    contentPadding = PaddingValues(top = 0.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                     state = resultListState,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .then(if (searchHazeEnabled) Modifier.hazeSourceCompat(state = hazeState) else Modifier)
                                 ) {
-                                    item {
-                                        SearchFilterBar(
-                                            currentType = targetSearchType,
-                                            currentOrder = state.searchOrder,
-                                            currentDurations = state.searchDurations,
-                                            currentVideoTid = state.videoTid,
-                                            currentUpOrder = state.upOrder,
-                                            currentUpOrderSort = state.upOrderSort,
-                                            currentUpUserType = state.upUserType,
-                                            currentLiveOrder = state.liveOrder,
-                                            onTypeChange = { viewModel.setSearchType(it) },
-                                            onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
-                                            onVideoTidChange = { viewModel.setVideoTid(it) },
-                                            onUpOrderChange = { viewModel.setUpOrder(it) },
-                                            onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
-                                            onUpUserTypeChange = { viewModel.setUpUserType(it) },
-                                            onLiveOrderChange = { viewModel.setLiveOrder(it) }
-                                        )
-                                    }
-
                                     itemsIndexed(
                                         state.bangumiResults,
                                         key = { index, bangumiItem ->
@@ -1164,34 +1119,13 @@ fun SearchScreen(
                             com.android.purebilibili.data.model.response.SearchType.LIVE -> {
                                 //  直播搜索结果
                                 LazyColumn(
-                                    contentPadding = PaddingValues(top = contentTopPadding + 8.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
+                                    contentPadding = PaddingValues(top = 0.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                     state = resultListState,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .then(if (searchHazeEnabled) Modifier.hazeSourceCompat(state = hazeState) else Modifier)
                                 ) {
-                                    item {
-                                        SearchFilterBar(
-                                            currentType = targetSearchType,
-                                            currentOrder = state.searchOrder,
-                                            currentDurations = state.searchDurations,
-                                            currentVideoTid = state.videoTid,
-                                            currentUpOrder = state.upOrder,
-                                            currentUpOrderSort = state.upOrderSort,
-                                            currentUpUserType = state.upUserType,
-                                            currentLiveOrder = state.liveOrder,
-                                            onTypeChange = { viewModel.setSearchType(it) },
-                                            onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
-                                            onVideoTidChange = { viewModel.setVideoTid(it) },
-                                            onUpOrderChange = { viewModel.setUpOrder(it) },
-                                            onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
-                                            onUpUserTypeChange = { viewModel.setUpUserType(it) },
-                                            onLiveOrderChange = { viewModel.setLiveOrder(it) }
-                                        )
-                                    }
-
                                     itemsIndexed(
                                         state.liveResults,
                                         key = { index, liveItem ->
@@ -1260,34 +1194,13 @@ fun SearchScreen(
                             }
                             com.android.purebilibili.data.model.response.SearchType.LIVE_USER -> {
                                 LazyColumn(
-                                    contentPadding = PaddingValues(top = contentTopPadding + 8.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
+                                    contentPadding = PaddingValues(top = 0.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                     state = resultListState,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .then(if (searchHazeEnabled) Modifier.hazeSourceCompat(state = hazeState) else Modifier)
                                 ) {
-                                    item {
-                                        SearchFilterBar(
-                                            currentType = targetSearchType,
-                                            currentOrder = state.searchOrder,
-                                            currentDurations = state.searchDurations,
-                                            currentVideoTid = state.videoTid,
-                                            currentUpOrder = state.upOrder,
-                                            currentUpOrderSort = state.upOrderSort,
-                                            currentUpUserType = state.upUserType,
-                                            currentLiveOrder = state.liveOrder,
-                                            onTypeChange = { viewModel.setSearchType(it) },
-                                            onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
-                                            onVideoTidChange = { viewModel.setVideoTid(it) },
-                                            onUpOrderChange = { viewModel.setUpOrder(it) },
-                                            onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
-                                            onUpUserTypeChange = { viewModel.setUpUserType(it) },
-                                            onLiveOrderChange = { viewModel.setLiveOrder(it) }
-                                        )
-                                    }
-
                                     itemsIndexed(
                                         state.liveUserResults,
                                         key = { index, item ->
@@ -1330,34 +1243,13 @@ fun SearchScreen(
                             }
                             com.android.purebilibili.data.model.response.SearchType.ARTICLE -> {
                                 LazyColumn(
-                                    contentPadding = PaddingValues(top = contentTopPadding + 8.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
+                                    contentPadding = PaddingValues(top = 0.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                     state = resultListState,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .then(if (searchHazeEnabled) Modifier.hazeSourceCompat(state = hazeState) else Modifier)
                                 ) {
-                                    item {
-                                        SearchFilterBar(
-                                            currentType = targetSearchType,
-                                            currentOrder = state.searchOrder,
-                                            currentDurations = state.searchDurations,
-                                            currentVideoTid = state.videoTid,
-                                            currentUpOrder = state.upOrder,
-                                            currentUpOrderSort = state.upOrderSort,
-                                            currentUpUserType = state.upUserType,
-                                            currentLiveOrder = state.liveOrder,
-                                            onTypeChange = { viewModel.setSearchType(it) },
-                                            onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
-                                            onVideoTidChange = { viewModel.setVideoTid(it) },
-                                            onUpOrderChange = { viewModel.setUpOrder(it) },
-                                            onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
-                                            onUpUserTypeChange = { viewModel.setUpUserType(it) },
-                                            onLiveOrderChange = { viewModel.setLiveOrder(it) }
-                                        )
-                                    }
-
                                     itemsIndexed(
                                         state.articleResults,
                                         key = { index, articleItem ->
@@ -1424,34 +1316,13 @@ fun SearchScreen(
                             }
                             com.android.purebilibili.data.model.response.SearchType.TOPIC -> {
                                 LazyColumn(
-                                    contentPadding = PaddingValues(top = contentTopPadding + 8.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
+                                    contentPadding = PaddingValues(top = 0.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                     state = resultListState,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .then(if (searchHazeEnabled) Modifier.hazeSourceCompat(state = hazeState) else Modifier)
                                 ) {
-                                    item {
-                                        SearchFilterBar(
-                                            currentType = targetSearchType,
-                                            currentOrder = state.searchOrder,
-                                            currentDurations = state.searchDurations,
-                                            currentVideoTid = state.videoTid,
-                                            currentUpOrder = state.upOrder,
-                                            currentUpOrderSort = state.upOrderSort,
-                                            currentUpUserType = state.upUserType,
-                                            currentLiveOrder = state.liveOrder,
-                                            onTypeChange = { viewModel.setSearchType(it) },
-                                            onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
-                                            onVideoTidChange = { viewModel.setVideoTid(it) },
-                                            onUpOrderChange = { viewModel.setUpOrder(it) },
-                                            onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
-                                            onUpUserTypeChange = { viewModel.setUpUserType(it) },
-                                            onLiveOrderChange = { viewModel.setLiveOrder(it) }
-                                        )
-                                    }
-
                                     itemsIndexed(
                                         state.topicResults,
                                         key = { index, item ->
@@ -1483,34 +1354,13 @@ fun SearchScreen(
                             }
                             com.android.purebilibili.data.model.response.SearchType.PHOTO -> {
                                 LazyColumn(
-                                    contentPadding = PaddingValues(top = contentTopPadding + 8.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
+                                    contentPadding = PaddingValues(top = 0.dp, bottom = resultBottomPadding, start = 16.dp, end = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                     state = resultListState,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .then(if (searchHazeEnabled) Modifier.hazeSourceCompat(state = hazeState) else Modifier)
                                 ) {
-                                    item {
-                                        SearchFilterBar(
-                                            currentType = targetSearchType,
-                                            currentOrder = state.searchOrder,
-                                            currentDurations = state.searchDurations,
-                                            currentVideoTid = state.videoTid,
-                                            currentUpOrder = state.upOrder,
-                                            currentUpOrderSort = state.upOrderSort,
-                                            currentUpUserType = state.upUserType,
-                                            currentLiveOrder = state.liveOrder,
-                                            onTypeChange = { viewModel.setSearchType(it) },
-                                            onOrderChange = { viewModel.setSearchOrder(it) },
-                                            onDurationToggle = { viewModel.toggleSearchDuration(it) },
-                                            onVideoTidChange = { viewModel.setVideoTid(it) },
-                                            onUpOrderChange = { viewModel.setUpOrder(it) },
-                                            onUpOrderSortChange = { viewModel.setUpOrderSort(it) },
-                                            onUpUserTypeChange = { viewModel.setUpUserType(it) },
-                                            onLiveOrderChange = { viewModel.setLiveOrder(it) }
-                                        )
-                                    }
-
                                     itemsIndexed(
                                         state.photoResults,
                                         key = { index, item ->
