@@ -8,6 +8,7 @@ internal const val HOME_HERO_CAROUSEL_WIDE_ASPECT_RATIO = 21f / 9f
 internal const val HOME_HERO_CAROUSEL_TABLET_BREAKPOINT_DP = 600f
 internal const val HOME_HERO_CAROUSEL_WIDE_BREAKPOINT_DP = 840f
 internal const val HOME_HERO_CAROUSEL_MAX_WIDTH_DP = 840f
+private const val HOME_HERO_CAROUSEL_TOP_GAP_REDUCTION_DP = 12f
 
 internal data class HomeHeroCarouselCardTransform(
     val rotationY: Float,
@@ -24,6 +25,14 @@ internal data class HomeHeroCarouselCardTransform(
     val edgeShadeStartFromLeft: Boolean,
     val shadowElevationFraction: Float
 )
+
+internal fun resolveHomeFeedTopPaddingDp(
+    reservedTopPaddingDp: Float,
+    showHeroCarousel: Boolean
+): Float {
+    val reductionDp = if (showHeroCarousel) HOME_HERO_CAROUSEL_TOP_GAP_REDUCTION_DP else 0f
+    return (reservedTopPaddingDp - reductionDp).coerceAtLeast(0f)
+}
 
 internal fun <T> selectHomeHeroCarouselItems(
     items: List<T>,

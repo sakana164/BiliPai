@@ -9,6 +9,26 @@ import kotlin.math.abs
 class HomeHeroCarouselPolicyTest {
 
     @Test
+    fun `visible hero carousel reduces the reserved top gap without affecting other feeds`() {
+        assertEquals(
+            157f,
+            resolveHomeFeedTopPaddingDp(
+                reservedTopPaddingDp = 169f,
+                showHeroCarousel = true
+            ),
+            0.001f
+        )
+        assertEquals(
+            169f,
+            resolveHomeFeedTopPaddingDp(
+                reservedTopPaddingDp = 169f,
+                showHeroCarousel = false
+            ),
+            0.001f
+        )
+    }
+
+    @Test
     fun `carousel only shows on recommend page with items when enabled`() {
         assertTrue(
             shouldShowHomeHeroCarousel(

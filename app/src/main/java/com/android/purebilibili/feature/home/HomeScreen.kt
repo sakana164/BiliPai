@@ -1642,12 +1642,6 @@ fun HomeScreen(
                                      { subCategory: PopularSubCategory -> viewModel.switchPopularSubCategory(subCategory) }
                                  }
 
-                                 val homePageContentPadding = PaddingValues(
-                                     bottom = homeListBottomPadding,
-                                     start = homeFeedCardLayout.outerPaddingDp.dp,
-                                     end = homeFeedCardLayout.outerPaddingDp.dp,
-                                     top = listTopPadding
-                                 )
                                  val renderHomeCategoryPage: @Composable (
                                      CategoryContent,
                                      LazyGridState,
@@ -1656,12 +1650,26 @@ fun HomeScreen(
                                  ) -> Unit = { pageCategoryState, contentGridState, selectedPopularSubCategory, onPageLoadMore ->
                                  val pageDissolvingVideos by viewModel.dissolvingVideos.collectAsStateWithLifecycle()
                                  val pageFollowingMids by viewModel.followingMids.collectAsStateWithLifecycle()
+                                 val pageShowsHeroCarousel = shouldShowHomeHeroCarousel(
+                                     enabled = homeSettings.homeHeroCarouselEnabled,
+                                     category = category,
+                                     itemCount = pageCategoryState.videos.size
+                                 )
+                                 val pageContentPadding = PaddingValues(
+                                     bottom = homeListBottomPadding,
+                                     start = homeFeedCardLayout.outerPaddingDp.dp,
+                                     end = homeFeedCardLayout.outerPaddingDp.dp,
+                                     top = resolveHomeFeedTopPaddingDp(
+                                         reservedTopPaddingDp = listTopPadding.value,
+                                         showHeroCarousel = pageShowsHeroCarousel
+                                     ).dp
+                                 )
                                  HomeCategoryPageContent(
                                      category = category,
                                      categoryState = pageCategoryState,
                                      gridState = contentGridState,
                                      gridColumns = gridColumns,
-                                     contentPadding = homePageContentPadding,
+                                     contentPadding = pageContentPadding,
                                      dissolvingVideos = pageDissolvingVideos,
                                      followingMids = pageFollowingMids,
                                      onVideoClick = wrappedOnVideoClick,
