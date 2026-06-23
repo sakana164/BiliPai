@@ -1289,10 +1289,7 @@ private fun MobileSettingsLayout(
         )
     }
     val sectionOrder = remember { resolveSettingsRootCategoryOrder() }
-    var activeRootCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
-    val activeRootCategory = remember(activeRootCategoryName) {
-        resolveSettingsRootCategoryByName(activeRootCategoryName)
-    }
+    var expandedCategories by rememberSaveable { mutableStateOf(setOf<String>()) }
     val focusRequest by SettingsSearchFocusController.request.collectAsStateWithLifecycle()
     val bottomBarVisible = LocalBottomBarVisible.current
     val bottomInset = resolveSettingsContentBottomPadding(
@@ -1383,12 +1380,8 @@ private fun MobileSettingsLayout(
             return@LaunchedEffect
         }
         val category = resolveSettingsRootCategoryForSearchTarget(request.target) ?: return@LaunchedEffect
-        activeRootCategoryName = category.name
+        expandedCategories = expandedCategories + category.name
         SettingsSearchFocusController.clear(request.token)
-    }
-
-    BackHandler(enabled = activeRootCategory != null && searchQuery.isBlank()) {
-        activeRootCategoryName = null
     }
 
     AdaptiveScaffold(
@@ -1439,7 +1432,7 @@ private fun MobileSettingsLayout(
             }
 
             item {
-                if (searchQuery.isBlank() && activeRootCategory == null) {
+                if (searchQuery.isBlank()) {
                     Box(
                         modifier = Modifier
                             .padding(top = 8.dp)
@@ -1457,7 +1450,7 @@ private fun MobileSettingsLayout(
                         onResultClick = { result ->
                             val category = resolveSettingsRootCategoryForSearchTarget(result.target)
                             if (isSceneSettingsSearchTarget(result.target) && category != null) {
-                                activeRootCategoryName = category.name
+                                expandedCategories = expandedCategories + category.name
                                 onSearchQueryChange("")
                             } else {
                                 onSearchResultClick(result)
@@ -1466,27 +1459,26 @@ private fun MobileSettingsLayout(
                     )
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
-            } else if (activeRootCategory != null) {
-                item {
-                    SettingsRootCategoryDetailLayout(
-                        category = activeRootCategory,
-                        actions = rootCategoryActions,
-                        state = rootCategoryState,
-                        onBack = { activeRootCategoryName = null }
-                    )
-                }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
             } else {
                 sectionOrder.forEachIndexed { index, section ->
                     item {
                         Box(
                             modifier = Modifier
-                                .padding(top = 16.dp)
+                                .padding(top = if (index == 0) 8.dp else 16.dp)
                                 .entrance()
                         ) {
                             SettingsRootCategoryNavigationSection(
                                 category = section,
-                                onClick = { activeRootCategoryName = section.name }
+                                isExpanded = section.name in expandedCategories,
+                                onToggle = {
+                                    expandedCategories = if (section.name in expandedCategories) {
+                                        expandedCategories - section.name
+                                    } else {
+                                        expandedCategories + section.name
+                                    }
+                                },
+                                actions = rootCategoryActions,
+                                state = rootCategoryState
                             )
                         }
                     }
@@ -1499,45 +1491,6 @@ private fun MobileSettingsLayout(
     }
 }
 
-@Composable
-private fun SettingsRootCategoryDetailLayout(
-    category: SettingsRootCategory,
-    actions: SettingsRootCategoryActions,
-    state: SettingsRootCategoryState,
-    onBack: () -> Unit
-) {
-    Column(modifier = Modifier.padding(top = 16.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(AppShapes.container(ContainerLevel.Chip))
-                .clickable(onClick = onBack)
-                .padding(horizontal = 8.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = rememberAppBackIcon(),
-                contentDescription = "返回设置分类",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = category.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        SettingsRootCategoryContent(
-            category = category,
-            actions = actions,
-            state = state
-        )
-    }
-}
 
 // Imports... (Ensure clickable is imported)
 
