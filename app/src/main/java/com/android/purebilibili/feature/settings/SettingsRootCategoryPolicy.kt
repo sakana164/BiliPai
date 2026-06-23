@@ -5,45 +5,33 @@ internal enum class SettingsRootCategory(
     val subtitle: String,
     val searchTarget: SettingsSearchTarget
 ) {
-    INTERFACE_HOME(
-        title = "界面与首页",
-        subtitle = "主题、动效、首页展示、壁纸与刷新",
+    APPEARANCE_INTERACTION(
+        title = "外观与交互",
+        subtitle = "主题、动效、导航、全屏与手势",
         searchTarget = SettingsSearchTarget.INTERFACE_THEME
     ),
-    DYNAMIC_RECOMMEND(
-        title = "动态与推荐",
-        subtitle = "推荐流类型、动态栏位、图片预览与 UP 栏",
+    CONTENT_PLAYBACK(
+        title = "内容与播放",
+        subtitle = "首页展示、推荐流、播放画质、评论互动",
         searchTarget = SettingsSearchTarget.HOME_FEED
     ),
-    PLAYBACK_INTERACTION(
-        title = "播放与互动",
-        subtitle = "画质、解码、倍速、连播、评论与视频互动",
-        searchTarget = SettingsSearchTarget.PLAYBACK_QUALITY
-    ),
-    NAVIGATION_GESTURE(
-        title = "导航与手势",
-        subtitle = "底栏、顶部标签、平板侧边栏、全屏与手势",
-        searchTarget = SettingsSearchTarget.NAVIGATION
-    ),
-    DATA_PRIVACY(
-        title = "数据与隐私",
-        subtitle = "设置分享、WebDAV、下载缓存、权限、无痕与黑名单",
+    PRIVACY_STORAGE(
+        title = "隐私与存储",
+        subtitle = "设置分享、WebDAV、下载缓存、权限与黑名单",
         searchTarget = SettingsSearchTarget.DATA_BACKUP
     ),
-    EXTENSION_ABOUT(
-        title = "扩展与关于",
-        subtitle = "插件、诊断、日志、版本、更新、社群与支持",
+    SYSTEM_ABOUT(
+        title = "系统与关于",
+        subtitle = "插件、诊断、版本、更新、社群与支持",
         searchTarget = SettingsSearchTarget.DIAGNOSTICS
     )
 }
 
 internal fun resolveSettingsRootCategoryOrder(): List<SettingsRootCategory> = listOf(
-    SettingsRootCategory.INTERFACE_HOME,
-    SettingsRootCategory.DYNAMIC_RECOMMEND,
-    SettingsRootCategory.PLAYBACK_INTERACTION,
-    SettingsRootCategory.NAVIGATION_GESTURE,
-    SettingsRootCategory.DATA_PRIVACY,
-    SettingsRootCategory.EXTENSION_ABOUT
+    SettingsRootCategory.APPEARANCE_INTERACTION,
+    SettingsRootCategory.CONTENT_PLAYBACK,
+    SettingsRootCategory.PRIVACY_STORAGE,
+    SettingsRootCategory.SYSTEM_ABOUT
 )
 
 internal fun resolveTabletSettingsRootCategoryOrder(): List<SettingsRootCategory> =
@@ -54,17 +42,15 @@ internal fun resolveSettingsRootCategoryForSearchTarget(
 ): SettingsRootCategory? = when (target) {
     SettingsSearchTarget.INTERFACE_THEME,
     SettingsSearchTarget.APPEARANCE,
-    SettingsSearchTarget.ANIMATION -> SettingsRootCategory.INTERFACE_HOME
-
-    SettingsSearchTarget.HOME_FEED -> SettingsRootCategory.DYNAMIC_RECOMMEND
-
-    SettingsSearchTarget.PLAYBACK_QUALITY,
-    SettingsSearchTarget.PLAYBACK,
-    SettingsSearchTarget.INTERACTION_COMMENT -> SettingsRootCategory.PLAYBACK_INTERACTION
-
+    SettingsSearchTarget.ANIMATION,
     SettingsSearchTarget.NAVIGATION,
     SettingsSearchTarget.BOTTOM_BAR,
-    SettingsSearchTarget.FULLSCREEN_GESTURE -> SettingsRootCategory.NAVIGATION_GESTURE
+    SettingsSearchTarget.FULLSCREEN_GESTURE -> SettingsRootCategory.APPEARANCE_INTERACTION
+
+    SettingsSearchTarget.HOME_FEED,
+    SettingsSearchTarget.PLAYBACK_QUALITY,
+    SettingsSearchTarget.PLAYBACK,
+    SettingsSearchTarget.INTERACTION_COMMENT -> SettingsRootCategory.CONTENT_PLAYBACK
 
     SettingsSearchTarget.DATA_BACKUP,
     SettingsSearchTarget.SETTINGS_SHARE,
@@ -74,7 +60,7 @@ internal fun resolveSettingsRootCategoryForSearchTarget(
     SettingsSearchTarget.CLEAR_CACHE,
     SettingsSearchTarget.PRIVACY_PERMISSION,
     SettingsSearchTarget.PERMISSION,
-    SettingsSearchTarget.BLOCKED_LIST -> SettingsRootCategory.DATA_PRIVACY
+    SettingsSearchTarget.BLOCKED_LIST -> SettingsRootCategory.PRIVACY_STORAGE
 
     SettingsSearchTarget.DIAGNOSTICS,
     SettingsSearchTarget.PLUGINS,
@@ -90,7 +76,7 @@ internal fun resolveSettingsRootCategoryForSearchTarget(
     SettingsSearchTarget.DISCLAIMER,
     SettingsSearchTarget.TELEGRAM,
     SettingsSearchTarget.TWITTER,
-    SettingsSearchTarget.DONATE -> SettingsRootCategory.EXTENSION_ABOUT
+    SettingsSearchTarget.DONATE -> SettingsRootCategory.SYSTEM_ABOUT
 }
 
 internal fun resolveSettingsRootCategoryByName(name: String?): SettingsRootCategory? {
