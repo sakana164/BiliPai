@@ -47,7 +47,7 @@ private fun StringBuilder.appendRepresentation(track: DashVideo) {
         """      <Representation id="${track.id}" bandwidth="${track.bandwidth}" codecs="${track.codecs.escapeXml()}" width="${track.width}" height="${track.height}" frameRate="${track.frameRate.escapeXml()}">"""
     )
     append('\n')
-    append("        <BaseURL>${track.baseUrl.escapeXml()}</BaseURL>\n")
+    append("        <BaseURL>${track.getValidUrl().escapeXml()}</BaseURL>\n")
     appendSegmentBase(track.segmentBase)
     append("      </Representation>\n")
 }
@@ -57,7 +57,7 @@ private fun StringBuilder.appendRepresentation(track: DashAudio) {
         """      <Representation id="${track.id}" bandwidth="${track.bandwidth}" codecs="${track.codecs.escapeXml()}">"""
     )
     append('\n')
-    append("        <BaseURL>${track.baseUrl.escapeXml()}</BaseURL>\n")
+    append("        <BaseURL>${track.getValidUrl().escapeXml()}</BaseURL>\n")
     appendSegmentBase(track.segmentBase)
     append("      </Representation>\n")
 }

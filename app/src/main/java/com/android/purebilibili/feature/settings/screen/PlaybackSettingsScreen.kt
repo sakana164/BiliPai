@@ -152,6 +152,9 @@ fun PlaybackSettingsContent(
     val playerDiagnosticLoggingEnabled by com.android.purebilibili.core.store.SettingsManager
         .getPlayerDiagnosticLoggingEnabled(context)
         .collectAsStateWithLifecycle(initialValue = DEFAULT_PLAYER_DIAGNOSTIC_LOGGING_ENABLED)
+    val dashSegmentRequestsEnabled by com.android.purebilibili.core.store.SettingsManager
+        .getDashSegmentRequestsEnabled(context)
+        .collectAsStateWithLifecycle(initialValue = true)
     val qualitySwitchFailureDialogEnabled by SettingsManager
         .getQualitySwitchFailureDialogEnabled(context)
         .collectAsStateWithLifecycle(initialValue = DEFAULT_QUALITY_SWITCH_FAILURE_DIALOG_ENABLED)
@@ -640,6 +643,23 @@ fun PlaybackSettingsContent(
                                 }
                             },
                             iconTint = iOSOrange
+                        )
+                        IOSDivider()
+	                        IOSSwitchItem(
+	                            icon = rememberSettingsSemanticIcon(SettingsIconRole.PLAYER_DIAGNOSTICS),
+                            title = "DASH 分段请求",
+                            subtitle = if (dashSegmentRequestsEnabled) {
+                                "使用官方 DASH 播放路径请求初始化段和索引段；异常时可关闭回退旧路径"
+                            } else {
+                                "已关闭：使用旧的分离音视频合并播放路径"
+                            },
+                            checked = dashSegmentRequestsEnabled,
+                            onCheckedChange = {
+                                scope.launch {
+                                    SettingsManager.setDashSegmentRequestsEnabled(context, it)
+                                }
+                            },
+                            iconTint = iOSTeal
                         )
                         IOSDivider()
 	                        IOSSwitchItem(

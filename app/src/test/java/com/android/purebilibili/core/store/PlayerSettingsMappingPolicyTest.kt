@@ -23,4 +23,22 @@ class PlayerSettingsMappingPolicyTest {
             setHwDecodeBody.contains("PlayerSettingsCache.setHwDecodeEnabled(context, value)")
         )
     }
+
+    @Test
+    fun `setDashSegmentRequestsEnabled keeps PlayerSettingsCache in sync`() {
+        val source = File("src/main/java/com/android/purebilibili/core/store/SettingsManager.kt")
+            .takeIf { it.exists() }
+            ?: File("app/src/main/java/com/android/purebilibili/core/store/SettingsManager.kt")
+
+        val text = source.readText()
+        val setterBody = Regex(
+            pattern = """suspend fun setDashSegmentRequestsEnabled\(context: Context, enabled: Boolean\) \{([\s\S]*?)\n    \}""",
+            options = setOf(RegexOption.MULTILINE)
+        ).find(text)?.groupValues?.get(1).orEmpty()
+
+        assertTrue(
+            "setDashSegmentRequestsEnabled must update PlayerSettingsCache so playback reads the latest DASH segment setting",
+            setterBody.contains("PlayerSettingsCache.setDashSegmentRequestsEnabled(context, enabled)")
+        )
+    }
 }

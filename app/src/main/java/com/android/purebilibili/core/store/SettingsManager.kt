@@ -5151,6 +5151,8 @@ object SettingsManager {
         intPreferencesKey("comment_collapsed_reply_preview_limit")
     private val KEY_PLAYER_DIAGNOSTIC_LOGGING_ENABLED =
         booleanPreferencesKey("player_diagnostic_logging_enabled")
+    private val KEY_DASH_SEGMENT_REQUESTS_ENABLED =
+        booleanPreferencesKey("dash_segment_requests_enabled")
     private val KEY_QUALITY_SWITCH_FAILURE_DIALOG_ENABLED =
         booleanPreferencesKey("quality_switch_failure_dialog_enabled")
     private val KEY_QUALITY_SWITCH_FAILURE_DIALOG_ONCE_ENABLED =
@@ -5495,6 +5497,18 @@ object SettingsManager {
             preferences[KEY_PLAYER_DIAGNOSTIC_LOGGING_ENABLED] = enabled
         }
         PlayerSettingsCache.setPlayerDiagnosticLoggingEnabled(context, enabled)
+    }
+
+    fun getDashSegmentRequestsEnabled(context: Context): Flow<Boolean> =
+        context.settingsDataStore.data.map { preferences ->
+            preferences[KEY_DASH_SEGMENT_REQUESTS_ENABLED] ?: true
+        }
+
+    suspend fun setDashSegmentRequestsEnabled(context: Context, enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_DASH_SEGMENT_REQUESTS_ENABLED] = enabled
+        }
+        PlayerSettingsCache.setDashSegmentRequestsEnabled(context, enabled)
     }
 
     fun getQualitySwitchFailureDialogEnabled(context: Context): Flow<Boolean> =

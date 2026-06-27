@@ -13,6 +13,7 @@ import androidx.media3.exoplayer.dash.DashMediaSource
 import com.android.purebilibili.core.cooldown.CooldownStatus
 import com.android.purebilibili.core.cooldown.PlaybackCooldownManager
 import com.android.purebilibili.core.network.NetworkModule
+import com.android.purebilibili.core.store.PlayerSettingsCache
 import com.android.purebilibili.core.player.PlaybackMediaCache
 import com.android.purebilibili.core.util.Logger
 import com.android.purebilibili.data.model.VideoLoadError
@@ -167,19 +168,23 @@ internal fun applyPlaybackIntentAfterSourceChange(
     }
 }
 
-// TODO: Re-enable local adaptive DASH playback after the generated MPD seek path
-// is validated on real devices and covered by a playback-level regression test.
-private const val LOCAL_ADAPTIVE_DASH_PLAYBACK_ENABLED = false
-
 internal fun shouldUseAdaptiveDashPlayback(
     adaptiveDashSource: AdaptiveDashPlaybackSource?,
-    audioUrl: String?
+    audioUrl: String?,
+    dashSegmentRequestsEnabled: Boolean = true
 ): Boolean {
-    // Local MPD playback regressed manual seeks on real devices in v7.3.2:
-    // the UI position updates, but decoded video jumps back to the opening frame.
-    // Keep building the adaptive source for future recovery work, but route
-    // playback through the previous legacy DASH path until seek stability is fixed.
-    return LOCAL_ADAPTIVE_DASH_PLAYBACK_ENABLED && adaptiveDashSource != null
+    val source = adaptiveDashSource ?: return false
+    if (!dashSegmentRequestsEnabled) return false
+    if (source.videoTracks.isEmpty()) return false
+    if (!audioUrl.isNullOrBlank() && source.audioTracks.isEmpty()) return false
+
+    return source.videoTracks.all { it.segmentBase.hasCompleteDashByteRanges() } &&
+        source.audioTracks.all { it.segmentBase.hasCompleteDashByteRanges() }
+}
+
+private fun SegmentBase?.hasCompleteDashByteRanges(): Boolean {
+    return this?.initialization?.isNotBlank() == true &&
+        this.indexRange?.isNotBlank() == true
 }
 
 internal fun resolveLocalDashManifestFileName(manifest: String): String {
@@ -749,7 +754,14 @@ class VideoPlaybackUseCase(
         val player = exoPlayer ?: return
         com.android.purebilibili.core.player.PlayerVolumeController.applyPreferredVolume(player)
 
-        val finalSource = if (shouldUseAdaptiveDashPlayback(adaptiveDashSource, audioUrl)) {
+        val dashSegmentRequestsEnabled = resolveDashSegmentRequestsEnabled()
+        val finalSource = if (
+            shouldUseAdaptiveDashPlayback(
+                adaptiveDashSource = adaptiveDashSource,
+                audioUrl = audioUrl,
+                dashSegmentRequestsEnabled = dashSegmentRequestsEnabled
+            )
+        ) {
             createAdaptiveDashMediaSource(adaptiveDashSource)
                 ?: createLegacyDashMediaSource(videoUrl, audioUrl)
         } else {
@@ -1174,6 +1186,11 @@ class VideoPlaybackUseCase(
     ): DataSource.Factory {
         val context = appContext ?: NetworkModule.appContext ?: return upstreamFactory
         return PlaybackMediaCache.buildCachedDataSourceFactory(context, upstreamFactory)
+    }
+
+    private fun resolveDashSegmentRequestsEnabled(): Boolean {
+        val context = appContext ?: NetworkModule.appContext ?: return true
+        return PlayerSettingsCache.isDashSegmentRequestsEnabled(context)
     }
 
     private fun writeAdaptiveDashManifest(context: Context, manifest: String): Uri? {
