@@ -8,15 +8,17 @@ import org.junit.Test
 class ProfileWallpaperPolicyTest {
 
     @Test
-    fun compactProfileTopBanner_usesTallerWallpaperCoverage() {
-        assertEquals(420f, resolveProfileTopBannerHeightDp(WindowWidthSizeClass.Compact), 0.001f)
+    fun compactProfileTopBanner_usesHeroFractionAndClamp() {
+        val compactHeight = resolveProfileTopBannerHeightDp(WindowWidthSizeClass.Compact)
+        assertEquals(288f, compactHeight, 0.001f)
     }
 
     @Test
-    fun compactProfileTopBanner_isTallerThanTabletBannerHeight() {
-        val compactHeight = resolveProfileTopBannerHeightDp(WindowWidthSizeClass.Compact)
-        val expandedHeight = resolveProfileTopBannerHeightDp(WindowWidthSizeClass.Expanded)
-        assertTrue(compactHeight > expandedHeight)
+    fun profileTopBannerHeight_staysInsideHeroClampForAllBreakpoints() {
+        WindowWidthSizeClass.entries.forEach { sizeClass ->
+            val height = resolveProfileTopBannerHeightDp(sizeClass)
+            assertTrue(height in 280f..360f)
+        }
     }
 
     @Test

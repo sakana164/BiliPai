@@ -31,11 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.toArgb
@@ -61,7 +58,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
-import coil.request.SuccessResult
 import coil.size.Scale
 import com.android.purebilibili.core.theme.iOSBlue
 import com.android.purebilibili.core.theme.iOSGreen
@@ -103,9 +99,7 @@ import com.android.purebilibili.core.ui.rememberAppShareIcon
 import com.android.purebilibili.core.ui.components.UserLevelBadge
 import com.android.purebilibili.core.ui.rememberAppWarningIcon
 import com.android.purebilibili.core.ui.rememberAppWatchLaterIcon
-import com.android.purebilibili.core.ui.wallpaper.ProfileWallpaperLayout
 import com.android.purebilibili.core.ui.wallpaper.ProfileWallpaperTransform
-import com.android.purebilibili.core.ui.wallpaper.resolveProfileWallpaperLayout
 import com.android.purebilibili.core.util.LocalWindowSizeClass
 import com.android.purebilibili.core.util.WindowWidthSizeClass
 import com.android.purebilibili.core.ui.components.IOSGroup
@@ -145,10 +139,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.unit.times
-import androidx.core.graphics.drawable.toBitmap
-import androidx.palette.graphics.Palette
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+
 
 internal fun shouldEnableProfileHeaderLoginClick(isLogin: Boolean): Boolean = !isLogin
 
@@ -618,15 +609,6 @@ fun ProfileScreen(
     }
 }
 
-// [New] Reusable Background Component
-internal fun resolveProfileTopBannerHeightDp(widthSizeClass: WindowWidthSizeClass): Float {
-    return when (widthSizeClass) {
-        WindowWidthSizeClass.Compact -> 420f
-        WindowWidthSizeClass.Medium -> 380f
-        WindowWidthSizeClass.Expanded -> 340f
-    }
-}
-
 @Composable
 private fun BoxScope.ProfileBackground(
     user: UserState,
@@ -635,288 +617,106 @@ private fun BoxScope.ProfileBackground(
 ) {
     val windowSizeClass = LocalWindowSizeClass.current
     val isTablet = windowSizeClass.shouldUseSplitLayout
-    val isImmersive = user.topPhoto.isNotEmpty()
+    val hasWallpaper = user.topPhoto.isNotEmpty()
     val bgTransform by viewModel.getProfileBgTransform(isTablet).collectAsStateWithLifecycle(initialValue = ProfileWallpaperTransform())
-    val profileWallpaperLayout = remember(windowSizeClass.widthSizeClass) {
-        resolveProfileWallpaperLayout(windowSizeClass.widthSizeClass)
-    }
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
+    val colorScheme = MaterialTheme.colorScheme
+    val isDarkTheme = colorScheme.surface.luminance() < 0.5f
+    val heroHeight = resolveProfileHeroHeightDp(
+        screenHeightDp = configuration.screenHeightDp,
+        widthSizeClass = windowSizeClass.widthSizeClass
+    ).dp
     val wallpaperDecodeSize = remember(configuration.screenWidthDp, density.density) {
         resolveProfileWallpaperDecodeSizePx(
             screenWidthDp = configuration.screenWidthDp,
             density = density.density
         )
     }
-
-    if (shouldRenderProfileImmersiveBackground(isImmersive, deferImmersiveRenderBudget)) {
-        when (profileWallpaperLayout) {
-            ProfileWallpaperLayout.TOP_BANNER_BLUR_BG -> {
-                val bannerHeightDp = resolveProfileTopBannerHeightDp(windowSizeClass.widthSizeClass)
-                val bannerHeight = bannerHeightDp.dp
-                val blendBandHeight = resolveProfileWallpaperBlendBandDp(
-                    topBannerHeightDp = bannerHeightDp
-                ).dp
-                val clearImageHeight = bannerHeight + 144.dp
-                // 1. 底层：高斯模糊填充 (填补图片不够长的区域)
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(user.topPhoto)
-                        .size(wallpaperDecodeSize.first, wallpaperDecodeSize.second)
-                        .scale(Scale.FILL)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alignment = androidx.compose.ui.BiasAlignment(
-                        bgTransform.offsetX,
-                        bgTransform.offsetY
-                    ),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(
-                            scaleX = bgTransform.scale,
-                            scaleY = bgTransform.scale
-                        )
-                        .blur(60.dp)
-                )
-
-                // 2. 中层：保留模糊前提下，增加轻量清晰细节覆盖，补充更多壁纸信息
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(user.topPhoto)
-                        .size(wallpaperDecodeSize.first, wallpaperDecodeSize.second)
-                        .scale(Scale.FILL)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alignment = androidx.compose.ui.BiasAlignment(
-                        bgTransform.offsetX,
-                        bgTransform.offsetY
-                    ),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(
-                            scaleX = bgTransform.scale,
-                            scaleY = bgTransform.scale
-                        )
-                        .alpha(0.14f)
-                )
-
-                // 3. 顶层：清晰头部图 (Header Banner)
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(user.topPhoto)
-                        .size(wallpaperDecodeSize.first, wallpaperDecodeSize.second)
-                        .scale(Scale.FILL)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alignment = androidx.compose.ui.BiasAlignment(
-                        bgTransform.offsetX,
-                        bgTransform.offsetY
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(clearImageHeight)
-                        .graphicsLayer(
-                            scaleX = bgTransform.scale,
-                            scaleY = bgTransform.scale,
-                            compositingStrategy = CompositingStrategy.Offscreen
-                        )
-                        .drawWithContent {
-                            drawContent()
-                            val fadeStart = (size.height - blendBandHeight.toPx()).coerceAtLeast(0f)
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.White,
-                                        Color.White,
-                                        Color.Transparent
-                                    ),
-                                    startY = fadeStart,
-                                    endY = size.height
-                                ),
-                                blendMode = BlendMode.DstIn
-                            )
-                        }
-                        .align(Alignment.TopCenter)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = bannerHeight - blendBandHeight * 0.62f)
-                        .fillMaxWidth()
-                        .height(blendBandHeight + 124.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) {
-                                    listOf(
-                                        Color.Transparent,
-                                        Color.Black.copy(alpha = 0.04f),
-                                        Color.Black.copy(alpha = 0.12f),
-                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.30f),
-                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.52f)
-                                    )
-                                } else {
-                                    listOf(
-                                        Color.Transparent,
-                                        Color.White.copy(alpha = 0.03f),
-                                        Color.Black.copy(alpha = 0.05f),
-                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.20f),
-                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.38f)
-                                    )
-                                }
-                            )
-                        )
-                )
-            }
-
-            ProfileWallpaperLayout.POSTER_CARD_BLUR_BG -> {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(user.topPhoto)
-                        .size(wallpaperDecodeSize.first, wallpaperDecodeSize.second)
-                        .scale(Scale.FILL)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alignment = androidx.compose.ui.BiasAlignment(
-                        bgTransform.offsetX,
-                        bgTransform.offsetY
-                    ),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(
-                            scaleX = bgTransform.scale,
-                            scaleY = bgTransform.scale
-                        )
-                        .blur(58.dp)
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.18f))
-                )
-                Card(
-                    shape = RoundedCornerShape(28.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = if (windowSizeClass.isExpandedScreen) 72.dp else 84.dp)
-                        .fillMaxWidth(if (windowSizeClass.isExpandedScreen) 0.28f else 0.4f)
-                        .widthIn(min = 210.dp, max = 360.dp)
-                        .aspectRatio(9f / 16f)
-                ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(user.topPhoto)
-                            .size(wallpaperDecodeSize.first, wallpaperDecodeSize.second)
-                            .scale(Scale.FILL)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        alignment = androidx.compose.ui.BiasAlignment(
-                            bgTransform.offsetX,
-                            bgTransform.offsetY
-                        ),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer(
-                                scaleX = bgTransform.scale,
-                                scaleY = bgTransform.scale
-                            )
-                    )
-                }
-            }
-        }
-
-        // 遮罩：渐变黑遮罩 (增加缓动层级)
-        val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-        val gradientColors = if (isDarkTheme) {
-            listOf(
-                Color.Black.copy(alpha = 0.6f),
-                Color.Black.copy(alpha = 0.3f),
-                Color.Transparent,
-                Color.Black.copy(alpha = 0.2f),
-                Color.Black.copy(alpha = 0.8f)
-            )
-        } else {
-            listOf(
-                Color.Black.copy(alpha = 0.3f),
-                Color.Black.copy(alpha = 0.1f),
-                Color.Transparent,
-                Color.Black.copy(alpha = 0.05f),
-                Color.Black.copy(alpha = 0.4f)
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = gradientColors,
-                        startY = 0f,
-                        endY = 1200f
-                    )
-                )
+    val heroChrome = remember(hasWallpaper, isDarkTheme, colorScheme.onSurface, colorScheme.onSurfaceVariant) {
+        resolveProfileHeroChrome(
+            hasWallpaper = hasWallpaper,
+            isDarkTheme = isDarkTheme,
+            onSurfaceColor = colorScheme.onSurface,
+            onSurfaceVariantColor = colorScheme.onSurfaceVariant
         )
-    } else {
-         // 无背景图时使用默认渐变
-         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-         )
     }
-}
-
-@Composable
-private fun rememberProfileWallpaperColor(wallpaperUrl: String): Color {
-    val context = LocalContext.current
-    val fallbackColor = MaterialTheme.colorScheme.surface
-    var color by remember(wallpaperUrl, fallbackColor) { mutableStateOf(fallbackColor) }
-
-    LaunchedEffect(wallpaperUrl, fallbackColor) {
-        color = fallbackColor
-        if (wallpaperUrl.isBlank()) return@LaunchedEffect
-        extractProfileWallpaperColor(context, wallpaperUrl)?.let { color = it }
+    val heroFallbackGradient = remember(hasWallpaper, isDarkTheme, colorScheme.surface, colorScheme.surfaceVariant, colorScheme.primaryContainer) {
+        resolveProfileHeroFallbackGradient(
+            hasWallpaper = hasWallpaper,
+            isDarkTheme = isDarkTheme,
+            surfaceColor = colorScheme.surface,
+            surfaceVariantColor = colorScheme.surfaceVariant,
+            primaryContainerColor = colorScheme.primaryContainer
+        )
     }
 
-    return color
-}
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colorScheme.surface)
+    )
 
-private suspend fun extractProfileWallpaperColor(
-    context: Context,
-    wallpaperUrl: String
-): Color? = withContext(Dispatchers.IO) {
-    runCatching {
-        val request = ImageRequest.Builder(context)
-            .data(wallpaperUrl)
-            .allowHardware(false)
-            .size(96, 96)
-            .build()
-        val result = context.imageLoader.execute(request) as? SuccessResult ?: return@runCatching null
-        val bitmap = result.drawable.toBitmap(width = 96, height = 96)
-        val palette = Palette.from(bitmap)
-            .maximumColorCount(8)
-            .generate()
-        val swatch = palette.dominantSwatch
-            ?: palette.vibrantSwatch
-            ?: palette.mutedSwatch
-            ?: palette.darkVibrantSwatch
-            ?: palette.lightVibrantSwatch
-            ?: palette.darkMutedSwatch
-            ?: palette.lightMutedSwatch
-        swatch?.rgb?.let(::Color)
-    }.getOrNull()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(heroHeight)
+            .align(Alignment.TopCenter)
+    ) {
+        if (shouldRenderProfileImmersiveBackground(hasWallpaper, deferImmersiveRenderBudget)) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(user.topPhoto)
+                    .size(wallpaperDecodeSize.first, wallpaperDecodeSize.second)
+                    .scale(Scale.FILL)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                alignment = androidx.compose.ui.BiasAlignment(
+                    bgTransform.offsetX,
+                    bgTransform.offsetY
+                ),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(
+                        scaleX = bgTransform.scale,
+                        scaleY = bgTransform.scale
+                    )
+            )
+        } else if (heroFallbackGradient != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                heroFallbackGradient.topColor,
+                                heroFallbackGradient.bottomColor
+                            )
+                        )
+                    )
+            )
+        }
+
+        if (heroChrome.scrimBottomAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.72f)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = heroChrome.scrimTopAlpha),
+                                Color.Black.copy(alpha = heroChrome.scrimBottomAlpha)
+                            )
+                        )
+                    )
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1035,23 +835,30 @@ private fun ProfileSpaceContent(
         )
     }
 
-    val isImmersive = user.topPhoto.isNotEmpty()
+    val hasWallpaper = user.topPhoto.isNotEmpty()
     val statusBarTopPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val wallpaperUrl = user.topPhoto.ifBlank { user.face }
-    val wallpaperColor = rememberProfileWallpaperColor(wallpaperUrl)
-    val fallbackSurfaceColor = MaterialTheme.colorScheme.surface
-    val fallbackContentColor = MaterialTheme.colorScheme.onSurface
-    val wallpaperChromePalette = remember(
-        wallpaperColor,
-        fallbackSurfaceColor,
-        fallbackContentColor
-    ) {
-        resolveProfileSpaceWallpaperChromePalette(
-            wallpaperColor = wallpaperColor,
-            fallbackSurfaceColor = fallbackSurfaceColor,
-            fallbackContentColor = fallbackContentColor
+    val colorScheme = MaterialTheme.colorScheme
+    val isDarkTheme = colorScheme.surface.luminance() < 0.5f
+    val layoutTokens = remember { resolveProfileLayoutTokens() }
+    val contentChrome = remember(colorScheme, isDarkTheme) {
+        resolveProfileContentChrome(
+            surfaceColor = colorScheme.surface,
+            onSurfaceColor = colorScheme.onSurface,
+            onSurfaceVariantColor = colorScheme.onSurfaceVariant,
+            primaryColor = colorScheme.primary,
+            surfaceContainerHighColor = colorScheme.surfaceContainerHigh,
+            isDarkTheme = isDarkTheme
         )
     }
+    val heroChrome = remember(hasWallpaper, isDarkTheme, colorScheme.onSurface, colorScheme.onSurfaceVariant) {
+        resolveProfileHeroChrome(
+            hasWallpaper = hasWallpaper,
+            isDarkTheme = isDarkTheme,
+            onSurfaceColor = colorScheme.onSurface,
+            onSurfaceVariantColor = colorScheme.onSurfaceVariant
+        )
+    }
+    val topBarIconColor = heroChrome.textColor
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isTablet) {
@@ -1073,6 +880,8 @@ private fun ProfileSpaceContent(
                         user = user,
                         editableAccount = editableAccount,
                         compact = true,
+                        heroChrome = heroChrome,
+                        showWallpaperAction = true,
                         onEditClick = { showEditDialog = true },
                         onWallpaperActionClick = { showWallpaperActionSheet = true },
                         onFollowingClick = onFollowingClick
@@ -1088,7 +897,7 @@ private fun ProfileSpaceContent(
                         onInboxClick = onInboxClick,
                         onAccountManageClick = onAccountManageClick,
                         onLogout = onLogout,
-                        chromePalette = wallpaperChromePalette
+                        contentChrome = contentChrome
                     )
                 }
                 ProfileSpaceFeedColumn(
@@ -1110,39 +919,37 @@ private fun ProfileSpaceContent(
                     onAccountManageClick = onAccountManageClick,
                     onLogout = onLogout,
                     onDynamicDeleteClick = onDynamicDeleteClick,
-                    chromePalette = wallpaperChromePalette,
+                    contentChrome = contentChrome,
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(bottom = 48.dp)
                 )
             }
         } else {
-            val panelSpec = remember { resolveProfileSpaceContentPanelSpec() }
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(if (hazeState != null) Modifier.hazeSourceCompat(hazeState) else Modifier),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding() + 120.dp)
             ) {
                 item {
                     ProfileSpaceHeroHeader(
                         user = user,
                         editableAccount = editableAccount,
+                        heroChrome = heroChrome,
+                        layoutTokens = layoutTokens,
+                        showWallpaperAction = false,
                         onEditClick = { showEditDialog = true },
                         onWallpaperActionClick = { showWallpaperActionSheet = true },
                         onFollowingClick = onFollowingClick
                     )
                 }
                 item {
-                    ProfileSpaceUnifiedPanel(
-                        isImmersive = isImmersive,
-                        chromePalette = wallpaperChromePalette,
-                        hazeState = hazeState,
-                        panelSpec = panelSpec
+                    ProfileContentSheet(
+                        contentChrome = contentChrome,
+                        layoutTokens = layoutTokens
                     ) {
                         ProfileSpaceTabs(
                             selectedTab = space.selectedTab,
                             onTabSelected = onTabSelected,
-                            chromePalette = wallpaperChromePalette,
+                            contentChrome = contentChrome,
                             embeddedInPanel = true
                         )
                         ProfileSpaceTabBody(
@@ -1163,9 +970,8 @@ private fun ProfileSpaceContent(
                             onAccountManageClick = onAccountManageClick,
                             onLogout = onLogout,
                             onDynamicDeleteClick = onDynamicDeleteClick,
-                            chromePalette = wallpaperChromePalette,
-                            embeddedInPanel = true,
-                            isImmersive = isImmersive
+                            contentChrome = contentChrome,
+                            embeddedInPanel = true
                         )
                     }
                 }
@@ -1180,11 +986,14 @@ private fun ProfileSpaceContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(rememberAppBackIcon(), contentDescription = "返回", tint = Color.White)
+                    Icon(rememberAppBackIcon(), contentDescription = "返回", tint = topBarIconColor)
                 }
                 Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = { showWallpaperActionSheet = true }) {
+                    Icon(rememberAppPhotoIcon(), contentDescription = "换壁纸", tint = topBarIconColor)
+                }
                 IconButton(onClick = onSettingsClick) {
-                    Icon(rememberAppSettingsIcon(), contentDescription = "设置", tint = Color.White)
+                    Icon(rememberAppSettingsIcon(), contentDescription = "设置", tint = topBarIconColor)
                 }
             }
         }
@@ -1211,7 +1020,7 @@ private fun ProfileSpaceFeedColumn(
     onAccountManageClick: () -> Unit,
     onLogout: () -> Unit,
     onDynamicDeleteClick: (DynamicDeleteAction) -> Unit,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
+    contentChrome: ProfileContentChrome,
     modifier: Modifier,
     contentPadding: PaddingValues
 ) {
@@ -1220,7 +1029,7 @@ private fun ProfileSpaceFeedColumn(
             ProfileSpaceTabs(
                 selectedTab = space.selectedTab,
                 onTabSelected = onTabSelected,
-                chromePalette = chromePalette
+                contentChrome = contentChrome
             )
         }
         item {
@@ -1242,7 +1051,7 @@ private fun ProfileSpaceFeedColumn(
                 onAccountManageClick = onAccountManageClick,
                 onLogout = onLogout,
                 onDynamicDeleteClick = onDynamicDeleteClick,
-                chromePalette = chromePalette
+                contentChrome = contentChrome
             )
         }
     }
@@ -1252,95 +1061,69 @@ private fun ProfileSpaceFeedColumn(
 private fun ProfileSpaceHeroHeader(
     user: UserState,
     editableAccount: ProfileEditableAccountState,
+    heroChrome: ProfileHeroChrome,
+    layoutTokens: ProfileLayoutTokens,
+    showWallpaperAction: Boolean,
     onEditClick: () -> Unit,
     onWallpaperActionClick: () -> Unit,
     onFollowingClick: () -> Unit
 ) {
+    val configuration = LocalConfiguration.current
     val windowSizeClass = LocalWindowSizeClass.current
-    val panelSpec = remember { resolveProfileSpaceContentPanelSpec() }
-    val bannerHeight = resolveProfileTopBannerHeightDp(windowSizeClass.widthSizeClass).dp
+    val heroHeight = resolveProfileHeroHeightDp(
+        screenHeightDp = configuration.screenHeightDp,
+        widthSizeClass = windowSizeClass.widthSizeClass
+    ).dp
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(bannerHeight)
+            .height(heroHeight)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.18f),
-                            Color.Black.copy(alpha = 0.58f)
-                        )
-                    )
-                )
-        )
         ProfileSpaceHeader(
             user = user,
             editableAccount = editableAccount,
             compact = false,
+            heroChrome = heroChrome,
+            showWallpaperAction = showWallpaperAction,
             onEditClick = onEditClick,
             onWallpaperActionClick = onWallpaperActionClick,
             onFollowingClick = onFollowingClick,
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(
-                    top = 126.dp,
-                    bottom = panelSpec.heroBottomInsetDp.dp
+                    top = 112.dp,
+                    bottom = layoutTokens.heroBottomInsetDp.dp
                 )
         )
     }
 }
 
 @Composable
-private fun ProfileSpaceUnifiedPanel(
-    isImmersive: Boolean,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
-    hazeState: HazeState?,
-    panelSpec: ProfileSpaceContentPanelSpec,
+private fun ProfileContentSheet(
+    contentChrome: ProfileContentChrome,
+    layoutTokens: ProfileLayoutTokens,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val shape = remember(panelSpec.topCornerRadiusDp) {
+    val shape = remember(layoutTokens.contentSheetTopRadiusDp) {
         RoundedCornerShape(
-            topStart = panelSpec.topCornerRadiusDp.dp,
-            topEnd = panelSpec.topCornerRadiusDp.dp
+            topStart = layoutTokens.contentSheetTopRadiusDp.dp,
+            topEnd = layoutTokens.contentSheetTopRadiusDp.dp
         )
     }
-    val panelColor = if (isImmersive) {
-        chromePalette.contentPanelColor
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
-    val borderColor = if (isImmersive) chromePalette.contentPanelBorderColor else null
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (isImmersive) panelSpec.horizontalInsetDp.dp else 0.dp)
-            .offset(y = (-panelSpec.topOverlapDp).dp)
-            .then(
-                if (isImmersive && hazeState != null) {
-                    Modifier.unifiedBlur(
-                        hazeState = hazeState,
-                        shape = shape
-                    )
-                } else {
-                    Modifier
-                }
-            ),
+            .offset(y = (-layoutTokens.contentSheetTopOverlapDp).dp),
         shape = shape,
-        color = panelColor,
-        border = borderColor?.let { BorderStroke(0.5.dp, it) },
-        shadowElevation = 0.dp,
+        color = contentChrome.surfaceColor,
+        border = BorderStroke(0.5.dp, contentChrome.sheetBorderColor),
+        shadowElevation = contentChrome.sheetShadowElevationDp.dp,
         tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(
-                top = panelSpec.topPaddingDp.dp,
-                bottom = panelSpec.bottomPaddingDp.dp
+                top = layoutTokens.contentSheetTopPaddingDp.dp,
+                bottom = layoutTokens.contentSheetBottomPaddingDp.dp
             ),
             verticalArrangement = Arrangement.spacedBy(4.dp),
             content = content
@@ -1353,13 +1136,15 @@ private fun ProfileSpaceHeader(
     user: UserState,
     editableAccount: ProfileEditableAccountState,
     compact: Boolean,
+    heroChrome: ProfileHeroChrome,
+    showWallpaperAction: Boolean,
     onEditClick: () -> Unit,
     onWallpaperActionClick: () -> Unit,
     onFollowingClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val textColor = if (compact) MaterialTheme.colorScheme.onSurface else Color.White
-    val secondaryColor = textColor.copy(alpha = 0.72f)
+    val textColor = heroChrome.textColor
+    val secondaryColor = heroChrome.secondaryTextColor
     val meta = remember(editableAccount.sign, editableAccount.ipLocation, editableAccount.sex) {
         resolveProfileSpaceIdentityMeta(
             sign = editableAccount.sign,
@@ -1367,16 +1152,8 @@ private fun ProfileSpaceHeader(
             sex = editableAccount.sex
         )
     }
-    val metaChipContainer = if (compact) {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
-    } else {
-        Color.Black.copy(alpha = 0.22f)
-    }
-    val metaChipBorder = if (compact) {
-        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f)
-    } else {
-        Color.White.copy(alpha = 0.22f)
-    }
+    val metaChipContainer = heroChrome.metaChipContainerColor
+    val metaChipBorder = heroChrome.metaChipBorderColor
     var identityExpanded by remember(user.mid, editableAccount.sign, editableAccount.ipLocation, editableAccount.sex) {
         mutableStateOf(false)
     }
@@ -1392,9 +1169,9 @@ private fun ProfileSpaceHeader(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(if (compact) 72.dp else 88.dp)
+                    .size(if (compact) 72.dp else 80.dp)
                     .clip(CircleShape)
-                    .border(2.dp, Color.White.copy(alpha = 0.88f), CircleShape)
+                    .border(2.dp, heroChrome.avatarBorderColor, CircleShape)
             )
             Spacer(modifier = Modifier.weight(1f))
             ProfileSpaceStat("粉丝", user.follower, textColor)
@@ -1461,19 +1238,21 @@ private fun ProfileSpaceHeader(
             OutlinedButton(
                 onClick = onEditClick,
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = textColor),
-                border = BorderStroke(1.dp, textColor.copy(alpha = 0.42f)),
+                    .fillMaxWidth()
+                    .height(44.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = heroChrome.actionButtonContentColor),
+                border = BorderStroke(1.dp, heroChrome.actionButtonContentColor.copy(alpha = heroChrome.actionButtonBorderAlpha)),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("编辑资料")
             }
-            ProfileWallpaperMenuButton(
-                contentColor = textColor,
-                borderColor = textColor.copy(alpha = 0.42f),
-                onClick = onWallpaperActionClick
-            )
+            if (showWallpaperAction) {
+                ProfileWallpaperMenuButton(
+                    contentColor = heroChrome.actionButtonContentColor,
+                    borderColor = heroChrome.actionButtonContentColor.copy(alpha = heroChrome.actionButtonBorderAlpha),
+                    onClick = onWallpaperActionClick
+                )
+            }
         }
     }
 }
@@ -1586,11 +1365,12 @@ private fun ProfileSpaceStat(label: String, value: Int, color: Color, onClick: (
 private fun ProfileSpaceTabs(
     selectedTab: ProfileSpaceMainTab,
     onTabSelected: (ProfileSpaceMainTab) -> Unit,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
+    contentChrome: ProfileContentChrome,
     embeddedInPanel: Boolean = false
 ) {
     val tabs = remember { defaultProfileSpaceTabs() }
     val context = LocalContext.current
+    val layoutTokens = remember { resolveProfileLayoutTokens() }
     val chromeSpec = remember { resolveProfileSpaceTabChromeSpec() }
     val rowContainerShape = remember(chromeSpec.rowCornerRadiusDp) {
         RoundedCornerShape(chromeSpec.rowCornerRadiusDp.dp)
@@ -1599,51 +1379,42 @@ private fun ProfileSpaceTabs(
         .getBottomBarLiquidGlassEnabled(context)
         .collectAsStateWithLifecycle(initialValue = true)
     val selectedIndex = tabs.indexOfFirst { it.tab == selectedTab }.coerceAtLeast(0)
-    val tabModifier = if (embeddedInPanel) {
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = chromeSpec.rowHorizontalInsetDp.dp)
-    } else {
-        Modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = chromeSpec.rowHorizontalInsetDp.dp,
-                vertical = chromeSpec.rowVerticalInsetDp.dp
-            )
-            .background(chromePalette.rowContainerColor, rowContainerShape)
-            .padding(horizontal = 10.dp, vertical = 8.dp)
-    }
-    if (bottomBarLiquidGlassEnabled) {
+    val tabModifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp)
+    val useUnderlineTabs = embeddedInPanel || !bottomBarLiquidGlassEnabled
+    if (!useUnderlineTabs) {
         BottomBarLiquidSegmentedControl(
             items = tabs.map { it.title },
             selectedIndex = selectedIndex,
             onSelected = { index -> tabs.getOrNull(index)?.let { onTabSelected(it.tab) } },
-            modifier = tabModifier.then(
-                if (embeddedInPanel) Modifier.padding(horizontal = 2.dp, vertical = 4.dp) else Modifier
-            ),
+            modifier = tabModifier
+                .padding(vertical = 6.dp)
+                .background(contentChrome.cardContainerColor, rowContainerShape)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             height = 46.dp,
             indicatorHeight = 40.dp,
             labelFontSize = 16.sp,
-            forceLiquidChrome = true,
-            containerColorOverride = chromePalette.controlContainerColor,
-            selectedTextColorOverride = chromePalette.selectedTextColor,
-            unselectedTextColorOverride = chromePalette.unselectedTextColor,
-            indicatorIdleSurfaceColorOverride = chromePalette.indicatorColor
+            forceLiquidChrome = false,
+            containerColorOverride = contentChrome.surfaceColor,
+            selectedTextColorOverride = contentChrome.onSurfaceColor,
+            unselectedTextColorOverride = contentChrome.onSurfaceVariantColor,
+            indicatorIdleSurfaceColorOverride = contentChrome.primaryColor.copy(alpha = 0.14f)
         )
         return
     }
 
     Row(
         modifier = tabModifier
-            .horizontalScroll(rememberScrollState())
-            .then(if (!embeddedInPanel) Modifier else Modifier.padding(horizontal = 2.dp)),
-        horizontalArrangement = Arrangement.spacedBy(28.dp)
+            .height(layoutTokens.tabHeightDp.dp)
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(24.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         tabs.forEach { item ->
             val selected = item.tab == selectedTab
             Column(
                 modifier = Modifier
-                    .height(50.dp)
                     .clickable { onTabSelected(item.tab) },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -1651,16 +1422,16 @@ private fun ProfileSpaceTabs(
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (selected) chromePalette.selectedTextColor else chromePalette.unselectedTextColor,
+                    color = if (selected) contentChrome.onSurfaceColor else contentChrome.onSurfaceVariantColor,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Box(
                     modifier = Modifier
-                        .width(28.dp)
+                        .width(24.dp)
                         .height(3.dp)
                         .clip(RoundedCornerShape(999.dp))
-                        .background(if (selected) chromePalette.selectedTextColor else Color.Transparent)
+                        .background(if (selected) contentChrome.primaryColor else Color.Transparent)
                 )
             }
         }
@@ -1686,9 +1457,8 @@ private fun ProfileSpaceTabBody(
     onAccountManageClick: () -> Unit,
     onLogout: () -> Unit,
     onDynamicDeleteClick: (DynamicDeleteAction) -> Unit,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
-    embeddedInPanel: Boolean = false,
-    isImmersive: Boolean = false
+    contentChrome: ProfileContentChrome,
+    embeddedInPanel: Boolean = false
 ) {
     when (space.selectedTab) {
         ProfileSpaceMainTab.HOME -> ProfileSpaceHome(
@@ -1708,9 +1478,8 @@ private fun ProfileSpaceTabBody(
             onInboxClick = onInboxClick,
             onAccountManageClick = onAccountManageClick,
             onLogout = onLogout,
-            chromePalette = chromePalette,
-            embeddedInPanel = embeddedInPanel,
-            isImmersive = isImmersive
+            contentChrome = contentChrome,
+            embeddedInPanel = embeddedInPanel
         )
         ProfileSpaceMainTab.DYNAMIC -> ProfileDynamicList(
             items = space.dynamicItems,
@@ -1741,16 +1510,16 @@ private fun ProfileSpaceHome(
     onInboxClick: () -> Unit,
     onAccountManageClick: () -> Unit,
     onLogout: () -> Unit,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
-    embeddedInPanel: Boolean = false,
-    isImmersive: Boolean = false
+    contentChrome: ProfileContentChrome,
+    embeddedInPanel: Boolean = false
 ) {
+    val layoutTokens = remember { resolveProfileLayoutTokens() }
     Column(
         modifier = Modifier.padding(
             top = if (embeddedInPanel) 6.dp else 10.dp,
             bottom = if (embeddedInPanel) 0.dp else 24.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(layoutTokens.sectionSpacingDp.dp)
     ) {
         resolveProfileSpaceHomeSections(
             favoriteFolders = space.favoriteFolders,
@@ -1766,40 +1535,35 @@ private fun ProfileSpaceHome(
                     count = space.favoriteFolderCount,
                     onMoreClick = onFavoriteClick,
                     onFolderClick = onFavoriteFolderClick,
-                    chromePalette = chromePalette,
-                    isImmersive = isImmersive
+                    contentChrome = contentChrome
                 )
                 ProfileSpaceHomeSection.BANGUMI -> ProfileBangumiStrip(
                     items = space.bangumiItems,
                     count = space.bangumiCount,
                     onMoreClick = onBangumiMoreClick,
                     onBangumiClick = onBangumiClick,
-                    chromePalette = chromePalette,
-                    isImmersive = isImmersive
+                    contentChrome = contentChrome
                 )
                 ProfileSpaceHomeSection.COIN_VIDEOS -> ProfileAggregateVideoStrip(
                     title = "最近投币的视频",
                     count = space.coinVideoCount,
                     videos = space.coinVideos,
                     onVideoClick = onVideoClick,
-                    chromePalette = chromePalette,
-                    isImmersive = isImmersive
+                    contentChrome = contentChrome
                 )
                 ProfileSpaceHomeSection.LIKE_VIDEOS -> ProfileAggregateVideoStrip(
                     title = "最近点赞的视频",
                     count = space.likeVideoCount,
                     videos = space.likeVideos,
                     onVideoClick = onVideoClick,
-                    chromePalette = chromePalette,
-                    isImmersive = isImmersive
+                    contentChrome = contentChrome
                 )
                 ProfileSpaceHomeSection.CONTRIBUTIONS -> ProfileVideoStrip(
                     title = "投稿预览",
                     count = space.contributionVideoCount,
                     videos = space.contributionVideos,
                     onVideoClick = onVideoClick,
-                    chromePalette = chromePalette,
-                    isImmersive = isImmersive
+                    contentChrome = contentChrome
                 )
                 ProfileSpaceHomeSection.SERVICES -> if (showServices) {
                     ProfileSpaceServices(
@@ -1813,7 +1577,7 @@ private fun ProfileSpaceHome(
                         onInboxClick = onInboxClick,
                         onAccountManageClick = onAccountManageClick,
                         onLogout = onLogout,
-                        chromePalette = chromePalette,
+                        contentChrome = contentChrome,
                         embeddedInPanel = embeddedInPanel
                     )
                 }
@@ -1834,14 +1598,14 @@ private fun ProfileSpaceServices(
     onInboxClick: () -> Unit,
     onAccountManageClick: () -> Unit,
     onLogout: () -> Unit,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
+    contentChrome: ProfileContentChrome,
     embeddedInPanel: Boolean = false
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "我的服务",
             style = MaterialTheme.typography.titleMedium,
-            color = chromePalette.sectionTextColor,
+            color = contentChrome.onSurfaceColor,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 20.dp)
         )
@@ -1857,13 +1621,9 @@ private fun ProfileSpaceServices(
             onInboxClick = onInboxClick,
             onAccountManageClick = onAccountManageClick,
             onLogout = onLogout,
-            containerColor = chromePalette.serviceContainerColor,
-            contentColor = chromePalette.serviceTextColor,
-            borderColor = when {
-                embeddedInPanel -> null
-                chromePalette.serviceBorderColor.alpha > 0f -> chromePalette.serviceBorderColor
-                else -> null
-            },
+            containerColor = contentChrome.surfaceColor,
+            contentColor = contentChrome.onSurfaceColor,
+            borderColor = null,
             embeddedInPanel = embeddedInPanel,
             isLogin = true
         )
@@ -1877,22 +1637,20 @@ private fun ProfileFavoriteFolderStrip(
     count: Int,
     onMoreClick: () -> Unit,
     onFolderClick: (Long, Long, String) -> Unit,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
-    isImmersive: Boolean
+    contentChrome: ProfileContentChrome
 ) {
     ProfileSpaceSection(
         title = "收藏",
         count = count,
         onMoreClick = onMoreClick,
-        textColor = if (isImmersive) chromePalette.sectionTextColor else MaterialTheme.colorScheme.onSurface
+        textColor = contentChrome.onSurfaceColor
     ) {
         folders.take(6).forEach { folder ->
             ProfileSpacePosterCard(
                 title = folder.title,
                 subtitle = "${folder.media_count} 个内容",
                 imageUrl = folder.cover,
-                width = 168.dp,
-                height = 152.dp,
+                contentChrome = contentChrome,
                 onClick = { onFolderClick(folder.id, ownerMid, folder.title) }
             )
         }
@@ -1905,22 +1663,20 @@ private fun ProfileBangumiStrip(
     count: Int,
     onMoreClick: () -> Unit,
     onBangumiClick: (Long, Long) -> Unit,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
-    isImmersive: Boolean
+    contentChrome: ProfileContentChrome
 ) {
     ProfileSpaceSection(
         title = "追番",
         count = count,
         onMoreClick = onMoreClick,
-        textColor = if (isImmersive) chromePalette.sectionTextColor else MaterialTheme.colorScheme.onSurface
+        textColor = contentChrome.onSurfaceColor
     ) {
         items.take(8).forEach { item ->
             ProfileSpacePosterCard(
                 title = item.title,
                 subtitle = item.progress.ifBlank { item.newEp?.indexShow.orEmpty() },
                 imageUrl = item.cover,
-                width = 126.dp,
-                height = 198.dp,
+                contentChrome = contentChrome,
                 onClick = { onBangumiClick(item.seasonId, item.firstEp) }
             )
         }
@@ -1933,22 +1689,20 @@ private fun ProfileAggregateVideoStrip(
     count: Int,
     videos: List<SpaceAggregateArchiveItem>,
     onVideoClick: (String) -> Unit,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
-    isImmersive: Boolean
+    contentChrome: ProfileContentChrome
 ) {
     ProfileSpaceSection(
         title = title,
         count = count,
         onMoreClick = {},
-        textColor = if (isImmersive) chromePalette.sectionTextColor else MaterialTheme.colorScheme.onSurface
+        textColor = contentChrome.onSurfaceColor
     ) {
         videos.take(8).forEach { video ->
             ProfileSpacePosterCard(
                 title = video.title,
                 subtitle = video.length,
                 imageUrl = video.cover,
-                width = 192.dp,
-                height = 148.dp,
+                contentChrome = contentChrome,
                 onClick = { video.bvid.takeIf { it.isNotBlank() }?.let(onVideoClick) }
             )
         }
@@ -1961,22 +1715,20 @@ private fun ProfileVideoStrip(
     count: Int,
     videos: List<SpaceVideoItem>,
     onVideoClick: (String) -> Unit,
-    chromePalette: ProfileSpaceWallpaperChromePalette,
-    isImmersive: Boolean
+    contentChrome: ProfileContentChrome
 ) {
     ProfileSpaceSection(
         title = title,
         count = count,
         onMoreClick = {},
-        textColor = if (isImmersive) chromePalette.sectionTextColor else MaterialTheme.colorScheme.onSurface
+        textColor = contentChrome.onSurfaceColor
     ) {
         videos.take(8).forEach { video ->
             ProfileSpacePosterCard(
                 title = video.title,
                 subtitle = video.length,
                 imageUrl = video.pic,
-                width = 192.dp,
-                height = 148.dp,
+                contentChrome = contentChrome,
                 onClick = { video.bvid.takeIf { it.isNotBlank() }?.let(onVideoClick) }
             )
         }
@@ -2025,25 +1777,29 @@ private fun ProfileSpacePosterCard(
     title: String,
     subtitle: String,
     imageUrl: String,
-    width: androidx.compose.ui.unit.Dp,
-    height: androidx.compose.ui.unit.Dp,
+    contentChrome: ProfileContentChrome,
     onClick: () -> Unit
 ) {
+    val cardTokens = remember { resolveProfileCardTokens() }
+    val cardShape = RoundedCornerShape(cardTokens.cornerRadiusDp.dp)
+    val cardWidth = cardTokens.widthDp.dp
+    val coverHeight = resolveProfileCardCoverHeightDp(cardTokens).dp
+    val cardHeight = resolveProfileCardHeightDp(cardTokens).dp
     Surface(
         modifier = Modifier
-            .width(width)
-            .height(height)
-            .clip(RoundedCornerShape(8.dp))
+            .width(cardWidth)
+            .height(cardHeight)
+            .clip(cardShape)
             .clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        color = contentChrome.cardContainerColor,
         shadowElevation = 0.dp
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .height(coverHeight)
+                    .background(contentChrome.cardContainerColor)
             ) {
                 if (imageUrl.isNotBlank()) {
                     AsyncImage(
@@ -2056,25 +1812,29 @@ private fun ProfileSpacePosterCard(
                     Icon(
                         rememberAppFolderIcon(),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.42f),
+                        tint = contentChrome.onSurfaceVariantColor.copy(alpha = 0.42f),
                         modifier = Modifier
                             .size(42.dp)
                             .align(Alignment.Center)
                     )
                 }
             }
-            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Column(
+                modifier = Modifier
+                    .height(cardTokens.metadataHeightDp.dp)
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = contentChrome.onSurfaceColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = subtitle.ifBlank { "公开" },
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = contentChrome.onSurfaceVariantColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
