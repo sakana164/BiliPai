@@ -190,16 +190,8 @@ internal fun resolveHomeTopPresetStyle(
         androidNativeVariant == AndroidNativeVariant.MIUIX -> {
             HomeTopPresetStyle(
                 preset = HomeTopPreset.MIUIX,
-                renderer = if (shouldUseNativeMiuixTopTabRow(androidNativeVariant, normalizedLabelMode)) {
-                    HomeTopTabRenderer.MIUIX
-                } else {
-                    HomeTopTabRenderer.MD3
-                },
-                indicatorStyle = if (shouldUseNativeMiuixTopTabRow(androidNativeVariant, normalizedLabelMode)) {
-                    TopTabIndicatorStyle.CAPSULE
-                } else {
-                    TopTabIndicatorStyle.MATERIAL
-                },
+                renderer = HomeTopTabRenderer.MD3,
+                indicatorStyle = TopTabIndicatorStyle.MATERIAL,
                 search = HomeTopSearchStyle(
                     barHeight = 50.dp,
                     revealDeadZone = 0.dp,
@@ -380,19 +372,6 @@ data class TopTabVisualState(
     val materialMode: TopTabMaterialMode
 )
 
-data class MiuixTopTabRowColors(
-    val backgroundColor: Color,
-    val contentColor: Color,
-    val selectedBackgroundColor: Color,
-    val selectedContentColor: Color
-)
-
-data class MiuixTopTabActionColors(
-    val containerColor: Color,
-    val borderColor: Color,
-    val contentColor: Color
-)
-
 data class Md3TopTabVisualSpec(
     val rowHeight: Dp,
     val selectedCapsuleHeight: Dp,
@@ -446,45 +425,6 @@ internal fun resolveTopTabContentScale(
         UiPreset.MD3 -> 1.04f
     }
     return 1f + ((maxScale - 1f) * clampedFraction)
-}
-
-internal fun resolveMiuixTopTabRowColors(
-    surfaceContainer: Color,
-    onSurfaceVariant: Color,
-    secondaryContainer: Color,
-    onSecondaryContainer: Color
-): MiuixTopTabRowColors {
-    return MiuixTopTabRowColors(
-        backgroundColor = surfaceContainer.copy(alpha = 0.72f),
-        contentColor = onSurfaceVariant,
-        selectedBackgroundColor = secondaryContainer.copy(alpha = 0.58f),
-        selectedContentColor = onSecondaryContainer
-    )
-}
-
-internal fun resolveMiuixTopTabActionColors(
-    surfaceContainer: Color,
-    outlineVariant: Color,
-    contentColor: Color
-): MiuixTopTabActionColors {
-    return MiuixTopTabActionColors(
-        containerColor = surfaceContainer.copy(alpha = 0.74f),
-        borderColor = outlineVariant.copy(alpha = 0.42f),
-        contentColor = contentColor
-    )
-}
-
-internal fun resolveMiuixTopTabRowVerticalInset(): Dp = 2.dp
-
-internal fun resolveMiuixTopTabRowHorizontalPadding(): Dp = 4.dp
-
-internal fun resolveMiuixTopTabActionTrailingPadding(panelInnerPadding: Dp): Dp {
-    return (panelInnerPadding - resolveMiuixTopTabRowHorizontalPadding()).coerceAtLeast(0.dp)
-}
-
-internal fun resolveMiuixTopTabContentHeight(rowHeight: Dp): Dp {
-    val contentHeight = rowHeight - (resolveMiuixTopTabRowVerticalInset() * 2)
-    return contentHeight.coerceAtLeast(40.dp)
 }
 
 internal fun resolveMd3TopTabVisualSpec(

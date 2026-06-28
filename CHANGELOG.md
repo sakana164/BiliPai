@@ -1,5 +1,47 @@
 # Changelog
 
+## v9.7.0 (2026-06-28)
+
+### 版本信息
+- 版本号从 `9.6.0` 升级到 `9.7.0`，`versionCode` 从 `241` 升级到 `242`。
+
+### 更新内容
+
+#### Miuix 0.9.2 迁移（Wave 1–9）
+- **语义颜色统一**：通过 `AppSurfaceTokens` 统一 Miuix 语义颜色，替代直接 `MiuixTheme.colorScheme` 读取。
+- **设置子页转场**：设置子页统一 Chrome，增加 Miuix squircle 支持。
+- **自适应刷新**：新增 `AdaptivePullToRefresh`，Miuix 首页 Feed 路由到原生刷新组件。
+- **搜索输入框**：Miuix 搜索输入路由到官方 `InputField`。
+- **底部栏标准化**：Miuix 停靠底部栏 Tab 使用官方 `NavigationBarItem`。
+- **设置列表路由**：设置列表项路由统一，加强 Miuix 主题同步。
+- **分段控件迁移**：Miuix 分段设置路由到 `TabRow`，新增 `miuix-icons` artifact。
+- **弹窗与脚手架**：`AdaptiveScaffold`、Miuix `PopupHost` 策略、`iOSLargeTitleBar` 防护。
+
+#### 液态玻璃重构与全局复用
+- **底部栏预设合并**：合并底部栏液态玻璃预设，升级 `backdrop` 库到 2.0.0。
+- **全局复用对齐**：Miuix 渲染器统一使用 MD3 滑动胶囊指示器，移除原生 Miuix TabRow 旧渲染路径。
+- **顶部标签指示器**：修复顶部标签液态玻璃指示器颜色、空闲渲染、对齐与背板采样；消除重复指示器 Chrome 与标签运动漂移。
+- **设置内联指示器**：对齐设置内联液态指示器主题色与底部栏玻璃渲染。
+- **壳导出层修复**：修复顶部标签玻璃导出捕获层结构，路由顶部标签液态玻璃通过底部栏分段控制。
+- **冷启动修复**：修复 Miuix 主题冷启动误进设置搜索。
+- **刷新适配**：补齐液态玻璃回退与 Miuix 刷新适配。
+
+#### 预测返回手势
+- **预测返回完整支持**：从 InstallerX 移植预测返回手势，完成 Phase 5 处理器，设置中新增预测返回开关与样式选择器。
+
+#### 个人主页重构
+- **个人主页大改版**：重新设计个人主页，统一壁纸内容面板，围绕纯壁纸 + 不透明内容面板重建，应用着色内容面板与封面主导资料卡。
+
+#### 其他修复
+- **短视频修复**：修复竖屏滑动封面比例跳动，修复短视频首个 av 标识播放加载。
+- **设置分享栏**：修复设置分享标题栏布局与播放设置顶部栏颜色。
+
+### 文件变更
+- 新增 `app/src/main/java/.../theme/AppSurfaceTokens.kt` 等 Miuix 色彩桥梁
+- 新增 `app/src/main/java/.../core/ui/AdaptivePullToRefreshBox.kt`
+- 移除 `app/src/main/java/.../components/TopBar.kt` 中 `MiuixCategoryTabRow`、`resolveMiuixVisibleTabIndices` 等废弃函数
+- 更新 tests 适配移除的 Miuix 函数与渲染器路由变更
+
 ## v9.6.0 (2026-06-28)
 
 ### 版本信息

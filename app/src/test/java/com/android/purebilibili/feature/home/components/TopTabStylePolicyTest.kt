@@ -152,7 +152,7 @@ class TopTabStylePolicyTest {
             )
         )
         assertEquals(
-            HomeTopTabRenderer.MIUIX,
+            HomeTopTabRenderer.MD3,
             resolveHomeTopTabRenderer(
                 uiPreset = UiPreset.MD3,
                 androidNativeVariant = AndroidNativeVariant.MIUIX,
@@ -194,10 +194,10 @@ class TopTabStylePolicyTest {
         assertEquals(HomeTopPreset.MIUIX, miuix.preset)
         assertEquals(HomeTopTabRenderer.IOS, ios.renderer)
         assertEquals(HomeTopTabRenderer.MD3, material3.renderer)
-        assertEquals(HomeTopTabRenderer.MIUIX, miuix.renderer)
+        assertEquals(HomeTopTabRenderer.MD3, miuix.renderer)
         assertEquals(TopTabIndicatorStyle.CAPSULE, ios.indicatorStyle)
         assertEquals(TopTabIndicatorStyle.MATERIAL, material3.indicatorStyle)
-        assertEquals(TopTabIndicatorStyle.CAPSULE, miuix.indicatorStyle)
+        assertEquals(TopTabIndicatorStyle.MATERIAL, miuix.indicatorStyle)
     }
 
     @Test
@@ -292,20 +292,6 @@ class TopTabStylePolicyTest {
         )
     }
 
-    @Test
-    fun `miuix category action trailing padding aligns with unified top settings center`() {
-        val miuix = resolveHomeTopPresetStyle(
-            uiPreset = UiPreset.MD3,
-            androidNativeVariant = AndroidNativeVariant.MIUIX,
-            labelMode = 2
-        )
-
-        assertEquals(4.dp, resolveMiuixTopTabRowHorizontalPadding())
-        assertEquals(
-            5.dp,
-            resolveMiuixTopTabActionTrailingPadding(miuix.unifiedPanelInnerPadding)
-        )
-    }
 
     @Test
     fun `clicking selected top tab scrolls to top while other tabs select`() {
@@ -494,81 +480,6 @@ class TopTabStylePolicyTest {
         assertEquals(15.sp, spec.labelTextSize)
     }
 
-    @Test
-    fun `android native miuix top tab content is inset from row bottom`() {
-        val rowHeight = 48.dp
-
-        assertEquals(2.dp, resolveMiuixTopTabRowVerticalInset())
-        assertEquals(44.dp, resolveMiuixTopTabContentHeight(rowHeight))
-    }
-
-    @Test
-    fun `android native miuix text tabs should use native miuix row while icon modes stay shared`() {
-        assertTrue(
-            shouldUseNativeMiuixTopTabRow(
-                androidNativeVariant = AndroidNativeVariant.MIUIX,
-                labelMode = 2
-            )
-        )
-        assertEquals(
-            false,
-            shouldUseNativeMiuixTopTabRow(
-                androidNativeVariant = AndroidNativeVariant.MIUIX,
-                labelMode = 0
-            )
-        )
-        assertFalse(
-            shouldUseNativeMiuixTopTabRow(
-                androidNativeVariant = AndroidNativeVariant.MIUIX,
-                labelMode = 1
-            )
-        )
-    }
-
-    @Test
-    fun `android native miuix top tab chrome should avoid large primary color fills`() {
-        val source = sourceText("src/main/java/com/android/purebilibili/feature/home/components/TopBar.kt")
-        val miuixTabRowSource = source.substringAfter("private fun MiuixCategoryTabRow(")
-
-        assertTrue(
-            "MiuiX 分类条必须通过颜色策略收敛普通态背景",
-            miuixTabRowSource.contains("resolveMiuixTopTabRowColors(")
-        )
-        assertTrue(
-            "MiuiX 分区按钮必须通过颜色策略收敛普通态背景",
-            miuixTabRowSource.contains("resolveMiuixTopTabActionColors(")
-        )
-        assertFalse(
-            "MiuiX 分类条普通容器不应使用 primary 大面积铺色",
-            miuixTabRowSource.contains("backgroundColor = MiuixTheme.colorScheme.primary.copy")
-        )
-        assertFalse(
-            "MiuiX 分区按钮普通态不应使用 primary 大面积铺色",
-            miuixTabRowSource.contains("color = MiuixTheme.colorScheme.primary.copy")
-        )
-    }
-
-    @Test
-    fun `android native miuix top tabs keep native contour indicator driver`() {
-        val source = sourceText("src/main/java/com/android/purebilibili/feature/home/components/TopBar.kt")
-        val miuixSelectionSource = source
-            .substringAfter("private fun MiuixCategoryTabRow(")
-            .substringBefore("val topTabSpec =")
-
-        assertTrue(
-            "MiuiX 分类条必须继续使用原生轮廓 TabRow",
-            source.substringAfter("private fun MiuixCategoryTabRow(")
-                .contains("MiuixTabRowWithContour(")
-        )
-        assertFalse(
-            "MiuiX 原生轮廓指示器不应复用 MD3 的 pager 指示器位置驱动",
-            miuixSelectionSource.contains("resolveTopTabIndicatorRenderPosition(")
-        )
-        assertTrue(
-            "MiuiX 可见槽位应由已选中分类驱动，避免滑动中退化成 MD3 指示器语义",
-            miuixSelectionSource.contains("selectedIndex = selectedIndex")
-        )
-    }
 
     @Test
     fun `android native miuix top tabs skip outer chrome surface`() {
@@ -661,50 +572,6 @@ class TopTabStylePolicyTest {
         )
     }
 
-    @Test
-    fun `android native miuix top tab row colors should stay neutral outside selection`() {
-        val colorScheme = lightColorScheme(
-            primary = Color(0xFF1E88E5),
-            surfaceContainer = Color(0xFFF4F5F8),
-            secondaryContainer = Color(0xFFE3EAF8),
-            onSecondaryContainer = Color(0xFF1B2230),
-            onSurfaceVariant = Color(0xFF5F6368)
-        )
-
-        val colors = resolveMiuixTopTabRowColors(
-            surfaceContainer = colorScheme.surfaceContainer,
-            onSurfaceVariant = colorScheme.onSurfaceVariant,
-            secondaryContainer = colorScheme.secondaryContainer,
-            onSecondaryContainer = colorScheme.onSecondaryContainer
-        )
-
-        assertEquals(colorScheme.surfaceContainer.copy(alpha = 0.72f), colors.backgroundColor)
-        assertEquals(colorScheme.secondaryContainer.copy(alpha = 0.58f), colors.selectedBackgroundColor)
-        assertEquals(colorScheme.onSurfaceVariant, colors.contentColor)
-        assertEquals(colorScheme.onSecondaryContainer, colors.selectedContentColor)
-        assertFalse(colors.backgroundColor == colorScheme.primary.copy(alpha = 0.10f))
-    }
-
-    @Test
-    fun `android native miuix top tab action colors should stay neutral`() {
-        val colorScheme = lightColorScheme(
-            primary = Color(0xFF1E88E5),
-            surfaceContainer = Color(0xFFF4F5F8),
-            outlineVariant = Color(0xFFC9CDD6),
-            onSurfaceVariant = Color(0xFF5F6368)
-        )
-
-        val colors = resolveMiuixTopTabActionColors(
-            surfaceContainer = colorScheme.surfaceContainer,
-            outlineVariant = colorScheme.outlineVariant,
-            contentColor = colorScheme.onSurfaceVariant
-        )
-
-        assertEquals(colorScheme.surfaceContainer.copy(alpha = 0.74f), colors.containerColor)
-        assertEquals(colorScheme.outlineVariant.copy(alpha = 0.42f), colors.borderColor)
-        assertEquals(colorScheme.onSurfaceVariant, colors.contentColor)
-        assertFalse(colors.containerColor == colorScheme.primary.copy(alpha = 0.10f))
-    }
 
     @Test
     fun `md3 preset uses material tab indicator style`() {
@@ -900,7 +767,7 @@ class TopTabStylePolicyTest {
         val source = sourceText("src/main/java/com/android/purebilibili/feature/home/components/TopBar.kt")
         val rowCallSource = source
             .substringAfter("LightweightHomeTopTabs(")
-            .substringBefore("private fun MiuixCategoryTabRow(")
+            .substringBefore("private fun rememberTopTabPagerDragHeld(")
         val itemSource = source
             .substringAfter("private fun LightweightTopTabItem(")
             .substringBefore("@OptIn(ExperimentalMaterial3Api::class)")
@@ -927,10 +794,9 @@ class TopTabStylePolicyTest {
         val source = sourceText("src/main/java/com/android/purebilibili/feature/home/components/TopBar.kt")
         val categoryTabRowSource = source
             .substringAfter("fun CategoryTabRow(")
-            .substringBefore("@Composable\nprivate fun MiuixCategoryTabRow(")
+            .substringBefore("@Composable\nprivate fun rememberTopTabPagerDragHeld(")
 
         assertTrue(categoryTabRowSource.contains("val hasSkinStickerIcons = topTabSkinIconPaths.isNotEmpty() || !partitionSkinIconPath.isNullOrBlank()"))
-        assertTrue(categoryTabRowSource.contains("if (showPartitionAction && !hasSkinStickerIcons && !skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX)"))
         assertTrue(categoryTabRowSource.contains("topTabSkinIconPaths = topTabSkinIconPaths"))
         assertTrue(categoryTabRowSource.contains("partitionSkinIconPath = partitionSkinIconPath"))
     }

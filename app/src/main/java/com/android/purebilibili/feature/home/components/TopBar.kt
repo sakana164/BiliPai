@@ -102,9 +102,6 @@ import kotlinx.coroutines.delay
 import com.android.purebilibili.core.ui.motion.BottomBarMotionProfile
 import com.android.purebilibili.core.ui.motion.resolveBottomBarMotionSpec
 import androidx.compose.foundation.combinedClickable // [Added]
-import top.yukonga.miuix.kmp.basic.TabRowDefaults as MiuixTabRowDefaults
-import top.yukonga.miuix.kmp.basic.TabRowWithContour as MiuixTabRowWithContour
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.io.File
 
 private const val IOS_TOP_TAB_CONTENT_PADDING_DP = 2f
@@ -209,7 +206,7 @@ internal fun resolveMd3TopTabItemWidthDp(
     visibleSlots: Int = resolveMd3TopTabVisibleSlots()
 ): Float {
     if (containerWidthDp <= 0f) return 96f
-    if (visibleSlots >= 6) return (containerWidthDp / visibleSlots).coerceIn(52f, 72f)
+    if (visibleSlots >= 5) return (containerWidthDp / visibleSlots).coerceIn(52f, 72f)
     return (containerWidthDp / visibleSlots.coerceAtLeast(1)).coerceAtLeast(88f)
 }
 
@@ -233,32 +230,6 @@ internal fun resolveMd3VisibleTabIndices(
 }
 
 internal fun resolveMd3SelectedVisibleIndex(
-    visibleIndices: List<Int>,
-    selectedIndex: Int
-): Int {
-    val resolved = visibleIndices.indexOf(selectedIndex)
-    return if (resolved >= 0) resolved else 0
-}
-
-internal fun resolveMiuixVisibleTabIndices(
-    totalCount: Int,
-    selectedIndex: Int,
-    maxVisibleCount: Int = 4
-): List<Int> {
-    if (totalCount <= 0 || maxVisibleCount <= 0) return emptyList()
-    val visibleCount = totalCount.coerceAtMost(maxVisibleCount)
-    val safeSelectedIndex = selectedIndex.coerceIn(0, totalCount - 1)
-    if (safeSelectedIndex < visibleCount) {
-        return (0 until visibleCount).toList()
-    }
-
-    // MIUIX 原生 TabRow 会在 tabs 列表整体左移时重建指示器起点，
-    // 第 5 个标签容易先跳到前槽位再滑过去；固定前置槽位，只替换尾槽。
-    val pinnedLeadingCount = (visibleCount - 1).coerceAtLeast(0)
-    return (0 until pinnedLeadingCount).toList() + safeSelectedIndex
-}
-
-internal fun resolveMiuixSelectedVisibleIndex(
     visibleIndices: List<Int>,
     selectedIndex: Int
 ): Int {
@@ -327,17 +298,6 @@ internal fun shouldShowTopTabText(mode: Int): Boolean {
 
 internal fun resolveMd3TopTabLabelMode(requestedLabelMode: Int): Int =
     normalizeTopTabLabelMode(requestedLabelMode)
-
-internal fun shouldUseNativeMiuixTopTabRow(
-    androidNativeVariant: AndroidNativeVariant,
-    labelMode: Int
-): Boolean {
-    val normalized = normalizeTopTabLabelMode(labelMode)
-    // Native Miuix TabRow is text-first. Keep icon-only / icon+text modes on the shared row.
-    return androidNativeVariant == AndroidNativeVariant.MIUIX &&
-        shouldShowTopTabText(normalized) &&
-        !shouldShowTopTabIcon(normalized)
-}
 
 private fun resolveTopTabCategoryForIcon(categoryKey: String): HomeCategory? {
     val normalizedKey = categoryKey.trim()
@@ -1672,20 +1632,6 @@ fun CategoryTabRow(
     )
     val showPartitionAction = false
     val hasSkinStickerIcons = topTabSkinIconPaths.isNotEmpty() || !partitionSkinIconPath.isNullOrBlank()
-    if (showPartitionAction && !hasSkinStickerIcons && !skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX) {
-        val haptic = com.android.purebilibili.core.util.rememberHapticFeedback()
-        val scrollChannel = com.android.purebilibili.feature.home.LocalHomeScrollChannel.current
-        MiuixCategoryTabRow(
-            categories = categories,
-            selectedIndex = selectedIndex,
-            onCategorySelected = onCategorySelected,
-            onPartitionClick = onPartitionClick,
-            haptic = haptic,
-            scrollChannel = scrollChannel,
-            presetStyle = presetStyle
-        )
-        return
-    }
     LightweightHomeTopTabs(
         renderer = presetStyle.renderer,
         categories = categories,
@@ -1710,127 +1656,6 @@ fun CategoryTabRow(
         showPartitionAction = showPartitionAction,
         forceMaterialUnderline = forceMaterialUnderline
     )
-}
-
-@Composable
-private fun MiuixCategoryTabRow(
-    categories: List<String>,
-    selectedIndex: Int,
-    onCategorySelected: (Int) -> Unit,
-    onPartitionClick: () -> Unit,
-    haptic: (HapticType) -> Unit,
-    scrollChannel: kotlinx.coroutines.channels.Channel<Unit>?,
-    presetStyle: HomeTopPresetStyle
-) {
-    val visibleTabIndices = remember(categories.size, selectedIndex) {
-        resolveMiuixVisibleTabIndices(
-            totalCount = categories.size,
-            selectedIndex = selectedIndex
-        )
-    }
-    val visibleCategories = remember(categories, visibleTabIndices) {
-        visibleTabIndices.mapNotNull { index -> categories.getOrNull(index) }
-    }
-    val selectedTabIndex = resolveMiuixSelectedVisibleIndex(
-        visibleIndices = visibleTabIndices,
-        selectedIndex = selectedIndex
-    )
-    val topTabSpec = presetStyle.md3VisualSpec
-    val actionButtonSize = presetStyle.actionButtonSizeDocked
-    val actionButtonCorner = presetStyle.actionButtonCornerDocked
-    val actionIconSize = presetStyle.actionIconSizeDocked
-    val rowVerticalInset = resolveMiuixTopTabRowVerticalInset()
-    val rowHorizontalPadding = resolveMiuixTopTabRowHorizontalPadding()
-    val actionTrailingPadding = resolveMiuixTopTabActionTrailingPadding(
-        presetStyle.unifiedPanelInnerPadding
-    )
-    val tabContentHeight = resolveMiuixTopTabContentHeight(topTabSpec.rowHeight)
-    val tabRowColors = resolveMiuixTopTabRowColors(
-        surfaceContainer = MiuixTheme.colorScheme.surfaceContainer,
-        onSurfaceVariant = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-        secondaryContainer = MiuixTheme.colorScheme.secondaryContainer,
-        onSecondaryContainer = MiuixTheme.colorScheme.onSecondaryContainer
-    )
-    val actionColors = resolveMiuixTopTabActionColors(
-        surfaceContainer = MiuixTheme.colorScheme.surfaceContainer,
-        outlineVariant = MaterialTheme.colorScheme.outlineVariant,
-        contentColor = MiuixTheme.colorScheme.onSurfaceVariantActions
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(topTabSpec.rowHeight)
-            .padding(horizontal = rowHorizontalPadding, vertical = rowVerticalInset),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
-            contentAlignment = Alignment.Center
-        ) {
-            MiuixTabRowWithContour(
-                tabs = visibleCategories,
-                selectedTabIndex = selectedTabIndex,
-                onTabSelected = { index ->
-                    visibleTabIndices.getOrNull(index)?.let { categoryIndex ->
-                        performHomeTopBarTap(haptic = haptic, onClick = {
-                            when {
-                                categoryIndex == selectedIndex -> scrollChannel?.trySend(Unit)
-                                else -> onCategorySelected(categoryIndex)
-                            }
-                        })
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(tabContentHeight),
-                colors = MiuixTabRowDefaults.tabRowColors(
-                    backgroundColor = tabRowColors.backgroundColor,
-                    contentColor = tabRowColors.contentColor,
-                    selectedBackgroundColor = tabRowColors.selectedBackgroundColor,
-                    selectedContentColor = tabRowColors.selectedContentColor
-                ),
-                height = tabContentHeight,
-                cornerRadius = topTabSpec.selectedCapsuleCornerRadius + 4.dp,
-                itemSpacing = 6.dp
-            )
-        }
-
-        Spacer(modifier = Modifier.width(4.dp))
-
-        Surface(
-            modifier = Modifier
-                .size(actionButtonSize)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    performHomeTopBarTap(haptic = haptic, onClick = onPartitionClick)
-            },
-            shape = RoundedCornerShape(actionButtonCorner),
-            color = actionColors.containerColor,
-            border = BorderStroke(
-                width = 0.8.dp,
-                color = actionColors.borderColor
-            )
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    resolveTopTabPartitionIcon(UiPreset.MD3),
-                    contentDescription = "浏览全部分区",
-                    tint = actionColors.contentColor,
-                    modifier = Modifier.size(actionIconSize)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(actionTrailingPadding))
-    }
 }
 
 @Composable

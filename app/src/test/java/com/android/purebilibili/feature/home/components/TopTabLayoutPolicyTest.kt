@@ -106,6 +106,32 @@ class TopTabLayoutPolicyTest {
     }
 
     @Test
+    fun `md3 top tabs fit five inline tabs including partition within phone width`() {
+        assertEquals(
+            5,
+            resolveMd3TopTabLayoutVisibleSlots(
+                categoryCount = 5,
+                labelMode = 2,
+                showPartitionAction = false
+            )
+        )
+        listOf(0, 1, 2).forEach { labelMode ->
+            val itemWidth = resolveMd3TopTabItemWidthDp(
+                containerWidthDp = 360f,
+                visibleSlots = resolveMd3TopTabLayoutVisibleSlots(
+                    categoryCount = 5,
+                    labelMode = labelMode,
+                    showPartitionAction = false
+                )
+            )
+            assertTrue(
+                "five tabs must fit within 360dp for labelMode=$labelMode, got ${itemWidth * 5f}",
+                itemWidth * 5f <= 360f + 0.001f
+            )
+        }
+    }
+
+    @Test
     fun `ios top tabs show all six tabs for every label mode`() {
         listOf(0, 1, 2).forEach { labelMode ->
             assertEquals(
@@ -121,6 +147,28 @@ class TopTabLayoutPolicyTest {
                 labelMode = labelMode
             )
             assertEquals(360f, itemWidth * 6 + 4f, 0.001f)
+        }
+    }
+
+    @Test
+    fun `ios top tabs fit five inline tabs within phone width`() {
+        listOf(0, 1, 2).forEach { labelMode ->
+            assertEquals(
+                5,
+                resolveIosTopTabLayoutVisibleSlots(
+                    categoryCount = 5,
+                    labelMode = labelMode
+                )
+            )
+            val itemWidth = resolveIosTopTabItemWidthDp(
+                containerWidthDp = 360f,
+                categoryCount = 5,
+                labelMode = labelMode
+            )
+            assertTrue(
+                "five ios tabs must fit within 360dp for labelMode=$labelMode, got ${itemWidth * 5f}",
+                itemWidth * 5f + 4f <= 360f + 0.001f
+            )
         }
     }
 
@@ -192,31 +240,5 @@ class TopTabLayoutPolicyTest {
             )
         )
     }
-
-    @Test
-    fun `miuix top tabs render at most four complete labels without shifting tail target to front`() {
-        assertEquals(
-            listOf(0, 1, 2, 3),
-            resolveMiuixVisibleTabIndices(totalCount = 5, selectedIndex = 0)
-        )
-        assertEquals(
-            listOf(0, 1, 2, 3),
-            resolveMiuixVisibleTabIndices(totalCount = 5, selectedIndex = 3)
-        )
-        assertEquals(
-            listOf(0, 1, 2, 4),
-            resolveMiuixVisibleTabIndices(totalCount = 5, selectedIndex = 4)
-        )
-        assertEquals(
-            3,
-            resolveMiuixSelectedVisibleIndex(
-                visibleIndices = listOf(0, 1, 2, 4),
-                selectedIndex = 4
-            )
-        )
-        assertEquals(
-            listOf(0, 1, 2),
-            resolveMiuixVisibleTabIndices(totalCount = 3, selectedIndex = 2)
-        )
-    }
 }
+
