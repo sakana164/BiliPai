@@ -712,6 +712,145 @@ internal fun Modifier.homeTopBottomBarMatchedSurface(
 }
 
 @Composable
+private fun HomeTopTabLiquidSegmentedTabs(
+    categories: List<String>,
+    selectedIndex: Int,
+    onCategorySelected: (Int) -> Unit,
+    pagerState: androidx.compose.foundation.pager.PagerState?,
+    labelMode: Int,
+    isFloatingStyle: Boolean,
+    edgeToEdge: Boolean,
+    renderer: HomeTopTabRenderer,
+    hasOuterChromeSurface: Boolean,
+    miuixBackdrop: MiuixBackdrop?,
+    showPartitionAction: Boolean
+) {
+    val haptic = com.android.purebilibili.core.util.rememberHapticFeedback()
+    val scrollChannel = com.android.purebilibili.feature.home.LocalHomeScrollChannel.current
+    val colorScheme = MaterialTheme.colorScheme
+    val normalizedLabelMode = normalizeTopTabLabelMode(labelMode)
+    val safeSelectedIndex = selectedIndex.coerceIn(0, (categories.size - 1).coerceAtLeast(0))
+    val rowHeight = when (renderer) {
+        HomeTopTabRenderer.IOS -> resolveIosTopTabRowHeight(isFloatingStyle, normalizedLabelMode)
+        HomeTopTabRenderer.MD3 -> resolveMd3TopTabVisualSpec(
+            isFloatingStyle = isFloatingStyle,
+            labelMode = normalizedLabelMode
+        ).rowHeight
+        HomeTopTabRenderer.MIUIX -> resolveMd3TopTabVisualSpec(
+            isFloatingStyle = false,
+            androidNativeVariant = AndroidNativeVariant.MIUIX,
+            labelMode = normalizedLabelMode
+        ).rowHeight
+    }
+    val dockIndicatorVerticalGap = resolveTopTabDockIndicatorVerticalGapDp(
+        hasOuterChromeSurface = hasOuterChromeSurface
+    ).dp
+    val labelFontSize = when (renderer) {
+        HomeTopTabRenderer.IOS -> 13.sp
+        HomeTopTabRenderer.MD3,
+        HomeTopTabRenderer.MIUIX -> 15.sp
+    }
+    val selectedTextColor = when (renderer) {
+        HomeTopTabRenderer.IOS -> resolveIosTopTabSelectedContentColor(colorScheme)
+        HomeTopTabRenderer.MD3 -> colorScheme.primary
+        HomeTopTabRenderer.MIUIX -> colorScheme.onSecondaryContainer
+    }
+    val pagerIsDragging = rememberTopTabPagerDragHeld(pagerState)
+    val pagerIsScrolling = pagerState?.isScrollInProgress == true
+    val pagerPosition by remember(pagerState, safeSelectedIndex) {
+        derivedStateOf {
+            resolveTopTabIndicatorRenderPosition(
+                selectedIndex = safeSelectedIndex,
+                pagerCurrentPage = pagerState?.currentPage,
+                pagerTargetPage = pagerState?.targetPage,
+                pagerCurrentPageOffsetFraction = pagerState?.currentPageOffsetFraction,
+                pagerIsScrolling = pagerState?.isScrollInProgress == true
+            )
+        }
+    }
+    val indicatorPositionOverride = resolveTopTabLiquidIndicatorPosition(
+        pagerPosition = pagerPosition,
+        dragPosition = pagerPosition,
+        dragActive = false,
+        pagerInteractionActive = isTopTabPagerInteractionActive(
+            pagerIsDragging = pagerIsDragging,
+            pagerIsScrolling = pagerIsScrolling
+        )
+    )
+    val drawContainerShell = shouldTopTabDrawSegmentedContainerShell(
+        liquidGlassEnabled = true,
+        hasOuterChromeSurface = hasOuterChromeSurface
+    )
+    val drawCaptureBackdropEffects = shouldTopTabDrawSegmentedCaptureBackdropEffects(
+        liquidGlassEnabled = true,
+        hasOuterChromeSurface = hasOuterChromeSurface
+    )
+    val captureSurfaceColor = if (hasOuterChromeSurface) {
+        Color.Transparent
+    } else {
+        null
+    }
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(rowHeight)
+            .padding(
+                horizontal = resolveTopTabRowHorizontalPaddingDp(
+                    isFloatingStyle = isFloatingStyle,
+                    edgeToEdge = edgeToEdge
+                ).dp
+            )
+    ) {
+        val visibleSlots = resolveMd3TopTabLayoutVisibleSlots(
+            categoryCount = categories.size,
+            labelMode = normalizedLabelMode,
+            showPartitionAction = showPartitionAction
+        )
+        val slotWidth = resolveMd3TopTabItemWidthDp(
+            containerWidthDp = maxWidth.value,
+            visibleSlots = visibleSlots
+        ).dp
+        val indicatorWidth = resolveTopTabDockIndicatorWidthDp(
+            itemWidthDp = slotWidth.value,
+            horizontalGapDp = resolveTopTabDockIndicatorHorizontalGapDp(
+                hasOuterChromeSurface = hasOuterChromeSurface
+            )
+        ).dp
+        val indicatorHeight = resolveTopTabDockIndicatorHeightDp(
+            rowHeightDp = rowHeight.value,
+            verticalGapDp = dockIndicatorVerticalGap.value,
+            minHeightDp = if (hasOuterChromeSurface) 30f else 30f,
+            indicatorWidthDp = indicatorWidth.value
+        ).dp
+        BottomBarLiquidSegmentedControl(
+            items = categories,
+            selectedIndex = safeSelectedIndex,
+            onSelected = { index ->
+                performHomeTopBarTap(haptic = haptic, onClick = {
+                    when (resolveTopTabClickAction(index, safeSelectedIndex)) {
+                        TopTabClickAction.SELECT_TAB -> onCategorySelected(index)
+                        TopTabClickAction.SCROLL_TO_TOP -> scrollChannel?.trySend(Unit)
+                    }
+                })
+            },
+            modifier = Modifier.fillMaxWidth(),
+            height = rowHeight,
+            indicatorHeight = indicatorHeight,
+            itemWidth = slotWidth,
+            labelFontSize = labelFontSize,
+            liquidGlassEffectsEnabled = true,
+            forceLiquidChrome = true,
+            miuixBackdrop = miuixBackdrop,
+            selectedTextColorOverride = selectedTextColor,
+            containerColorOverride = captureSurfaceColor,
+            drawContainerShell = drawContainerShell,
+            drawCaptureBackdropEffects = drawCaptureBackdropEffects,
+            indicatorPositionOverride = indicatorPositionOverride
+        )
+    }
+}
+
+@Composable
 private fun LightweightHomeTopTabs(
     renderer: HomeTopTabRenderer,
     categories: List<String>,
@@ -788,6 +927,28 @@ private fun LightweightHomeTopTabs(
         ).rowHeight
     }
     val hasSkinStickerIcons = topTabSkinIconPaths.isNotEmpty() || !partitionSkinIconPath.isNullOrBlank()
+    if (shouldTopTabUseLiquidSegmentedControl(
+            isLiquidGlassEnabled = isLiquidGlassEnabled,
+            skinPlainStyle = skinPlainStyle,
+            hasSkinStickerIcons = hasSkinStickerIcons,
+            forceMaterialUnderline = forceMaterialUnderline
+        )
+    ) {
+        HomeTopTabLiquidSegmentedTabs(
+            categories = categories,
+            selectedIndex = safeSelectedIndex,
+            onCategorySelected = onCategorySelected,
+            pagerState = pagerState,
+            labelMode = normalizedLabelMode,
+            isFloatingStyle = isFloatingStyle,
+            edgeToEdge = edgeToEdge,
+            renderer = effectiveRenderer,
+            hasOuterChromeSurface = hasOuterChromeSurface,
+            miuixBackdrop = miuixBackdrop,
+            showPartitionAction = showPartitionAction
+        )
+        return
+    }
     val rowHeight = resolveTopTabSkinStickerRowHeight(
         baseRowHeight = baseRowHeight,
         hasSkinStickerIcons = hasSkinStickerIcons,

@@ -388,7 +388,10 @@ fun BottomBarLiquidSegmentedControl(
     selectedTextColorOverride: Color? = null,
     unselectedTextColorOverride: Color? = null,
     indicatorIdleSurfaceColorOverride: Color? = null,
-    onIndicatorPositionChanged: ((Float) -> Unit)? = null
+    onIndicatorPositionChanged: ((Float) -> Unit)? = null,
+    drawContainerShell: Boolean = true,
+    drawCaptureBackdropEffects: Boolean = true,
+    indicatorPositionOverride: Float? = null
 ) {
     if (items.isEmpty()) return
 
@@ -535,7 +538,7 @@ fun BottomBarLiquidSegmentedControl(
         } else {
             Modifier
         }
-        val indicatorPosition = dragState.value
+        val indicatorPosition = indicatorPositionOverride ?: dragState.value
         SideEffect {
             onIndicatorPositionChanged?.invoke(indicatorPosition)
         }
@@ -601,22 +604,24 @@ fun BottomBarLiquidSegmentedControl(
             motionProgress = motionProgress
         )
 
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .kernelSuMiuixFloatingDockSurface(
-                    shape = containerShape,
-                    backdrop = miuixBackdrop,
-                    containerColor = containerColor,
-                    blurEnabled = liquidGlassEnabled,
-                    glassEnabled = liquidGlassEnabled,
-                    blurRadius = androidNativeTuning.shellBlurRadiusDp.dp,
-                    hazeState = null,
-                    motionTier = MotionTier.Normal,
-                    isTransitionRunning = false,
-                    forceLowBlurBudget = false
-                )
-        )
+        if (drawContainerShell) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .kernelSuMiuixFloatingDockSurface(
+                        shape = containerShape,
+                        backdrop = miuixBackdrop,
+                        containerColor = containerColor,
+                        blurEnabled = liquidGlassEnabled,
+                        glassEnabled = liquidGlassEnabled,
+                        blurRadius = androidNativeTuning.shellBlurRadiusDp.dp,
+                        hazeState = null,
+                        motionTier = MotionTier.Normal,
+                        isTransitionRunning = false,
+                        forceLowBlurBudget = false
+                    )
+            )
+        }
 
         Box(
             modifier = Modifier
@@ -626,7 +631,11 @@ fun BottomBarLiquidSegmentedControl(
                 .miuixLayerBackdrop(tabsBackdrop)
                 .graphicsLayer { translationX = panelOffsetPx }
                 .run {
-                    if (miuixBackdrop != null && liquidGlassEnabled) {
+                    if (
+                        drawCaptureBackdropEffects &&
+                            miuixBackdrop != null &&
+                            liquidGlassEnabled
+                    ) {
                         miuixDrawBackdrop(
                             backdrop = miuixBackdrop,
                             shape = { containerShape },
