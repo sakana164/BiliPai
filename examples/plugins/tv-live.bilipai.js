@@ -1,6 +1,5 @@
 var DEFAULT_SOURCE_URL = "";
 var DEFAULT_LOGO_BASE_URL = "https://live.fanmingming.com/tv/";
-var IMAGE_PROXY_URL = "https://images.weserv.nl/";
 
 window.BiliPaiPlugin = {
   id: "tv.live",
@@ -55,14 +54,10 @@ window.BiliPaiPlugin = {
           defaultValue: ""
         },
         {
-          name: "enableImageProxy",
-          title: "启用图标缩放",
-          type: "enum",
-          defaultValue: "false",
-          options: [
-            { title: "否", value: "false" },
-            { title: "是", value: "true" }
-          ]
+          name: "iconProxyTemplate",
+          title: "图标代理模板",
+          type: "text",
+          defaultValue: ""
         }
       ]
     }
@@ -86,16 +81,16 @@ async function loadChannels(params) {
   var logoBaseUrl = stringParam(params, "logoBaseUrl", DEFAULT_LOGO_BASE_URL);
   var iconLibraryUrl = stringParam(params, "iconLibraryUrl", "").trim();
   var iconLibrary = loadIconLibrary(iconLibraryUrl);
-  var enableImageProxy = stringParam(params, "enableImageProxy", "false") === "true";
+  var iconProxyTemplate = stringParam(params, "iconProxyTemplate", "").trim();
   var format = detectFormat(content);
   var items;
 
   if (format === "m3u") {
-    items = parseM3uSource(content, logoBaseUrl, iconLibrary, enableImageProxy);
+    items = parseM3uSource(content, logoBaseUrl, iconLibrary, iconProxyTemplate);
   } else if (format === "txt") {
-    items = parseTxtSource(content, logoBaseUrl, iconLibrary, enableImageProxy);
+    items = parseTxtSource(content, logoBaseUrl, iconLibrary, iconProxyTemplate);
   } else if (format === "json") {
-    items = parseJsonSource(content, iconLibrary, enableImageProxy);
+    items = parseJsonSource(content, iconLibrary, iconProxyTemplate);
   } else {
     throw new Error("无法识别内容格式，请确认源返回的是 M3U/TXT/JSON");
   }
@@ -109,7 +104,7 @@ async function loadChannels(params) {
   return items;
 }
 
-function parseM3uSource(content, logoBaseUrl, iconLibrary, enableImageProxy) {
+function parseM3uSource(content, logoBaseUrl, iconLibrary, iconProxyTemplate) {
   var lines = String(content).split(/\r?\n/);
   var channels = {};
   var currentName = "";
@@ -125,7 +120,7 @@ function parseM3uSource(content, logoBaseUrl, iconLibrary, enableImageProxy) {
       return;
     }
     if (!line || line.indexOf("#") === 0) return;
-    addChannel(channels, currentName || "频道", line, currentLogo, logoBaseUrl, iconLibrary, enableImageProxy);
+    addChannel(channels, currentName || "频道", line, currentLogo, logoBaseUrl, iconLibrary, iconProxyTemplate);
     currentName = "";
     currentLogo = "";
   });
@@ -133,7 +128,7 @@ function parseM3uSource(content, logoBaseUrl, iconLibrary, enableImageProxy) {
   return channelMapToItems(channels);
 }
 
-function parseTxtSource(content, logoBaseUrl, iconLibrary, enableImageProxy) {
+function parseTxtSource(content, logoBaseUrl, iconLibrary, iconProxyTemplate) {
   var channels = {};
   String(content).split(/\r?\n/).forEach(function(rawLine) {
     var line = rawLine.trim();
@@ -143,13 +138,13 @@ function parseTxtSource(content, logoBaseUrl, iconLibrary, enableImageProxy) {
     var name = splitIndex > 0 ? line.substring(0, splitIndex).trim() : "频道";
     var url = splitIndex > 0 ? line.substring(splitIndex + 1).trim() : line;
     if (/^https?:\/\//i.test(url) || /^rtmps?:\/\//i.test(url) || /^rtsp:\/\//i.test(url)) {
-      addChannel(channels, cleanLeadingDash(name), url, "", logoBaseUrl, iconLibrary, enableImageProxy);
+      addChannel(channels, cleanLeadingDash(name), url, "", logoBaseUrl, iconLibrary, iconProxyTemplate);
     }
   });
   return channelMapToItems(channels);
 }
 
-function parseJsonSource(content, iconLibrary, enableImageProxy) {
+function parseJsonSource(content, iconLibrary, iconProxyTemplate) {
   var parsed = JSON.parse(String(content));
   var arrays = Array.isArray(parsed) ? { all: parsed } : parsed;
   var items = [];
@@ -169,9 +164,9 @@ function parseJsonSource(content, iconLibrary, enableImageProxy) {
             channel.logo ||
             channel.backdrop_path ||
             resolveIconUrl(iconLibrary, channel.title || channel.name || ""),
-          enableImageProxy
+          iconProxyTemplate
         ),
-        backdropUrl: scaleIcon(channel.backdropUrl || channel.backdrop_path || "", enableImageProxy),
+        backdropUrl: scaleIcon(channel.backdropUrl || channel.backdrop_path || "", iconProxyTemplate),
         type: "video",
         videoUrl: url,
         streams: streams,
@@ -182,7 +177,7 @@ function parseJsonSource(content, iconLibrary, enableImageProxy) {
   return items;
 }
 
-function addChannel(channels, name, url, logoUrl, logoBaseUrl, iconLibrary, enableImageProxy) {
+function addChannel(channels, name, url, logoUrl, logoBaseUrl, iconLibrary, iconProxyTemplate) {
   var title = cleanLeadingDash(name || "频道");
   if (!channels[title]) {
     var cleanName = cleanChannelNameForLogo(title);
@@ -191,7 +186,7 @@ function addChannel(channels, name, url, logoUrl, logoBaseUrl, iconLibrary, enab
       title: cleanName || title,
       description: title,
       logoUrl: matchedIcon || (cleanName ? logoBaseUrl + cleanName + ".png" : ""),
-      enableImageProxy: enableImageProxy,
+      iconProxyTemplate: iconProxyTemplate,
       category: guessCategory(title),
       urls: []
     };
@@ -206,7 +201,7 @@ function channelMapToItems(channels) {
       id: channel.urls[0],
       title: channel.title,
       description: channel.description,
-      coverUrl: scaleIcon(channel.logoUrl, channel.enableImageProxy),
+      coverUrl: scaleIcon(channel.logoUrl, channel.iconProxyTemplate),
       type: "video",
       videoUrl: channel.urls[0],
       streams: channel.urls.slice(1).map(function(url, index) {
@@ -291,10 +286,13 @@ function normalizeIconName(name) {
   return cleanChannelNameForLogo(name).toLowerCase();
 }
 
-function scaleIcon(url, enable) {
-  if (!enable || !url) return url || "";
-  if (url.indexOf(IMAGE_PROXY_URL) === 0) return url;
-  return IMAGE_PROXY_URL + "?url=" + encodeURIComponent(url) + "&w=200&h=112&fit=contain&bg=transparent";
+function scaleIcon(url, iconProxyTemplate) {
+  if (!url) return "";
+  if (!iconProxyTemplate) return url;
+  if (iconProxyTemplate.indexOf("{url}") >= 0) {
+    return iconProxyTemplate.replace("{url}", encodeURIComponent(url));
+  }
+  return iconProxyTemplate + url;
 }
 
 function cleanLeadingDash(str) {
