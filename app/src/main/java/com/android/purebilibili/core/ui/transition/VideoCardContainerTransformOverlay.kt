@@ -1,5 +1,7 @@
 package com.android.purebilibili.core.ui.transition
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -78,6 +80,11 @@ internal fun VideoCardContainerTransformOverlay(
     val cornerRadiusPx = remember(frame.cornerRadiusDp, density) {
         with(density) { frame.cornerRadiusDp.dp.toPx() }
     }
+    val animatedContainerAlpha by animateFloatAsState(
+        targetValue = frame.containerAlpha,
+        animationSpec = tween(durationMillis = 96),
+        label = "video-card-container-alpha"
+    )
 
     Box(
         modifier = modifier
@@ -86,9 +93,9 @@ internal fun VideoCardContainerTransformOverlay(
                 overlayBoundsInRoot = coordinates.boundsInRoot()
             }
             .drawBehind {
-                if (!frame.active) return@drawBehind
+                if (!frame.active || animatedContainerAlpha <= 0.01f) return@drawBehind
                 drawRoundRect(
-                    color = Color.Black.copy(alpha = frame.alpha),
+                    color = Color.Black.copy(alpha = animatedContainerAlpha),
                     topLeft = Offset(frame.rect.left, frame.rect.top),
                     size = Size(frame.rect.width, frame.rect.height),
                     cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx)

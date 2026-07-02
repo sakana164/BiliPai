@@ -21,6 +21,9 @@ class VideoCardContainerTransformPolicyTest {
         assertEquals(Rect(left = 20f, top = 50f, right = 180f, bottom = 170f), frame.rect)
         assertEquals(12f, frame.cornerRadiusDp)
         assertEquals(1f, frame.alpha)
+        assertEquals(1f, frame.containerAlpha)
+        assertEquals(0f, frame.detailContentAlpha)
+        assertTrue(frame.suppressSharedVisual)
     }
 
     @Test
@@ -31,6 +34,8 @@ class VideoCardContainerTransformPolicyTest {
         assertEquals(targetOverlayBounds, frame.rect)
         assertEquals(0f, frame.cornerRadiusDp)
         assertEquals(1f, frame.alpha)
+        assertEquals(1f, frame.containerAlpha)
+        assertTrue(frame.suppressSharedVisual)
     }
 
     @Test
@@ -40,6 +45,33 @@ class VideoCardContainerTransformPolicyTest {
         assertTrue(frame.active)
         assertEquals(Rect(left = 10f, top = 25f, right = 290f, bottom = 485f), frame.rect)
         assertEquals(6f, frame.cornerRadiusDp)
+        assertEquals(1f, frame.containerAlpha)
+        assertEquals(0f, frame.detailContentAlpha)
+        assertTrue(frame.suppressSharedVisual)
+    }
+
+    @Test
+    fun expandedPhaseKeepsFullscreenFrameWithZeroTargetAlphaForHandoffFade() {
+        val frame = resolveVideoCardContainerTransformFrame(
+            cardTransitionEnabled = true,
+            sourceKeyMatches = true,
+            cardFullyVisible = true,
+            motionTier = MotionTier.Normal,
+            session = VideoCardTransitionSession(VideoCardTransitionPhase.EXPANDED, 1f),
+            bounds = VideoCardContainerTransformBounds(
+                sourceBoundsInRoot = sourceRootBounds,
+                overlayBoundsInRoot = overlayRootBounds,
+                targetBoundsInOverlay = targetOverlayBounds
+            ),
+            sourceCornerRadiusDp = 12f
+        )
+
+        assertTrue(frame.active)
+        assertEquals(targetOverlayBounds, frame.rect)
+        assertEquals(0f, frame.cornerRadiusDp)
+        assertEquals(0f, frame.containerAlpha)
+        assertEquals(1f, frame.detailContentAlpha)
+        assertFalse(frame.suppressSharedVisual)
     }
 
     @Test
@@ -112,6 +144,32 @@ class VideoCardContainerTransformPolicyTest {
         assertEquals(0.75f, resolveVideoCardTransitionExpandedFractionFromPredictiveGestureProgress(0.25f))
         assertEquals(1f, resolveVideoCardTransitionExpandedFractionFromPredictiveGestureProgress(-0.2f))
         assertEquals(0f, resolveVideoCardTransitionExpandedFractionFromPredictiveGestureProgress(1.4f))
+    }
+
+    @Test
+    fun predictiveCollapseSessionDrivesSameContainerBounds() {
+        val session = resolveVideoCardTransitionSessionFromExpandedFraction(
+            resolveVideoCardTransitionExpandedFractionFromPredictiveGestureProgress(0.25f)
+        )
+        val frame = resolveVideoCardContainerTransformFrame(
+            cardTransitionEnabled = true,
+            sourceKeyMatches = true,
+            cardFullyVisible = true,
+            motionTier = MotionTier.Normal,
+            session = session,
+            bounds = VideoCardContainerTransformBounds(
+                sourceBoundsInRoot = sourceRootBounds,
+                overlayBoundsInRoot = overlayRootBounds,
+                targetBoundsInOverlay = targetOverlayBounds
+            ),
+            sourceCornerRadiusDp = 12f
+        )
+
+        assertEquals(VideoCardTransitionPhase.COLLAPSING, session.phase)
+        assertTrue(frame.active)
+        assertEquals(Rect(left = 5f, top = 12.5f, right = 345f, bottom = 642.5f), frame.rect)
+        assertEquals(1f, frame.containerAlpha)
+        assertTrue(frame.suppressSharedVisual)
     }
 
     private fun activeFrame(progress: Float): VideoCardContainerTransformFrame {

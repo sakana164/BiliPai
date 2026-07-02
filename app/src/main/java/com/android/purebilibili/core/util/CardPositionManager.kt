@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 
 private const val QUICK_RETURN_THRESHOLD_MS = 500L
+private const val MIN_CARD_VISIBLE_FRACTION_FOR_CONTAINER_TRANSITION = 0.35f
 
 internal fun shouldUseQuickReturnSharedTransitionPolicy(
     detailEnterUptimeMs: Long,
@@ -39,6 +40,8 @@ object CardPositionManager {
 
     var lastClickedVideoSourceCornerDp: Int? = null
         private set
+
+    private var lastClickedCardVisibleFraction: Float = 1f
     
     /**
      *  是否是单列卡片（故事卡片）
@@ -101,6 +104,15 @@ object CardPositionManager {
             x = bounds.center.x / screenWidth,
             y = visibleCenterY / screenHeight  //  使用可见部分的中心 Y
         )
+        lastClickedCardVisibleFraction = resolveCardVisibleFraction(
+            bounds = bounds,
+            viewport = Rect(
+                left = 0f,
+                top = 0f,
+                right = screenWidth,
+                bottom = visibleBottomPx.coerceAtLeast(0f)
+            )
+        )
     }
 
     fun recordVideoCardPosition(
@@ -140,6 +152,7 @@ object CardPositionManager {
         lastClickedCardCenter = null
         lastClickedVideoSourceKey = null
         lastClickedVideoSourceCornerDp = null
+        lastClickedCardVisibleFraction = 1f
     }
     
     /**
@@ -172,14 +185,28 @@ object CardPositionManager {
         get() = (lastClickedCardCenter?.x ?: 0.5f) < 0.5f
     
     /**
-     *  [新增] 判断卡片是否完全可见（没有被顶部 header 遮挡）
-     * Header 高度约为 156dp，如果卡片顶部在这个区域内，则认为被遮挡
-     * 被遮挡的卡片应该禁用共享元素过渡
+     * 判断最近点击卡片是否足够可见。
+     * 这里用点击时的可见面积比例，避免固定 header 高度误杀首页上方可见卡片。
      */
     val isCardFullyVisible: Boolean
         get() {
             val bounds = lastClickedCardBounds ?: return true
-            val headerHeightPx = 156 * lastScreenDensity  // 156dp header height
-            return bounds.top >= headerHeightPx
+            if (bounds.width <= 0f || bounds.height <= 0f) return false
+            return lastClickedCardVisibleFraction >= MIN_CARD_VISIBLE_FRACTION_FOR_CONTAINER_TRANSITION
         }
+}
+
+internal fun resolveCardVisibleFraction(
+    bounds: Rect,
+    viewport: Rect
+): Float {
+    val area = bounds.width * bounds.height
+    if (area <= 0f) return 0f
+    val visibleLeft = maxOf(bounds.left, viewport.left)
+    val visibleTop = maxOf(bounds.top, viewport.top)
+    val visibleRight = minOf(bounds.right, viewport.right)
+    val visibleBottom = minOf(bounds.bottom, viewport.bottom)
+    val visibleWidth = (visibleRight - visibleLeft).coerceAtLeast(0f)
+    val visibleHeight = (visibleBottom - visibleTop).coerceAtLeast(0f)
+    return ((visibleWidth * visibleHeight) / area).coerceIn(0f, 1f)
 }

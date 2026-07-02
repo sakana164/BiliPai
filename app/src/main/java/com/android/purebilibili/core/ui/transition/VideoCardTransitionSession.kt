@@ -56,8 +56,13 @@ internal data class VideoCardContainerTransformFrame(
     val active: Boolean,
     val rect: Rect,
     val cornerRadiusDp: Float,
+    val containerAlpha: Float,
+    val detailContentAlpha: Float,
+    val suppressSharedVisual: Boolean
+) {
     val alpha: Float
-)
+        get() = containerAlpha
+}
 
 internal val LocalVideoCardTransitionSession = compositionLocalOf { VideoCardTransitionSession() }
 
@@ -70,6 +75,7 @@ private const val VIDEO_CARD_TRANSITION_EXPAND_BLUR_PEAK_PROGRESS = 0.35f
 private const val VIDEO_CARD_TRANSITION_BLUR_EFFECT_MIN_RADIUS_DP = 0.5f
 private const val VIDEO_CARD_CONTAINER_TARGET_CORNER_DP = 0f
 private const val VIDEO_CARD_CONTAINER_ALPHA = 1f
+private const val VIDEO_CARD_CONTAINER_CONTENT_REVEAL_START_PROGRESS = 0.88f
 
 internal enum class VideoTransitionBackdropBlurMode {
     RENDER_EFFECT,
@@ -198,8 +204,7 @@ internal fun resolveVideoCardContainerTransformFrame(
         !sourceKeyMatches ||
         !cardFullyVisible ||
         motionTier == MotionTier.Reduced ||
-        session.phase == VideoCardTransitionPhase.IDLE ||
-        session.phase == VideoCardTransitionPhase.EXPANDED
+        session.phase == VideoCardTransitionPhase.IDLE
     ) {
         return inactiveFrame
     }
@@ -228,7 +233,13 @@ internal fun resolveVideoCardContainerTransformFrame(
             VIDEO_CARD_CONTAINER_TARGET_CORNER_DP,
             progress
         ),
-        alpha = VIDEO_CARD_CONTAINER_ALPHA
+        containerAlpha = when (session.phase) {
+            VideoCardTransitionPhase.EXPANDED -> 0f
+            else -> VIDEO_CARD_CONTAINER_ALPHA
+        },
+        detailContentAlpha = resolveVideoCardContainerDetailContentAlpha(session),
+        suppressSharedVisual = session.phase == VideoCardTransitionPhase.EXPANDING ||
+            session.phase == VideoCardTransitionPhase.COLLAPSING
     )
 }
 
@@ -237,8 +248,21 @@ internal fun inactiveVideoCardContainerTransformFrame(): VideoCardContainerTrans
         active = false,
         rect = Rect(0f, 0f, 0f, 0f),
         cornerRadiusDp = 0f,
-        alpha = 0f
+        containerAlpha = 0f,
+        detailContentAlpha = 1f,
+        suppressSharedVisual = false
     )
+}
+
+internal fun resolveVideoCardContainerDetailContentAlpha(
+    session: VideoCardTransitionSession
+): Float {
+    if (session.phase != VideoCardTransitionPhase.EXPANDING) return 1f
+    val progress = session.progress.coerceIn(0f, 1f)
+    if (progress <= VIDEO_CARD_CONTAINER_CONTENT_REVEAL_START_PROGRESS) return 0f
+    return ((progress - VIDEO_CARD_CONTAINER_CONTENT_REVEAL_START_PROGRESS) /
+        (1f - VIDEO_CARD_CONTAINER_CONTENT_REVEAL_START_PROGRESS))
+        .coerceIn(0f, 1f)
 }
 
 internal fun resolveVideoCardTransitionExpandedFractionFromPredictiveGestureProgress(
