@@ -1,5 +1,35 @@
 # Changelog
 
+## v9.8.9 (2026-07-07)
+
+### 版本信息
+- 版本号从 `9.8.8` 升级到 `9.8.9`，`versionCode` 从 `247` 升级到 `248`。
+
+### 更新内容
+
+#### 设置导航架构（Nav3 统一）
+- **取消手机本地 drill-down**：设置首页、分类、搜索全部纳入 Nav3 单栈；新增 `SettingsCategory`、`SettingsSearch` 路由，分类点击与搜索提交改为标准 push/pop。
+- **层级 sibling 过渡**：`SettingsNavHierarchyPolicy` 统一管理 settings 子树深度与父子关系，子树内相邻 push/pop 均走同一套 iOS push 动效，不再与底栏 sibling 混用。
+- **删除废弃实现**：移除 `SettingsRootDrillDownNavigator`、`SettingsRootCategoryTransitionPolicy` 及平板 `TabletSettingsLayout` 的 `activeDetail` 本地导航。
+
+#### iOS Settings 风格 push 动效
+- **专用过渡类型**：新增 `SETTINGS_IOS_PUSH_FORWARD` / `SETTINGS_IOS_PUSH_POP`，新页全宽右推入、旧页 parallax（≈0.33）左移，更接近 iOS UINavigationController。
+- **预测返回同源**：`BiliPaiIosPushPredictiveBackAnimation` 无 scale/圆角，手势中纯横滑 + 底层 parallax；提交 pop 与预测手势视觉一致，消除此前 SCALE 预览 vs BOTTOM_BAR 提交的分裂。
+- **退出设置到主页**：Settings → MainHost 仍走全局 `CLASSIC_CARD`，不纳入 iOS push 子树。
+
+#### 设置 UI 重设计
+- **首页**：Large Title「设置」+ 可点击搜索入口 + 四分类 icon bubble 卡片 + 关于区分组下沉。
+- **分类页 / 搜索页**：独立 Nav 页面（`SettingsCategoryScreen`、`SettingsSearchScreen`），搜索结果直达子页 push。
+- **共享 scaffold**：新增 `SettingsVisualSpec`、`SettingsPageScaffold`；首页、搜索、技巧、权限等页已统一 Large Title → Inline Title 与分组间距规范。
+
+#### 平板分栏
+- **`SettingsTabletShell`**：Nav 栈驱动左栏分类高亮 + 右栏当前 entry 内容；`AppNavigation` 中 settings 子树全部路由（含插件、WebDAV、分享等）经 `SettingsTabletEntry` 包裹，与手机共用 iOS push 预测返回体验。
+
+#### 测试
+- 新增/迁移 `SettingsNavHierarchyPolicyTest`、`SettingsIosPushTransitionPolicyTest` 等 policy 测试；更新 Nav entry provider 与 content transform 结构测试。
+
+---
+
 ## v9.8.8 (2026-07-07)
 
 ### 版本信息

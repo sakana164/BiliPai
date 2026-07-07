@@ -51,6 +51,10 @@ import com.android.purebilibili.feature.search.resolveArticleNavigationTarget
 import com.android.purebilibili.feature.search.SearchEntryMotionSource
 import com.android.purebilibili.feature.search.SearchScreen
 import com.android.purebilibili.feature.settings.SettingsScreen
+import com.android.purebilibili.feature.settings.resolveSettingsSearchNavigation
+import com.android.purebilibili.feature.settings.screen.SettingsCategoryScreen
+import com.android.purebilibili.feature.settings.screen.SettingsSearchScreen
+import com.android.purebilibili.feature.settings.screen.SettingsTabletNavEntryShell
 import com.android.purebilibili.feature.settings.AppearanceSettingsScreen
 import com.android.purebilibili.feature.settings.PlaybackSettingsScreen
 import com.android.purebilibili.feature.settings.SettingsViewModel
@@ -1379,6 +1383,16 @@ fun AppNavigation(
                     key: BiliPaiNavKey,
                     isBottomPagerPageActive: Boolean = true
                 ) {
+                    @Composable
+                    fun SettingsTabletEntry(content: @Composable () -> Unit) {
+                        SettingsTabletNavEntryShell(
+                            key = key,
+                            onSystemBack = { performSystemBackAction() },
+                            onPushKey = { pushNavigation3Key(it) },
+                            content = content,
+                        )
+                    }
+
                     when (resolveBiliPaiNavEntryContentRole(key)) {
                         BiliPaiNavEntryContentRole.MAIN_HOST -> {
                             CompositionLocalProvider(
@@ -1629,9 +1643,19 @@ fun AppNavigation(
                                 isReturningFromVideoDetail = navigation3ReturnSession.isReturningFromDetail,
                                 isQuickReturningFromVideoDetail =
                                     navigation3ReturnSession.isQuickReturnFromDetail,
+                                onVideoDetailReturnAnimationConsumed = {
+                                    navigation3ReturnSession = navigation3ReturnSession.clearReturning()
+                                },
                                 onBack = { performSystemBackAction() },
                                 onOpenTrending = { pushNavigation3Key(BiliPaiNavKey.SearchTrending) },
-                                onVideoClick = { bvid, cid -> navigateToVideoInNavigation3(bvid, cid, "") },
+                                onVideoClick = { bvid, cid ->
+                                    navigateToVideoInNavigation3(
+                                        bvid = bvid,
+                                        cid = cid,
+                                        coverUrl = "",
+                                        sourceRoute = ScreenRoutes.Search.route
+                                    )
+                                },
                                 onWebClick = { url, title ->
                                     pushNavigation3Route(ScreenRoutes.Web.createRoute(url, title))
                                 },
@@ -1890,54 +1914,118 @@ fun AppNavigation(
                                     )
                                 }
                             )
-                        BiliPaiNavEntryContentRole.SETTINGS -> SettingsScreen(
-                                viewModel = settingsViewModel,
-                                onBack = { performSystemBackAction() },
-                                onOpenSourceLicensesClick = { pushNavigation3Key(BiliPaiNavKey.OpenSourceLicenses) },
-                                onAppearanceClick = { pushNavigation3Key(BiliPaiNavKey.AppearanceSettings) },
-                                onAnimationClick = { pushNavigation3Key(BiliPaiNavKey.AnimationSettings) },
-                                onPlaybackClick = { pushNavigation3Key(BiliPaiNavKey.PlaybackSettings) },
-                                onPermissionClick = { pushNavigation3Key(BiliPaiNavKey.PermissionSettings) },
-                                onPluginsClick = { pushNavigation3Key(BiliPaiNavKey.PluginsSettings()) },
-                                onSettingsShareClick = { pushNavigation3Key(BiliPaiNavKey.SettingsShare) },
-                                onWebDavBackupClick = { pushNavigation3Key(BiliPaiNavKey.WebDavBackup) },
-                                onNavigateToBottomBarSettings = { pushNavigation3Key(BiliPaiNavKey.BottomBarSettings) },
-                                onTipsClick = { pushNavigation3Key(BiliPaiNavKey.TipsSettings) },
-                                onReplayOnboardingClick = { pushNavigation3Route(ScreenRoutes.Onboarding.route) },
-                                mainHazeState = mainHazeState
-                            )
+                        BiliPaiNavEntryContentRole.SETTINGS ->
+                            SettingsTabletEntry {
+                                SettingsScreen(
+                                    viewModel = settingsViewModel,
+                                    onBack = { performSystemBackAction() },
+                                    onOpenSourceLicensesClick = { pushNavigation3Key(BiliPaiNavKey.OpenSourceLicenses) },
+                                    onAppearanceClick = { pushNavigation3Key(BiliPaiNavKey.AppearanceSettings) },
+                                    onAnimationClick = { pushNavigation3Key(BiliPaiNavKey.AnimationSettings) },
+                                    onPlaybackClick = { pushNavigation3Key(BiliPaiNavKey.PlaybackSettings) },
+                                    onPermissionClick = { pushNavigation3Key(BiliPaiNavKey.PermissionSettings) },
+                                    onPluginsClick = { pushNavigation3Key(BiliPaiNavKey.PluginsSettings()) },
+                                    onSettingsShareClick = { pushNavigation3Key(BiliPaiNavKey.SettingsShare) },
+                                    onWebDavBackupClick = { pushNavigation3Key(BiliPaiNavKey.WebDavBackup) },
+                                    onNavigateToBottomBarSettings = { pushNavigation3Key(BiliPaiNavKey.BottomBarSettings) },
+                                    onTipsClick = { pushNavigation3Key(BiliPaiNavKey.TipsSettings) },
+                                    onReplayOnboardingClick = { pushNavigation3Route(ScreenRoutes.Onboarding.route) },
+                                    onCategoryClick = { category ->
+                                        pushNavigation3Key(BiliPaiNavKey.SettingsCategory(category))
+                                    },
+                                    onSearchOpen = { pushNavigation3Key(BiliPaiNavKey.SettingsSearch) },
+                                    mainHazeState = mainHazeState,
+                                )
+                            }
+                        BiliPaiNavEntryContentRole.SETTINGS_CATEGORY -> {
+                            val categoryKey = key as BiliPaiNavKey.SettingsCategory
+                            SettingsTabletEntry {
+                                SettingsCategoryScreen(
+                                    category = categoryKey.category,
+                                    viewModel = settingsViewModel,
+                                    onBack = { performSystemBackAction() },
+                                    onOpenSourceLicensesClick = { pushNavigation3Key(BiliPaiNavKey.OpenSourceLicenses) },
+                                    onAppearanceClick = { pushNavigation3Key(BiliPaiNavKey.AppearanceSettings) },
+                                    onAnimationClick = { pushNavigation3Key(BiliPaiNavKey.AnimationSettings) },
+                                    onPlaybackClick = { pushNavigation3Key(BiliPaiNavKey.PlaybackSettings) },
+                                    onPermissionClick = { pushNavigation3Key(BiliPaiNavKey.PermissionSettings) },
+                                    onPluginsClick = { pushNavigation3Key(BiliPaiNavKey.PluginsSettings()) },
+                                    onSettingsShareClick = { pushNavigation3Key(BiliPaiNavKey.SettingsShare) },
+                                    onWebDavBackupClick = { pushNavigation3Key(BiliPaiNavKey.WebDavBackup) },
+                                    onNavigateToBottomBarSettings = { pushNavigation3Key(BiliPaiNavKey.BottomBarSettings) },
+                                    onTipsClick = { pushNavigation3Key(BiliPaiNavKey.TipsSettings) },
+                                    onReplayOnboardingClick = { pushNavigation3Route(ScreenRoutes.Onboarding.route) },
+                                    onCategoryClick = { category ->
+                                        pushNavigation3Key(BiliPaiNavKey.SettingsCategory(category))
+                                    },
+                                    onSearchOpen = { pushNavigation3Key(BiliPaiNavKey.SettingsSearch) },
+                                    mainHazeState = mainHazeState,
+                                )
+                            }
+                        }
+                        BiliPaiNavEntryContentRole.SETTINGS_SEARCH ->
+                            SettingsTabletEntry {
+                                SettingsSearchScreen(
+                                    viewModel = settingsViewModel,
+                                    onBack = { performSystemBackAction() },
+                                    onCategoryClick = { category ->
+                                        pushNavigation3Key(BiliPaiNavKey.SettingsCategory(category))
+                                    },
+                                    onSearchResultClick = { result ->
+                                        resolveSettingsSearchNavigation(result)?.let { navKey ->
+                                            pushNavigation3Key(navKey)
+                                        }
+                                    },
+                                    mainHazeState = mainHazeState,
+                                )
+                            }
                         BiliPaiNavEntryContentRole.OPEN_SOURCE_LICENSES ->
-                            com.android.purebilibili.feature.settings.OpenSourceLicensesScreen(
-                                onBack = { performSystemBackAction() }
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.settings.OpenSourceLicensesScreen(
+                                    onBack = { performSystemBackAction() }
+                                )
+                            }
                         BiliPaiNavEntryContentRole.APPEARANCE_SETTINGS ->
-                            AppearanceSettingsScreen(
-                                viewModel = settingsViewModel,
-                                onBack = { performSystemBackAction() },
-                                onNavigateToIconSettings = { pushNavigation3Key(BiliPaiNavKey.IconSettings) },
-                                onNavigateToAnimationSettings = { pushNavigation3Key(BiliPaiNavKey.AnimationSettings) }
-                            )
+                            SettingsTabletEntry {
+                                AppearanceSettingsScreen(
+                                    viewModel = settingsViewModel,
+                                    onBack = { performSystemBackAction() },
+                                    onNavigateToIconSettings = { pushNavigation3Key(BiliPaiNavKey.IconSettings) },
+                                    onNavigateToAnimationSettings = {
+                                        pushNavigation3Key(BiliPaiNavKey.AnimationSettings)
+                                    },
+                                )
+                            }
                         BiliPaiNavEntryContentRole.ICON_SETTINGS ->
-                            com.android.purebilibili.feature.settings.IconSettingsScreen(
-                                viewModel = settingsViewModel,
-                                onBack = { performSystemBackAction() }
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.settings.IconSettingsScreen(
+                                    viewModel = settingsViewModel,
+                                    onBack = { performSystemBackAction() }
+                                )
+                            }
                         BiliPaiNavEntryContentRole.ANIMATION_SETTINGS ->
-                            com.android.purebilibili.feature.settings.AnimationSettingsScreen(
-                                viewModel = settingsViewModel,
-                                onBack = { performSystemBackAction() }
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.settings.AnimationSettingsScreen(
+                                    viewModel = settingsViewModel,
+                                    onBack = { performSystemBackAction() }
+                                )
+                            }
                         BiliPaiNavEntryContentRole.PLAYBACK_SETTINGS ->
-                            PlaybackSettingsScreen(
-                                viewModel = settingsViewModel,
-                                onBack = { performSystemBackAction() }
-                            )
+                            SettingsTabletEntry {
+                                PlaybackSettingsScreen(
+                                    viewModel = settingsViewModel,
+                                    onBack = { performSystemBackAction() }
+                                )
+                            }
                         BiliPaiNavEntryContentRole.PERMISSION_SETTINGS ->
-                            com.android.purebilibili.feature.settings.PermissionSettingsScreen(
-                                onBack = { performSystemBackAction() }
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.settings.PermissionSettingsScreen(
+                                    onBack = { performSystemBackAction() }
+                                )
+                            }
                         BiliPaiNavEntryContentRole.PLUGINS_SETTINGS -> {
-                                val pluginsKey = key as BiliPaiNavKey.PluginsSettings
+                            val pluginsKey = key as BiliPaiNavKey.PluginsSettings
+                            SettingsTabletEntry {
                                 com.android.purebilibili.feature.settings.PluginsScreen(
                                     onBack = { performSystemBackAction() },
                                     initialImportUrl = pluginsKey.importUrl,
@@ -1946,49 +2034,62 @@ fun AppNavigation(
                                     }
                                 )
                             }
+                        }
                         BiliPaiNavEntryContentRole.JS_PLUGIN_CONTENT -> {
                             val jsPluginKey = key as BiliPaiNavKey.JsPluginContent
-                            com.android.purebilibili.feature.plugin.js.BiliPaiJsPluginContentScreen(
-                                pluginId = jsPluginKey.pluginId,
-                                onBack = { performSystemBackAction() },
-                                onPlayMedia = { launchId ->
-                                    pushNavigation3Key(BiliPaiNavKey.ExternalMedia(launchId))
-                                }
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.plugin.js.BiliPaiJsPluginContentScreen(
+                                    pluginId = jsPluginKey.pluginId,
+                                    onBack = { performSystemBackAction() },
+                                    onPlayMedia = { launchId ->
+                                        pushNavigation3Key(BiliPaiNavKey.ExternalMedia(launchId))
+                                    }
+                                )
+                            }
                         }
                         BiliPaiNavEntryContentRole.EXTERNAL_MEDIA -> {
                             val mediaKey = key as BiliPaiNavKey.ExternalMedia
-                            com.android.purebilibili.feature.plugin.js.ExternalMediaPlayerScreen(
-                                launchId = mediaKey.launchId,
-                                onBack = { performSystemBackAction() }
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.plugin.js.ExternalMediaPlayerScreen(
+                                    launchId = mediaKey.launchId,
+                                    onBack = { performSystemBackAction() }
+                                )
+                            }
                         }
                         BiliPaiNavEntryContentRole.BOTTOM_BAR_SETTINGS ->
-                            com.android.purebilibili.feature.settings.BottomBarSettingsScreen(
-                                onBack = { performSystemBackAction() }
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.settings.BottomBarSettingsScreen(
+                                    onBack = { performSystemBackAction() }
+                                )
+                            }
                         BiliPaiNavEntryContentRole.SETTINGS_SHARE -> {
                             val settingsShareViewModel: SettingsShareViewModel = viewModel(
                                 factory = remember(application) { SettingsShareViewModelFactory(application) }
                             )
-                            com.android.purebilibili.feature.settings.share.SettingsShareScreen(
-                                onBack = { performSystemBackAction() },
-                                viewModel = settingsShareViewModel
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.settings.share.SettingsShareScreen(
+                                    onBack = { performSystemBackAction() },
+                                    viewModel = settingsShareViewModel
+                                )
+                            }
                         }
                         BiliPaiNavEntryContentRole.WEB_DAV_BACKUP -> {
                             val webDavBackupViewModel: WebDavBackupViewModel = viewModel(
                                 factory = remember(application) { WebDavBackupViewModelFactory(application) }
                             )
-                            com.android.purebilibili.feature.settings.webdav.WebDavBackupScreen(
-                                onBack = { performSystemBackAction() },
-                                viewModel = webDavBackupViewModel
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.settings.webdav.WebDavBackupScreen(
+                                    onBack = { performSystemBackAction() },
+                                    viewModel = webDavBackupViewModel
+                                )
+                            }
                         }
                         BiliPaiNavEntryContentRole.TIPS_SETTINGS ->
-                            com.android.purebilibili.feature.settings.TipsSettingsScreen(
-                                onBack = { performSystemBackAction() }
-                            )
+                            SettingsTabletEntry {
+                                com.android.purebilibili.feature.settings.TipsSettingsScreen(
+                                    onBack = { performSystemBackAction() }
+                                )
+                            }
                         BiliPaiNavEntryContentRole.WATCH_LATER -> {
                                 val watchLaterViewModel: com.android.purebilibili.feature.watchlater.WatchLaterViewModel = viewModel()
                                 androidx.compose.runtime.LaunchedEffect(
