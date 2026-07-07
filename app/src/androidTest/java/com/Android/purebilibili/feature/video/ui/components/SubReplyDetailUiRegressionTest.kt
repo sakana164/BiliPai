@@ -29,6 +29,7 @@ import com.android.purebilibili.feature.video.ui.components.COMMENT_VIEW_ALL_REP
 import com.android.purebilibili.feature.video.ui.components.ReplyItemView
 import com.android.purebilibili.feature.video.ui.components.SubReplySheet
 import com.android.purebilibili.feature.video.viewmodel.SubReplyUiState
+import kotlinx.collections.immutable.toImmutableList
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -137,7 +138,7 @@ class SubReplyDetailUiRegressionTest {
                     item = buildReplyWithPreview(),
                     emoteMap = emptyMap(),
                     onClick = {},
-                    onSubClick = { openedReplyId = it.rpid },
+                    onSubClick = { reply, _ -> openedReplyId = reply.rpid },
                     onAvatarClick = {}
                 )
             }
@@ -162,7 +163,7 @@ class SubReplyDetailUiRegressionTest {
                     item = buildReplyWithPreview(),
                     emoteMap = emptyMap(),
                     onClick = {},
-                    onSubClick = { openedReplyId = it.rpid },
+                    onSubClick = { reply, _ -> openedReplyId = reply.rpid },
                     onAvatarClick = {}
                 )
             }
@@ -187,7 +188,7 @@ class SubReplyDetailUiRegressionTest {
                     item = buildReplyWithPreview(),
                     emoteMap = emptyMap(),
                     onClick = {},
-                    onSubClick = { openedReplyId = it.rpid },
+                    onSubClick = { reply, _ -> openedReplyId = reply.rpid },
                     onAvatarClick = {}
                 )
             }
@@ -214,7 +215,7 @@ class SubReplyDetailUiRegressionTest {
                     item = buildReplyWithPreview(),
                     emoteMap = emptyMap(),
                     onClick = {},
-                    onSubClick = { openedReplyId = it.rpid },
+                    onSubClick = { reply, _ -> openedReplyId = reply.rpid },
                     onAvatarClick = {}
                 )
             }
@@ -241,7 +242,7 @@ class SubReplyDetailUiRegressionTest {
                     item = buildReplyWithPreview(),
                     emoteMap = emptyMap(),
                     onClick = {},
-                    onSubClick = { openedReplyId = it.rpid },
+                    onSubClick = { reply, _ -> openedReplyId = reply.rpid },
                     onAvatarClick = {}
                 )
             }
@@ -271,7 +272,7 @@ class SubReplyDetailUiRegressionTest {
                     item = buildReplyWithPreview(),
                     emoteMap = emptyMap(),
                     onClick = {},
-                    onSubClick = {},
+                    onSubClick = { _, _ -> },
                     onAvatarClick = {}
                 )
             }
@@ -359,7 +360,7 @@ class SubReplyDetailUiRegressionTest {
                     ),
                     content = ReplyContent(message = "回复 @ReplyTextOnly：没错")
                 )
-            )
+            ).toImmutableList()
         )
     }
 

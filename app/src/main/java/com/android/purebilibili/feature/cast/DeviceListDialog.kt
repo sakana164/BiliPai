@@ -34,8 +34,16 @@ fun DeviceListDialog(
 
     // Generic cast plugin routes
     val allPlugins by PluginManager.pluginsFlow.collectAsStateWithLifecycle()
-    val castPlugins = remember(allPlugins) {
-        allPlugins.filter { it.enabled }.mapNotNull { it.plugin as? CastPluginApi }
+    val castPluginInfos = remember(allPlugins) {
+        allPlugins.mapNotNull { info ->
+            (info.plugin as? CastPluginApi)?.let { info to it }
+        }
+    }
+    val castPlugins = remember(castPluginInfos) {
+        castPluginInfos.filter { it.first.enabled }.map { it.second }
+    }
+    val hasDisabledCastPlugins = remember(castPluginInfos) {
+        castPluginInfos.any { !it.first.enabled }
     }
 
     val pluginRouteEntries by produceState(emptyList<PluginRouteEntry>(), castPlugins) {
@@ -89,11 +97,26 @@ fun DeviceListDialog(
         text = {
             val hasDevices = pluginRouteEntries.isNotEmpty()
 
-            if (!hasDevices && !isDiscovering) {
+            if (castPlugins.isEmpty() && hasDisabledCastPlugins) {
+                Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("投屏插件未启用", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "请前往 设置 > 插件，启用 DLNA 或 Google Cast",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else if (!hasDevices && !isDiscovering) {
                 Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("未找到设备", style = MaterialTheme.typography.bodyMedium)
-                        Text("请确保在同一 WiFi 下", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "请确保手机与电视在同一 WiFi，并已授予附近设备/定位权限",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             } else if (!hasDevices && isDiscovering) {

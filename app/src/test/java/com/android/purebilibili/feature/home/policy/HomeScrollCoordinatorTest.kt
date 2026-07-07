@@ -236,10 +236,27 @@ class HomeScrollCoordinatorTest {
     }
 
     @Test
-    fun upwardScrollAwayFromTop_keepsHeaderCollapsed() {
+    fun upwardScrollAwayFromTop_revealsHeaderProgressively() {
         val result = reduceHomePreScroll(
             currentHeaderOffsetPx = -120f,
             deltaY = 36f,
+            minHeaderOffsetPx = -120f,
+            canRevealHeader = false,
+            isHeaderCollapseEnabled = true,
+            isBottomBarAutoHideEnabled = false,
+            useSideNavigation = false,
+            liquidGlassEnabled = false,
+            currentGlobalScrollOffset = 40f
+        )
+
+        assertEquals(-84f, result.headerOffsetPx)
+    }
+
+    @Test
+    fun downwardScrollAwayFromTop_snapsHeaderFullyCollapsed() {
+        val result = reduceHomePreScroll(
+            currentHeaderOffsetPx = -40f,
+            deltaY = -12f,
             minHeaderOffsetPx = -120f,
             canRevealHeader = false,
             isHeaderCollapseEnabled = true,

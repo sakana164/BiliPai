@@ -97,7 +97,8 @@ internal fun reduceHomePreScroll(
 ): HomeScrollUpdate {
     val nextHeaderOffset = when {
         !isHeaderCollapseEnabled -> 0f
-        deltaY > 0f && !canRevealHeader -> minHeaderOffsetPx
+        // 列表未在顶部时，只有继续下滑才立刻收满；上滑应逐步露出顶栏/标签。
+        deltaY < 0f && !canRevealHeader -> minHeaderOffsetPx
         else -> (currentHeaderOffsetPx + deltaY).coerceIn(minHeaderOffsetPx, 0f)
     }
 

@@ -13,19 +13,19 @@ class LiveForegroundRecoveryPolicyTest {
     fun `resume should rebind surface only when player view and player both exist`() {
         assertTrue(
             shouldRebindFullscreenSurfaceOnResume(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 hasPlayer = true
             )
         )
         assertFalse(
             shouldRebindFullscreenSurfaceOnResume(
-                hasPlayerView = false,
+                hasPlayerSurface = false,
                 hasPlayer = true
             )
         )
         assertFalse(
             shouldRebindFullscreenSurfaceOnResume(
-                hasPlayerView = true,
+                hasPlayerSurface = true,
                 hasPlayer = false
             )
         )

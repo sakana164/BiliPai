@@ -84,7 +84,7 @@ class BottomBarSurfaceColorPolicyTest {
             tuning = tuning,
             glassEnabled = false,
             blurEnabled = true,
-            blurIntensity = BlurIntensity.THICK
+            blurIntensity = BlurIntensity.APPLE_DOCK
         )
 
         assertEquals(0.6f, color.alpha, 0.001f)

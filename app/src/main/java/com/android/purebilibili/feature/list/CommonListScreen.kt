@@ -598,12 +598,8 @@ fun CommonListScreen(
         isSubscribedBrowse,
         favoriteContentMode,
         pagerState.settledPage,
-        pagerState.isScrollInProgress,
         favoritePagerGridStates.size
     ) {
-        if (favoriteContentMode == FavoriteContentMode.PAGER && pagerState.isScrollInProgress) {
-            return@LaunchedEffect
-        }
         val (firstVisibleItemIndex, firstVisibleItemScrollOffset) =
             when (val scrollState = activeCommonListScrollState()) {
                 is CommonListScrollState.Grid -> Pair(

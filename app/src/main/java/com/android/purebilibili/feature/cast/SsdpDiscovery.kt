@@ -2,7 +2,10 @@ package com.android.purebilibili.feature.cast
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.os.Build
+import android.net.wifi.WifiManager
 import com.android.purebilibili.core.util.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -51,9 +54,11 @@ object SsdpDiscovery {
     suspend fun discover(context: Context, timeoutMs: Int = 5000): List<SsdpDevice> = withContext(Dispatchers.IO) {
         val devices = mutableListOf<SsdpDevice>()
         var socket: MulticastSocket? = null
+        var multicastLock: WifiManager.MulticastLock? = null
         
         try {
             Logger.i(TAG, "📺 [DLNA] Starting SSDP discovery (timeout: ${timeoutMs}ms)")
+            multicastLock = acquireMulticastLock(context)
             
             // 创建 UDP socket
             socket = MulticastSocket(null)
@@ -61,7 +66,7 @@ object SsdpDiscovery {
             socket.broadcast = true
             socket.bind(InetSocketAddress(0))
             socket.timeToLive = 4
-            bindSocketToLocalNetworkInterface(context, socket)
+            bindSocketToActiveNetwork(context, socket)
 
             Logger.d(TAG, "📺 [DLNA] Socket bound to local port ${socket.localPort}")
             
@@ -118,9 +123,33 @@ object SsdpDiscovery {
             Logger.e(TAG, "📺 [DLNA] Discovery error: ${e.javaClass.simpleName} - ${e.message}")
         } finally {
             socket?.close()
+            releaseMulticastLock(multicastLock)
         }
         
         devices
+    }
+
+    private fun acquireMulticastLock(context: Context): WifiManager.MulticastLock? {
+        return try {
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            wifiManager.createMulticastLock("SsdpDiscovery").apply {
+                setReferenceCounted(true)
+                acquire()
+            }
+        } catch (e: Exception) {
+            Logger.w(TAG, "📺 [DLNA] Failed to acquire multicast lock: ${e.message}")
+            null
+        }
+    }
+
+    private fun releaseMulticastLock(multicastLock: WifiManager.MulticastLock?) {
+        try {
+            if (multicastLock?.isHeld == true) {
+                multicastLock.release()
+            }
+        } catch (e: Exception) {
+            Logger.w(TAG, "📺 [DLNA] Failed to release multicast lock: ${e.message}")
+        }
     }
 
     internal fun resolveSsdpSearchPayloads(): List<String> = listOf(
@@ -130,7 +159,7 @@ object SsdpDiscovery {
         "ssdp:all"
     ).map(::buildSearchPayload).distinct()
 
-    private fun bindSocketToLocalNetworkInterface(context: Context, socket: MulticastSocket) {
+    private fun bindSocketToActiveNetwork(context: Context, socket: MulticastSocket) {
         try {
             val connectivityManager =
                 context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -148,32 +177,55 @@ object SsdpDiscovery {
                 Logger.w(TAG, "📺 [DLNA] Active network is not WiFi/Ethernet; discovery may fail")
             }
 
-            val linkProperties = connectivityManager.getLinkProperties(activeNetwork)
-            val ipv4Address = linkProperties
-                ?.linkAddresses
-                ?.map { it.address }
-                ?.firstOrNull { address -> address is Inet4Address && !address.isLoopbackAddress }
-                as? Inet4Address
-
-            if (ipv4Address == null) {
-                Logger.w(TAG, "📺 [DLNA] No IPv4 address found on active network")
-                return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                runCatching { activeNetwork.bindSocket(socket) }
+                    .onSuccess {
+                        Logger.i(TAG, "📺 [DLNA] SSDP socket bound to active network")
+                        return
+                    }
+                    .onFailure { error ->
+                        Logger.w(TAG, "📺 [DLNA] activeNetwork.bindSocket failed: ${error.message}")
+                    }
             }
 
-            val networkInterface = NetworkInterface.getByInetAddress(ipv4Address)
-            if (networkInterface == null) {
-                Logger.w(TAG, "📺 [DLNA] No network interface for IPv4 address ${ipv4Address.hostAddress}")
-                return
-            }
-
-            socket.networkInterface = networkInterface
-            Logger.i(
-                TAG,
-                "📺 [DLNA] SSDP socket bound to interface=${networkInterface.displayName}, ip=${ipv4Address.hostAddress}"
+            bindSocketToLocalNetworkInterface(
+                connectivityManager = connectivityManager,
+                activeNetwork = activeNetwork,
+                socket = socket,
             )
         } catch (e: Exception) {
             Logger.w(TAG, "📺 [DLNA] Failed to bind SSDP socket to local interface: ${e.message}")
         }
+    }
+
+    private fun bindSocketToLocalNetworkInterface(
+        connectivityManager: ConnectivityManager,
+        activeNetwork: Network,
+        socket: MulticastSocket,
+    ) {
+        val linkProperties = connectivityManager.getLinkProperties(activeNetwork)
+        val ipv4Address = linkProperties
+            ?.linkAddresses
+            ?.map { it.address }
+            ?.firstOrNull { address -> address is Inet4Address && !address.isLoopbackAddress }
+            as? Inet4Address
+
+        if (ipv4Address == null) {
+            Logger.w(TAG, "📺 [DLNA] No IPv4 address found on active network")
+            return
+        }
+
+        val networkInterface = NetworkInterface.getByInetAddress(ipv4Address)
+        if (networkInterface == null) {
+            Logger.w(TAG, "📺 [DLNA] No network interface for IPv4 address ${ipv4Address.hostAddress}")
+            return
+        }
+
+        socket.networkInterface = networkInterface
+        Logger.i(
+            TAG,
+            "📺 [DLNA] SSDP socket bound to interface=${networkInterface.displayName}, ip=${ipv4Address.hostAddress}"
+        )
     }
     
     private fun parseResponse(response: String): SsdpDevice? {
