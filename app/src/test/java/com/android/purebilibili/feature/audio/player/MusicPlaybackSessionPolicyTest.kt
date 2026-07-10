@@ -33,6 +33,22 @@ class MusicPlaybackSessionPolicyTest {
     }
 
     @Test
+    fun `shuffle queue keeps next enabled at sequential boundary`() {
+        assertEquals(
+            MusicQueueControlState(
+                hasPrevious = true,
+                hasNext = true,
+                showQueue = true
+            ),
+            resolveMusicQueueControlState(
+                queueSize = 3,
+                currentIndex = 2,
+                playMode = com.android.purebilibili.feature.video.player.PlayMode.SHUFFLE
+            )
+        )
+    }
+
+    @Test
     fun `mini player managed session survives screen exit`() {
         assertFalse(shouldReleaseMusicPlayerOnScreenExit(isManagedByMiniPlayer = true))
         assertTrue(shouldReleaseMusicPlayerOnScreenExit(isManagedByMiniPlayer = false))

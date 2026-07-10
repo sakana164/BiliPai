@@ -11,6 +11,7 @@ import com.android.purebilibili.data.repository.AudioRepository
 import com.android.purebilibili.feature.audio.lyrics.FileLyricsCache
 import com.android.purebilibili.feature.audio.lyrics.KugouLyricsProvider
 import com.android.purebilibili.feature.audio.lyrics.LyricDocument
+import com.android.purebilibili.feature.audio.lyrics.LyricCandidate
 import com.android.purebilibili.feature.audio.lyrics.LyricQuery
 import com.android.purebilibili.feature.audio.lyrics.LyricsLoadResult
 import com.android.purebilibili.feature.audio.lyrics.LyricsRepository
@@ -33,6 +34,8 @@ internal data class MusicUiState(
     val songInfo: SongInfoData? = null,
     val lyrics: String? = null,
     val lyricsDocument: LyricDocument? = null,
+    val lyricCandidates: List<LyricCandidate> = emptyList(),
+    val isLyricsSearching: Boolean = false,
     val error: String? = null,
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = false,
@@ -53,6 +56,10 @@ internal class MusicViewModel : ViewModel() {
     private var lyricsRepository: LyricsRepository? = null
     private var observedPlayer: ExoPlayer? = null
     private var progressJob: Job? = null
+    private var lyricsJob: Job? = null
+    private var lastLyricsCacheKey: String? = null
+    private var lastLyricsQuery: LyricQuery? = null
+    private var lastBilibiliLyrics: String? = null
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -203,18 +210,87 @@ internal class MusicViewModel : ViewModel() {
 
     fun adjustLyricsOffset(offsetMs: Long) {
         _uiState.update { state ->
-            val adjusted = state.lyricsDocument?.withOffset(offsetMs) ?: return@update state
+            val document = state.lyricsDocument ?: return@update state
+            val adjusted = document.withOffset(document.offsetMs + offsetMs)
             state.copy(lyricsDocument = adjusted)
+        }
+    }
+
+    fun loadLyricsForVideo(
+        title: String,
+        artist: String,
+        bvid: String,
+        cid: Long,
+        durationMs: Long
+    ) {
+        lyricsJob?.cancel()
+        lyricsJob = viewModelScope.launch {
+            _uiState.update { it.copy(lyricsDocument = null) }
+            loadLyrics(
+                cacheKey = MusicPlaybackSource.VideoAudio(bvid, cid, title).stableId,
+                query = LyricQuery(title, artist, durationMs),
+                bilibiliLyrics = null
+            )
+        }
+    }
+
+    fun retryLyrics() {
+        val cacheKey = lastLyricsCacheKey ?: return
+        val query = lastLyricsQuery ?: return
+        lyricsJob?.cancel()
+        lyricsJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(lyricsDocument = null, lyricCandidates = emptyList(), isLyricsSearching = true)
+            }
+            loadLyrics(cacheKey, query, lastBilibiliLyrics, forceRefresh = true)
+            _uiState.update { it.copy(isLyricsSearching = false) }
+        }
+    }
+
+    fun searchLyrics(title: String) {
+        val cacheKey = lastLyricsCacheKey ?: return
+        val previousQuery = lastLyricsQuery ?: return
+        val repository = lyricsRepository ?: return
+        lyricsJob?.cancel()
+        lyricsJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLyricsSearching = true, lyricCandidates = emptyList()) }
+            val candidates = repository.search(previousQuery.copy(title = title.ifBlank { previousQuery.title }))
+            lastLyricsCacheKey = cacheKey
+            _uiState.update { it.copy(isLyricsSearching = false, lyricCandidates = candidates) }
+        }
+    }
+
+    fun selectLyricsCandidate(index: Int) {
+        val cacheKey = lastLyricsCacheKey ?: return
+        val candidate = _uiState.value.lyricCandidates.getOrNull(index) ?: return
+        val repository = lyricsRepository ?: return
+        lyricsJob?.cancel()
+        lyricsJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLyricsSearching = true) }
+            when (val result = repository.select(cacheKey, candidate)) {
+                is LyricsLoadResult.Found -> _uiState.update {
+                    it.copy(
+                        lyricsDocument = result.document,
+                        lyricCandidates = emptyList(),
+                        isLyricsSearching = false
+                    )
+                }
+                LyricsLoadResult.NotFound -> _uiState.update { it.copy(isLyricsSearching = false) }
+            }
         }
     }
 
     private suspend fun loadLyrics(
         cacheKey: String,
         query: LyricQuery,
-        bilibiliLyrics: String?
+        bilibiliLyrics: String?,
+        forceRefresh: Boolean = false
     ) {
         val repository = lyricsRepository ?: return
-        when (val result = repository.load(cacheKey, query, bilibiliLyrics)) {
+        lastLyricsCacheKey = cacheKey
+        lastLyricsQuery = query
+        lastBilibiliLyrics = bilibiliLyrics
+        when (val result = repository.load(cacheKey, query, bilibiliLyrics, forceRefresh)) {
             is LyricsLoadResult.Found -> {
                 val document = result.document
                 _uiState.update {
@@ -244,6 +320,7 @@ internal class MusicViewModel : ViewModel() {
 
     override fun onCleared() {
         progressJob?.cancel()
+        lyricsJob?.cancel()
         observedPlayer?.removeListener(playerListener)
         observedPlayer = null
         super.onCleared()

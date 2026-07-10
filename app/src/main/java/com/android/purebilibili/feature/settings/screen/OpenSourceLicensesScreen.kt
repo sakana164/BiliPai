@@ -202,6 +202,12 @@ val openSourceLibraries = listOf(
         description = "液态玻璃/背景折射效果依赖"
     ),
     OpenSourceLibrary(
+        name = "BBPlayer",
+        license = "MIT",
+        url = "https://github.com/bbplayer-app/BBPlayer",
+        description = "多来源歌词匹配与播放器交互实现参考"
+    ),
+    OpenSourceLibrary(
         name = "KernelSU",
         license = "GPL-3.0",
         url = "https://github.com/tiann/KernelSU",

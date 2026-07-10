@@ -22,6 +22,7 @@ class OpenSourceLicensesPolicyTest {
             "Compose Shimmer",
             "Cupertino",
             "Backdrop",
+            "BBPlayer",
             "DanmakuRenderEngine",
             "Cling",
             "NanoHTTPD",

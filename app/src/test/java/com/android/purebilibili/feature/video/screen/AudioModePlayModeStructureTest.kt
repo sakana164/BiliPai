@@ -9,7 +9,7 @@ class AudioModePlayModeStructureTest {
 
     @Test
     fun audioModeControlsUsePlaylistModeNavigation() {
-        val source = audioModeSource()
+        val source = audioModePlayerSource()
 
         assertTrue(
             source.contains("onPrevious = { viewModel.playPreviousAudioModeTrack() }"),
@@ -37,7 +37,7 @@ class AudioModePlayModeStructureTest {
 
     @Test
     fun audioModeCollectionSelectionForcesPlayback() {
-        val source = audioModeSource()
+        val source = audioModePlayerSource()
         val episodeClickBlock = source
             .substringAfter("onEpisodeClick = { episode ->")
             .substringBefore("}")
@@ -49,32 +49,21 @@ class AudioModePlayModeStructureTest {
     }
 
     @Test
-    fun audioModeCollectionSelectionSnapsPagerToTargetCover() {
-        val source = audioModeSource()
-        val pagerSyncBlock = source
-            .substringAfter("LaunchedEffect(currentIndex, playlist, pendingCollectionSwitchBvid)")
-            .substringBefore("// 当用户滑动 Pager 时，直接加载对应视频")
-        val episodeClickBlock = source
-            .substringAfter("onEpisodeClick = { episode ->")
-            .substringBefore("}")
-
+    fun audioModeQueueSelectionLoadsSelectedTrack() {
+        val source = audioModePlayerSource()
         assertTrue(
-            episodeClickBlock.contains("pendingCollectionSwitchBvid = episode.bvid"),
-            "合集点击应标记目标 bvid，避免后续按普通滑动动画同步封面"
+            source.contains("PlaylistManager.playAt(index)?.let"),
+            "队列选择应先更新 PlaylistManager 当前项"
         )
         assertTrue(
-            pagerSyncBlock.contains("pagerState.scrollToPage(currentIndex)"),
-            "合集点击后的目标封面应直接同步，不应 animate 滑过去"
-        )
-        assertTrue(
-            pagerSyncBlock.contains("pagerState.animateScrollToPage(currentIndex)"),
-            "普通队列索引变化仍保留动画同步"
+            source.contains("autoPlay = resolveAudioModePageSwitchAutoPlay()"),
+            "队列选择应显式恢复播放"
         )
     }
 
-    private fun audioModeSource(): String = loadSource(
-        "src/main/java/com/android/purebilibili/feature/video/screen/AudioModeScreen.kt",
-        "app/src/main/java/com/android/purebilibili/feature/video/screen/AudioModeScreen.kt"
+    private fun audioModePlayerSource(): String = loadSource(
+        "src/main/java/com/android/purebilibili/feature/video/screen/AudioModeMusicPlayer.kt",
+        "app/src/main/java/com/android/purebilibili/feature/video/screen/AudioModeMusicPlayer.kt"
     )
 
     private fun playerViewModelSource(): String = loadSource(

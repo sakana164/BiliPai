@@ -1,5 +1,9 @@
 package com.android.purebilibili.feature.audio.player
 
+import androidx.compose.runtime.Immutable
+import com.android.purebilibili.feature.audio.lyrics.LyricDocument
+import com.android.purebilibili.feature.video.player.PlayMode
+
 internal sealed interface MusicPlaybackSource {
     val stableId: String
 
@@ -24,14 +28,16 @@ internal data class MusicQueueControlState(
 
 internal fun resolveMusicQueueControlState(
     queueSize: Int,
-    currentIndex: Int
+    currentIndex: Int,
+    playMode: PlayMode = PlayMode.SEQUENTIAL
 ): MusicQueueControlState {
     if (queueSize <= 1 || currentIndex !in 0 until queueSize) {
         return MusicQueueControlState(false, false, false)
     }
+    val wrapsQueue = playMode != PlayMode.SEQUENTIAL
     return MusicQueueControlState(
-        hasPrevious = currentIndex > 0,
-        hasNext = currentIndex < queueSize - 1,
+        hasPrevious = wrapsQueue || currentIndex > 0,
+        hasNext = wrapsQueue || currentIndex < queueSize - 1,
         showQueue = true
     )
 }
@@ -39,3 +45,40 @@ internal fun resolveMusicQueueControlState(
 internal fun shouldReleaseMusicPlayerOnScreenExit(
     isManagedByMiniPlayer: Boolean
 ): Boolean = !isManagedByMiniPlayer
+
+@Immutable
+internal data class MusicQueueItemUi(
+    val stableId: String,
+    val title: String,
+    val artist: String,
+    val coverUrl: String
+)
+
+@Immutable
+internal data class MusicLyricCandidateUi(
+    val title: String,
+    val artist: String,
+    val sourceLabel: String
+)
+
+@Immutable
+internal data class MusicPlayerUiState(
+    val title: String = "未知歌曲",
+    val artist: String = "",
+    val coverUrl: String = "",
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val lyrics: LyricDocument? = null,
+    val lyricCandidates: List<MusicLyricCandidateUi> = emptyList(),
+    val isLyricsSearching: Boolean = false,
+    val queue: List<MusicQueueItemUi> = emptyList(),
+    val currentQueueIndex: Int = -1,
+    val playMode: PlayMode = PlayMode.SEQUENTIAL
+) {
+    val queueControls: MusicQueueControlState
+        get() = resolveMusicQueueControlState(queue.size, currentQueueIndex, playMode)
+}
