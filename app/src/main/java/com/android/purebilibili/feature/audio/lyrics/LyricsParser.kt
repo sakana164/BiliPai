@@ -4,7 +4,6 @@ private val metadataPattern = Regex("^\\[([A-Za-z]+):(.*)]$")
 private val leadingTimestampPattern = Regex("^(?:\\[-?\\d{1,3}:[-?\\d]{1,2}\\.\\d{1,6}])+")
 private val timestampPattern = Regex("\\[(-?\\d{1,3}):(-?\\d{1,2})\\.(\\d{1,6})]")
 private val spanTimestampPattern = Regex("<(-?\\d{1,3}):(-?\\d{1,2})\\.(\\d{1,6})>")
-private const val LYRIC_AUXILIARY_ALIGNMENT_TOLERANCE_MS = 650L
 
 private data class ParsedRawLine(
     val startTimeMs: Long,
@@ -28,7 +27,19 @@ internal fun parseSplLyrics(
         ?.let { parseRawLines(it, linkedMapOf()) }
         .orEmpty()
 
-    val lines = primaryLines
+    val primaryTimeline = primaryLines.map { raw ->
+        LyricLine(raw.startTimeMs, raw.startTimeMs, raw.text)
+    }
+    val translationMap = mergeAuxiliaryLyrics(
+        primaryTimeline,
+        translationLines.map { raw -> LyricLine(raw.startTimeMs, raw.startTimeMs, raw.text) }
+    )
+    val romanizationMap = mergeAuxiliaryLyrics(
+        primaryTimeline,
+        romanizationLines.map { raw -> LyricLine(raw.startTimeMs, raw.startTimeMs, raw.text) }
+    )
+
+    val lines = normalizeLyricTimeline(primaryLines
         .map { raw ->
             val nextStart = primaryLines
                 .asSequence()
@@ -42,9 +53,8 @@ internal fun parseSplLyrics(
                 startTimeMs = raw.startTimeMs,
                 endTimeMs = endTime.coerceAtLeast(raw.startTimeMs),
                 text = raw.text,
-                translations = findAlignedLines(translationLines, raw.startTimeMs),
-                romanization = findAlignedLines(romanizationLines, raw.startTimeMs)
-                    .firstOrNull(),
+                translations = translationMap[raw.startTimeMs].orEmpty(),
+                romanization = romanizationMap[raw.startTimeMs]?.firstOrNull(),
                 spans = raw.spans
                     .filter { span -> span.startTimeMs < endTime }
                     .map { span ->
@@ -56,7 +66,7 @@ internal fun parseSplLyrics(
                         )
                     }
             )
-        }
+        })
 
     return LyricDocument(
         metadata = metadata,
@@ -79,24 +89,6 @@ private fun mergeSimultaneousLines(lines: List<ParsedRawLine>): List<ParsedRawLi
                     .maxOrNull()
             )
         }
-}
-
-private fun findAlignedLines(lines: List<ParsedRawLine>, targetTimeMs: Long): List<String> {
-    val closestTime = lines
-        .map(ParsedRawLine::startTimeMs)
-        .distinct()
-        .minByOrNull { timestamp -> kotlin.math.abs(timestamp - targetTimeMs) }
-        ?.takeIf { timestamp ->
-            kotlin.math.abs(timestamp - targetTimeMs) <= LYRIC_AUXILIARY_ALIGNMENT_TOLERANCE_MS
-        }
-        ?: return emptyList()
-    return lines
-        .asSequence()
-        .filter { it.startTimeMs == closestTime }
-        .map(ParsedRawLine::text)
-        .filter(String::isNotBlank)
-        .distinct()
-        .toList()
 }
 
 private fun parseRawLines(

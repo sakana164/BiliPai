@@ -38,6 +38,21 @@ class ListenVideoNavigationStructureTest {
         assertFalse(listenVideoBranch.contains("Box(modifier = Modifier.fillMaxSize())"))
     }
 
+    @Test
+    fun `now playing card reopens current audio item`() {
+        val screenSource = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/audio/screen/ListenVideoScreen.kt"
+        )
+        val navigationSource = loadSource(
+            "app/src/main/java/com/android/purebilibili/navigation/AppNavigation.kt"
+        )
+
+        assertTrue(screenSource.contains("onNowPlayingClick"))
+        assertTrue(screenSource.contains("item.bvid"))
+        assertTrue(navigationSource.contains("onNowPlayingClick ="))
+        assertTrue(navigationSource.contains("startAudio = true"))
+    }
+
     private fun loadSource(path: String): String {
         val normalizedPath = path.removePrefix("app/")
         val sourceFile = listOf(File(path), File(normalizedPath)).firstOrNull(File::exists)

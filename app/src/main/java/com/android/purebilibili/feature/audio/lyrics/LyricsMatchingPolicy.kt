@@ -10,13 +10,17 @@ internal fun scoreLyricCandidate(
     query: LyricQuery,
     candidate: LyricCandidate
 ): Double {
-    val titleScore = stringSimilarity(
-        normalizeLyricMatchText(query.title, removeBracketedPrefix = true),
-        normalizeLyricMatchText(candidate.title, removeBracketedPrefix = true)
+    val titleScore = maximumVariantSimilarity(
+        lyricTitleMatchVariants(query.title),
+        lyricTitleMatchVariants(candidate.title)
     )
-    val artistScore = stringSimilarity(
-        normalizeLyricMatchText(query.artist),
-        normalizeLyricMatchText(candidate.artist)
+    val queryArtistVariants = buildList {
+        add(normalizeLyricMatchText(query.artist))
+        addAll(extractPerformerVariants(query.title))
+    }.filter(String::isNotBlank).distinct()
+    val artistScore = maximumVariantSimilarity(
+        queryArtistVariants,
+        listOf(normalizeLyricMatchText(candidate.artist))
     )
     val durationScore = if (query.durationMs <= 0L || candidate.durationMs <= 0L) {
         1.0
@@ -25,6 +29,39 @@ internal fun scoreLyricCandidate(
             LYRIC_MATCH_DURATION_TOLERANCE_MS.toDouble()).coerceIn(0.0, 1.0)
     }
     return (titleScore * 0.55) + (artistScore * 0.25) + (durationScore * 0.20)
+}
+
+private fun lyricTitleMatchVariants(value: String): List<String> {
+    val quoted = listOf(
+        Regex("《([^》]+)》"),
+        Regex("「([^」]+)」"),
+        Regex("『([^』]+)』"),
+        Regex("[“\"]([^”\"]+)[”\"]")
+    ).flatMap { pattern ->
+        pattern.findAll(value).map { match ->
+            normalizeLyricMatchText(match.groupValues[1], removeBracketedPrefix = true)
+        }.toList()
+    }
+    return (quoted + normalizeLyricMatchText(value, removeBracketedPrefix = true))
+        .filter(String::isNotBlank)
+        .distinct()
+}
+
+private fun extractPerformerVariants(value: String): List<String> {
+    return Regex("([\\p{L}\\p{N}· ]{2,24})\\s*[《「『]")
+        .findAll(value)
+        .map { match -> normalizeLyricMatchText(match.groupValues[1]) }
+        .filter(String::isNotBlank)
+        .toList()
+}
+
+private fun maximumVariantSimilarity(
+    leftVariants: List<String>,
+    rightVariants: List<String>
+): Double {
+    return leftVariants.maxOfOrNull { left ->
+        rightVariants.maxOfOrNull { right -> stringSimilarity(left, right) } ?: 0.0
+    } ?: 0.0
 }
 
 internal fun selectBestLyricCandidate(

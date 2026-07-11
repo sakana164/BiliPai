@@ -81,4 +81,22 @@ class LyricsMatchingPolicyTest {
 
         assertEquals(netease, selectBestLyricCandidate(query, listOf(base, qq, netease)))
     }
+
+    @Test
+    fun `quoted song and performer are extracted from noisy video title`() {
+        val noisyVideo = LyricQuery(
+            title = "【4K修复】超甜！周杰伦《可爱女人》官方现场版",
+            artist = "zyl2012_音乐无限",
+            durationMs = 213_000L
+        )
+        val candidate = LyricCandidate(
+            source = LyricSource.NETEASE,
+            remoteId = "cute-lady",
+            title = "可爱女人",
+            artist = "周杰伦",
+            durationMs = 215_000L
+        )
+
+        assertEquals(candidate, selectBestLyricCandidate(noisyVideo, listOf(candidate)))
+    }
 }

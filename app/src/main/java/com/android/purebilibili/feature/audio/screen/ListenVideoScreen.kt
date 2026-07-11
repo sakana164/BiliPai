@@ -76,6 +76,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 internal data class ListenVideoNowPlaying(
+    val bvid: String,
     val title: String,
     val artist: String,
     val coverUrl: String
@@ -84,6 +85,7 @@ internal data class ListenVideoNowPlaying(
 @Composable
 internal fun ListenVideoRoute(
     onPlayTracks: (List<ListenVideoTrack>, String) -> Unit,
+    onNowPlayingClick: (bvid: String, coverUrl: String) -> Unit,
     onLogin: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ListenVideoViewModel = viewModel()
@@ -95,6 +97,7 @@ internal fun ListenVideoRoute(
     val nowPlaying = remember(playlistState.playlist, playlistState.currentIndex) {
         playlistState.playlist.getOrNull(playlistState.currentIndex)?.let { item ->
             ListenVideoNowPlaying(
+                bvid = item.bvid,
                 title = item.title,
                 artist = item.owner,
                 coverUrl = item.cover
@@ -111,6 +114,7 @@ internal fun ListenVideoRoute(
     ListenVideoScreen(
         state = state,
         nowPlaying = nowPlaying,
+        onNowPlayingClick = onNowPlayingClick,
         onRefresh = viewModel::refresh,
         onSectionSelected = viewModel::selectSection,
         onPlaylistSelected = viewModel::openPlaylist,
@@ -130,6 +134,7 @@ internal fun ListenVideoRoute(
 internal fun ListenVideoScreen(
     state: ListenVideoUiState,
     nowPlaying: ListenVideoNowPlaying?,
+    onNowPlayingClick: (bvid: String, coverUrl: String) -> Unit,
     onRefresh: () -> Unit,
     onSectionSelected: (ListenVideoSection) -> Unit,
     onPlaylistSelected: (ListenVideoPlaylist) -> Unit,
@@ -173,6 +178,7 @@ internal fun ListenVideoScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             ListenVideoHeader(
                 nowPlaying = nowPlaying,
+                onNowPlayingClick = onNowPlayingClick,
                 onRefresh = onRefresh,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -237,6 +243,7 @@ internal fun ListenVideoScreen(
 @Composable
 private fun ListenVideoHeader(
     nowPlaying: ListenVideoNowPlaying?,
+    onNowPlayingClick: (bvid: String, coverUrl: String) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -260,7 +267,9 @@ private fun ListenVideoHeader(
         }
         nowPlaying?.let { item ->
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNowPlayingClick(item.bvid, item.coverUrl) },
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.58f),
                 border = androidx.compose.foundation.BorderStroke(

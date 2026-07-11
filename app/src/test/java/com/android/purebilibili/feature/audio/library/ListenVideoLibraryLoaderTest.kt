@@ -74,6 +74,28 @@ class ListenVideoLibraryLoaderTest {
     }
 
     @Test
+    fun `playlist previews use a video cover from each folder first page`() = runTest {
+        val source = FakeListenVideoDataSource(
+            folderPages = mapOf(
+                1L to mapOf(1 to Result.success(coverPage("cover-a", "cover-b"))),
+                2L to mapOf(1 to Result.failure(IOException("offline")))
+            )
+        )
+        val loader = ListenVideoLibraryLoader(
+            source = source,
+            maxConcurrentFolders = 3,
+            previewCoverSelector = { covers -> covers.lastOrNull() }
+        )
+
+        val covers = loader.loadPlaylistPreviewCovers(
+            listOf(FavFolder(id = 1L), FavFolder(id = 2L))
+        )
+
+        assertEquals(mapOf(1L to "cover-b"), covers)
+        assertEquals(listOf(1, 1), source.requestedFolderPages)
+    }
+
+    @Test
     fun `index progress counts completed folders even when they finish out of order`() = runTest {
         val source = GatedListenVideoDataSource()
         val progress = mutableListOf<Int>()
@@ -137,7 +159,7 @@ class ListenVideoLibraryLoaderTest {
         advanceUntilIdle()
 
         assertEquals(listOf("BV-RETRY"), viewModel.uiState.value.selectedTracks.map { it.bvid })
-        assertEquals(2, source.detailRequests)
+        assertEquals(3, source.detailRequests)
     }
 
     private fun page(bvid: String, hasMore: Boolean): FavoriteResourceData {
@@ -151,6 +173,21 @@ class ListenVideoLibraryLoaderTest {
                 )
             ),
             has_more = hasMore
+        )
+    }
+
+    private fun coverPage(vararg covers: String): FavoriteResourceData {
+        return FavoriteResourceData(
+            medias = covers.mapIndexed { index, cover ->
+                FavoriteData(
+                    id = index.toLong(),
+                    bvid = "BV$index",
+                    title = "Track $index",
+                    cover = cover,
+                    upper = Upper(mid = 7L, name = "Artist")
+                )
+            },
+            has_more = false
         )
     }
 }
@@ -246,7 +283,7 @@ private class RetryDetailListenVideoDataSource : ListenVideoLibraryDataSource {
 
     override suspend fun folderPage(mediaId: Long, page: Int): Result<FavoriteResourceData> {
         detailRequests += 1
-        if (detailRequests == 1) return Result.failure(IOException("first failure"))
+        if (detailRequests <= 2) return Result.failure(IOException("preview and first detail failure"))
         return Result.success(
             FavoriteResourceData(
                 medias = listOf(

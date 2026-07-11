@@ -3,6 +3,9 @@ package com.android.purebilibili.feature.audio.screen
 import com.android.purebilibili.feature.audio.lyrics.parseSplLyrics
 import com.android.purebilibili.feature.audio.lyrics.LyricDocument
 import com.android.purebilibili.feature.audio.lyrics.LyricLine
+import com.android.purebilibili.feature.audio.lyrics.resolveActiveLyricIndex
+import com.android.purebilibili.feature.audio.lyrics.resolveLyricFocusScrollOffsetPx
+import com.android.purebilibili.feature.video.player.PlayMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -29,10 +32,18 @@ class MusicPlayerVisualPolicyTest {
     fun `liquid controls require supported foreground renderer`() {
         assertFalse(resolveMusicLiquidGlassEnabled(32, true, false, false))
         assertTrue(resolveMusicLiquidGlassEnabled(33, true, false, false))
-        assertFalse(resolveMusicLiquidGlassEnabled(36, true, false, false))
+        assertTrue(resolveMusicLiquidGlassEnabled(36, true, false, false))
         assertFalse(resolveMusicLiquidGlassEnabled(35, true, true, false))
         assertFalse(resolveMusicLiquidGlassEnabled(35, true, false, true))
         assertFalse(resolveMusicLiquidGlassEnabled(35, false, false, false))
+    }
+
+    @Test
+    fun `play mode segmented indices round trip`() {
+        PlayMode.entries.forEach { mode ->
+            assertEquals(mode, resolveMusicPlayMode(resolveMusicPlayModeIndex(mode)))
+        }
+        assertEquals(PlayMode.SEQUENTIAL, resolveMusicPlayMode(-1))
     }
 
     @Test
@@ -45,11 +56,11 @@ class MusicPlayerVisualPolicyTest {
             """.trimIndent()
         ).withOffset(500L)
 
-        assertEquals(-1, resolveCurrentLyricIndex(document, positionMs = 1_000L))
-        assertEquals(0, resolveCurrentLyricIndex(document, positionMs = 1_600L))
-        assertEquals(1, resolveCurrentLyricIndex(document, positionMs = 3_500L))
-        assertEquals(2, resolveCurrentLyricIndex(document, positionMs = 8_000L))
-        assertEquals(-1, resolveCurrentLyricIndex(document, positionMs = 15_501L))
+        assertEquals(-1, resolveActiveLyricIndex(document, positionMs = 1_000L))
+        assertEquals(0, resolveActiveLyricIndex(document, positionMs = 1_600L))
+        assertEquals(1, resolveActiveLyricIndex(document, positionMs = 3_500L))
+        assertEquals(2, resolveActiveLyricIndex(document, positionMs = 8_000L))
+        assertEquals(-1, resolveActiveLyricIndex(document, positionMs = 15_501L))
     }
 
     @Test
@@ -61,9 +72,9 @@ class MusicPlayerVisualPolicyTest {
             """.trimIndent()
         )
 
-        assertEquals(0, resolveCurrentLyricIndex(document, 1_500L))
-        assertEquals(-1, resolveCurrentLyricIndex(document, 5_000L))
-        assertEquals(1, resolveCurrentLyricIndex(document, 10_000L))
+        assertEquals(0, resolveActiveLyricIndex(document, 1_500L))
+        assertEquals(-1, resolveActiveLyricIndex(document, 5_000L))
+        assertEquals(1, resolveActiveLyricIndex(document, 10_000L))
     }
 
     @Test
@@ -75,8 +86,8 @@ class MusicPlayerVisualPolicyTest {
             )
         )
 
-        assertEquals(1, resolveCurrentLyricIndex(document, 3_500L))
-        assertEquals(0, resolveCurrentLyricIndex(document, 5_000L))
+        assertEquals(1, resolveActiveLyricIndex(document, 3_500L))
+        assertEquals(0, resolveActiveLyricIndex(document, 5_000L))
     }
 
     @Test

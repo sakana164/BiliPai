@@ -81,7 +81,10 @@ internal class BilibiliListenVideoLibraryDataSource : ListenVideoLibraryDataSour
 
 internal class ListenVideoLibraryLoader(
     private val source: ListenVideoLibraryDataSource,
-    maxConcurrentFolders: Int = 3
+    maxConcurrentFolders: Int = 3,
+    private val previewCoverSelector: (List<String>) -> String? = { covers ->
+        covers.randomOrNull()
+    }
 ) {
     private val folderSemaphore = Semaphore(maxConcurrentFolders.coerceAtLeast(1))
 
@@ -95,6 +98,26 @@ internal class ListenVideoLibraryLoader(
 
     suspend fun loadAlbum(seasonId: Long): Result<List<FavoriteData>> {
         return loadResourcePages { page -> source.albumPage(seasonId, page) }
+    }
+
+    suspend fun loadPlaylistPreviewCovers(
+        folders: List<FavFolder>
+    ): Map<Long, String> = supervisorScope {
+        folders.filter { it.id > 0L }.map { folder ->
+            async {
+                folderSemaphore.withPermit {
+                    val page = try {
+                        source.folderPage(folder.id, 1).getOrNull()
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
+                    }
+                    val covers = page?.medias.orEmpty()
+                        .map(FavoriteData::cover)
+                        .filter(String::isNotBlank)
+                    previewCoverSelector(covers)?.let { cover -> folder.id to cover }
+                }
+            }
+        }.awaitAll().filterNotNull().toMap()
     }
 
     suspend fun indexFolders(

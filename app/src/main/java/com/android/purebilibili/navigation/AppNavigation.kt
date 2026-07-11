@@ -1514,6 +1514,16 @@ fun AppNavigation(
                             )
                         BiliPaiNavEntryContentRole.LISTEN_VIDEO ->
                             ListenVideoRoute(
+                                onNowPlayingClick = { bvid, coverUrl ->
+                                    pushNavigation3Key(
+                                        BiliPaiNavKey.VideoDetail(
+                                            bvid = bvid,
+                                            coverUrl = coverUrl,
+                                            startAudio = true,
+                                            sourceRoute = ScreenRoutes.ListenVideo.route
+                                        )
+                                    )
+                                },
                                 onPlayTracks = { tracks, clickedBvid ->
                                     val selection = resolveListenVideoPlaybackSelection(
                                         tracks = tracks,

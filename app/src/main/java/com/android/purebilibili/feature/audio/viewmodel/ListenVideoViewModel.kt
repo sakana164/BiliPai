@@ -112,6 +112,19 @@ internal class ListenVideoViewModel(
                         error = collectedResult.exceptionOrNull()?.userMessage("部分合集加载失败")
                     )
                 }
+                val previewCovers = loader.loadPlaylistPreviewCovers(ownedFolders)
+                if (_uiState.value.generation != generation) return@launch
+                if (previewCovers.isNotEmpty()) {
+                    _uiState.update { state ->
+                        state.copy(
+                            playlists = state.playlists.map { playlist ->
+                                previewCovers[playlist.mediaId]?.let { cover ->
+                                    playlist.copy(coverUrl = cover)
+                                } ?: playlist
+                            }
+                        )
+                    }
+                }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             }
