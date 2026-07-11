@@ -32,7 +32,13 @@ internal interface LyricsCache {
 internal sealed interface LyricsLoadResult {
     data class Found(val document: LyricDocument) : LyricsLoadResult
     data object NotFound : LyricsLoadResult
+    data object Failed : LyricsLoadResult
 }
+
+private data class ProviderSearchResult(
+    val candidates: List<LyricCandidate>,
+    val completedProviderCount: Int
+)
 
 internal class LyricsRepository(
     private val providers: List<LyricsProvider>,
@@ -61,15 +67,24 @@ internal class LyricsRepository(
                 return LyricsLoadResult.Found(cached)
             }
 
-        val matched = withTimeoutOrNull(totalTimeoutMs) {
-            val candidates = searchAllProviders(query)
-            val candidate = selectBestLyricCandidate(query, candidates) ?: return@withTimeoutOrNull null
+        val attempt = withTimeoutOrNull(totalTimeoutMs) {
+            val searchQueries = automaticSearchQueries(query)
+            val search = searchAllProviders(searchQueries)
+            if (search.completedProviderCount == 0 && providers.isNotEmpty()) {
+                return@withTimeoutOrNull LyricsLoadResult.Failed
+            }
+            val candidate = searchQueries.mapNotNull { searchQuery ->
+                selectBestLyricCandidate(searchQuery, search.candidates)?.let { candidate ->
+                    candidate to scoreLyricCandidate(searchQuery, candidate)
+                }
+            }.maxByOrNull { (_, score) -> score }?.first
+                ?: return@withTimeoutOrNull LyricsLoadResult.NotFound
             val provider = providers.firstOrNull { it.source == candidate.source }
-                ?: return@withTimeoutOrNull null
+                ?: return@withTimeoutOrNull LyricsLoadResult.NotFound
             val raw = runCatching {
                 withTimeout(providerTimeoutMs) { provider.fetch(candidate) }
-            }.getOrNull() ?: return@withTimeoutOrNull null
-            parseSplLyrics(
+            }.getOrNull() ?: return@withTimeoutOrNull LyricsLoadResult.Failed
+            val document = parseSplLyrics(
                 primary = raw.primary,
                 translation = raw.translation,
                 romanization = raw.romanization,
@@ -79,17 +94,17 @@ internal class LyricsRepository(
                     remoteId = candidate.remoteId,
                     fetchedAtMs = nowMs()
                 )
+            document?.let(LyricsLoadResult::Found) ?: LyricsLoadResult.NotFound
         }
 
-        if (matched != null) {
-            cache.write(cacheKey, matched)
-            return LyricsLoadResult.Found(matched)
+        if (attempt is LyricsLoadResult.Found) {
+            cache.write(cacheKey, attempt.document)
         }
-        return LyricsLoadResult.NotFound
+        return attempt ?: LyricsLoadResult.Failed
     }
 
     suspend fun search(query: LyricQuery): List<LyricCandidate> {
-        return withTimeoutOrNull(totalTimeoutMs) { searchAllProviders(query) }.orEmpty()
+        return withTimeoutOrNull(totalTimeoutMs) { searchAllProviders(listOf(query)).candidates }.orEmpty()
     }
 
     suspend fun save(cacheKey: String, document: LyricDocument) {
@@ -104,7 +119,7 @@ internal class LyricsRepository(
             ?: return LyricsLoadResult.NotFound
         val raw = runCatching {
             withTimeout(providerTimeoutMs) { provider.fetch(providerCandidate) }
-        }.getOrNull() ?: return LyricsLoadResult.NotFound
+        }.getOrNull() ?: return LyricsLoadResult.Failed
         val document = parseSplLyrics(
             primary = raw.primary,
             translation = raw.translation,
@@ -120,15 +135,28 @@ internal class LyricsRepository(
         return LyricsLoadResult.Found(document)
     }
 
-    private suspend fun searchAllProviders(query: LyricQuery): List<LyricCandidate> {
+    private suspend fun searchAllProviders(queries: List<LyricQuery>): ProviderSearchResult {
         return supervisorScope {
-            providers.map { provider ->
+            val results = providers.flatMap { provider ->
+                queries.map { query ->
                 async {
                     runCatching {
                         withTimeout(providerTimeoutMs) { provider.search(query) }
-                    }.getOrDefault(emptyList())
+                    }.getOrNull()
                 }
-            }.awaitAll().flatten()
+                }
+            }.awaitAll()
+            ProviderSearchResult(
+                candidates = results.filterNotNull().flatten(),
+                completedProviderCount = results.count { it != null }
+            )
         }
     }
+}
+
+private fun automaticSearchQueries(query: LyricQuery): List<LyricQuery> {
+    val swapped = query.copy(title = query.artist, artist = query.title)
+    return listOf(query, swapped)
+        .filter { it.title.isNotBlank() }
+        .distinctBy { "${it.title.trim().lowercase()}\u0000${it.artist.trim().lowercase()}" }
 }

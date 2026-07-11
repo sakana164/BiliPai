@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -215,6 +218,16 @@ fun AudioModeScreen(
         onDispose { viewModel.setAudioMode(false) }
     }
 
+    if (displayState == null) {
+        AudioModeInitialState(
+            state = uiState,
+            title = titleOverride?.takeIf { it.isNotBlank() } ?: "正在加载音频",
+            onBack = onBack,
+            onRetry = { viewModel.retry() }
+        )
+        return
+    }
+
     val enterPip = remember(context) { { enterAudioModePip(context.findHostActivity()) } }
     AudioModeMusicPlayer(
         viewModel = viewModel,
@@ -229,6 +242,48 @@ fun AudioModeScreen(
         titleOverride = titleOverride,
         liquidGlassEffectsEnabled = homeSettings.androidNativeLiquidGlassEnabled
     )
+}
+
+@Composable
+private fun AudioModeInitialState(
+    state: PlayerUiState,
+    title: String,
+    onBack: () -> Unit,
+    onRetry: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        TextButton(
+            onClick = onBack,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 40.dp, start = 12.dp)
+                .height(48.dp)
+        ) {
+            Text("返回")
+        }
+        Column(
+            modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            when (state) {
+                is PlayerUiState.Error -> {
+                    Text("音频加载失败", style = MaterialTheme.typography.headlineSmall)
+                    Text(state.msg, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (state.canRetry) {
+                        TextButton(onClick = onRetry, modifier = Modifier.height(48.dp)) { Text("重试") }
+                    }
+                }
+                else -> {
+                    CircularProgressIndicator()
+                    Text(title)
+                    if (title != "正在加载音频") {
+                        Text("正在加载音频", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

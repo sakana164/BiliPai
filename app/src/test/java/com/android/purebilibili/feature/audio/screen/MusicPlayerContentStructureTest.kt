@@ -22,16 +22,16 @@ class MusicPlayerContentStructureTest {
     }
 
     @Test
-    fun `lyrics auto follow uses viewport offset and pauses for user drag`() {
+    fun `lyrics browsing pauses auto follow without seeking playback`() {
         val source = loadSource()
         val lyricsPage = source.substringAfter("private fun LyricsPage(")
 
         assertTrue(lyricsPage.contains("collectIsDraggedAsState()"))
         assertTrue(lyricsPage.contains("resolveLyricFocusScrollOffsetPx("))
-        assertTrue(lyricsPage.contains("delay(LYRIC_AUTO_FOLLOW_RESUME_DELAY_MS)"))
-        assertTrue(lyricsPage.contains("snapshotFlow"))
-        assertTrue(lyricsPage.contains("resolveDraggedLyricIndex("))
-        assertTrue(lyricsPage.contains("distinctUntilChanged()"))
+        assertTrue(lyricsPage.contains("回到当前歌词"))
+        assertTrue(!lyricsPage.contains("resolveDraggedLyricIndex("))
+        assertTrue(!lyricsPage.contains("snapshotFlow"))
+        assertTrue(!lyricsPage.contains("LYRIC_AUTO_FOLLOW_RESUME_DELAY_MS"))
         assertTrue(!lyricsPage.contains("scrollToItem(currentIndex, -160)"))
         assertTrue(!lyricsPage.contains("animateScrollToItem(currentIndex, -160)"))
         assertTrue(source.contains("progressSeekRevision"))
@@ -53,15 +53,21 @@ class MusicPlayerContentStructureTest {
     }
 
     @Test
-    fun `lyrics controls are split and top corners always render glass buttons`() {
+    fun `lyrics expose progress playback controls and immersive chrome`() {
         val source = loadSource()
         val lyricsPage = source.substringAfter("private fun LyricsPage(")
         val topBar = source
             .substringAfter("private fun MusicTopBar(")
             .substringBefore("private fun GlassIconButton(")
 
-        assertTrue(lyricsPage.contains("LyricsTransportDock("))
-        assertTrue(lyricsPage.contains("LyricsSecondaryActions("))
+        assertTrue(lyricsPage.contains("MusicProgress("))
+        assertTrue(lyricsPage.contains("PlaybackControls("))
+        assertTrue(lyricsPage.contains("AnimatedVisibility("))
+        assertTrue(lyricsPage.contains("LyricsImmersiveProgress("))
+        assertTrue(lyricsPage.contains("歌词设置"))
+        assertTrue(lyricsPage.contains("bottom = 260.dp"))
+        assertTrue(lyricsPage.contains("歌词加载失败"))
+        assertTrue(lyricsPage.contains("未找到匹配歌词"))
         assertTrue(topBar.contains("CupertinoIcons.Outlined.ChevronDown"))
         assertTrue(topBar.contains("CupertinoIcons.Outlined.Ellipsis"))
         assertTrue(source.contains(".musicGlassSurface(glassEnabled, CircleShape, glassTintColor, miuixBackdrop)"))
@@ -74,18 +80,16 @@ class MusicPlayerContentStructureTest {
     }
 
     @Test
-    fun `lyrics transport exposes quarter second offset correction and reset`() {
+    fun `lyrics settings expose quarter second offset correction and reset`() {
         val source = loadSource()
-        val transport = source
-            .substringAfter("private fun LyricsTransportDock(")
-            .substringBefore("private fun LyricsSecondaryActions(")
+        val settings = source
+            .substringAfter("private fun LyricsSettingsContent(")
+            .substringBefore("private fun LyricLineContent(")
 
-        assertTrue(transport.contains("onLyricsOffsetChange(-250L)"))
-        assertTrue(transport.contains("onLyricsOffsetChange(250L)"))
-        assertTrue(transport.contains("onLyricsOffsetChange(-lyricsOffsetMs)"))
-        assertTrue(transport.contains("formatLyricsOffset(lyricsOffsetMs)"))
-        assertTrue(!transport.contains("onLyricsOffsetChange(-10_000L)"))
-        assertTrue(!transport.contains("onLyricsOffsetChange(10_000L)"))
+        assertTrue(settings.contains("onLyricsOffsetChange(-250L)"))
+        assertTrue(settings.contains("onLyricsOffsetChange(250L)"))
+        assertTrue(settings.contains("onLyricsOffsetChange(-lyricsOffsetMs)"))
+        assertTrue(settings.contains("formatLyricsOffset(lyricsOffsetMs)"))
     }
 
     @Test

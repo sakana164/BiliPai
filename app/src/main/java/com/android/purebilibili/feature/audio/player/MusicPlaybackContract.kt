@@ -83,6 +83,7 @@ internal data class MusicPlayerUiState(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val lyrics: LyricDocument? = null,
+    val lyricsError: String? = null,
     val lyricCandidates: List<MusicLyricCandidateUi> = emptyList(),
     val isLyricsSearching: Boolean = false,
     val queue: List<MusicQueueItemUi> = emptyList(),

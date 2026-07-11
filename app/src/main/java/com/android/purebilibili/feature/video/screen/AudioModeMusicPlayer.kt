@@ -174,6 +174,7 @@ internal fun AudioModeMusicPlayer(
             positionMs = playback.positionMs,
             durationMs = playback.durationMs.takeIf { it > 0L } ?: metadataDurationMs,
             lyrics = lyricsState.lyricsDocument,
+            lyricsError = lyricsState.lyricsError,
             lyricCandidates = lyricsState.lyricCandidates.map {
                 MusicLyricCandidateUi(it.title, it.artist, it.source.name)
             },

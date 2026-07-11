@@ -4,24 +4,6 @@ import kotlin.math.abs
 
 internal const val LYRIC_AUXILIARY_ALIGNMENT_TOLERANCE_MS = 650L
 
-internal data class LyricVisibleItem(
-    val index: Int,
-    val offsetPx: Int,
-    val sizePx: Int
-)
-
-internal fun resolveDraggedLyricIndex(
-    items: List<LyricVisibleItem>,
-    viewportHeightPx: Int,
-    focusFraction: Float = 0.30f
-): Int {
-    if (items.isEmpty() || viewportHeightPx <= 0) return -1
-    val focusY = viewportHeightPx * focusFraction.coerceIn(0f, 1f)
-    return items.minByOrNull { item ->
-        abs((item.offsetPx + item.sizePx / 2f) - focusY)
-    }?.index ?: -1
-}
-
 internal fun normalizeLyricTimeline(lines: List<LyricLine>): List<LyricLine> {
     return lines
         .groupBy(LyricLine::startTimeMs)

@@ -27,19 +27,4 @@ class LyricsTimelinePolicyTest {
         assertEquals(-760, resolveLyricFocusScrollOffsetPx(2_000, 0.38f))
     }
 
-    @Test
-    fun `drag focus selects visible lyric nearest thirty percent anchor`() {
-        assertEquals(
-            2,
-            resolveDraggedLyricIndex(
-                items = listOf(
-                    LyricVisibleItem(index = 1, offsetPx = 100, sizePx = 80),
-                    LyricVisibleItem(index = 2, offsetPx = 260, sizePx = 80),
-                    LyricVisibleItem(index = 3, offsetPx = 420, sizePx = 80)
-                ),
-                viewportHeightPx = 1_000
-            )
-        )
-        assertEquals(-1, resolveDraggedLyricIndex(emptyList(), viewportHeightPx = 1_000))
-    }
 }

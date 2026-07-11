@@ -90,6 +90,7 @@ private fun MusicDetailContent(
             positionMs = state.currentPositionMs,
             durationMs = state.durationMs,
             lyrics = state.lyricsDocument,
+            lyricsError = state.lyricsError,
             lyricCandidates = state.lyricCandidates.map {
                 MusicLyricCandidateUi(it.title, it.artist, it.source.name)
             },

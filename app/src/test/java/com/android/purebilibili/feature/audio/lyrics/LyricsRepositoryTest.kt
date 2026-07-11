@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class LyricsRepositoryTest {
 
@@ -61,7 +62,7 @@ class LyricsRepositoryTest {
     }
 
     @Test
-    fun `provider failures degrade to not found`() = runTest {
+    fun `provider failures are distinct from no matching lyrics`() = runTest {
         val provider = FakeLyricsProvider(
             source = LyricSource.NETEASE,
             failure = IllegalStateException("offline")
@@ -70,7 +71,47 @@ class LyricsRepositoryTest {
 
         val result = repository.load("video:BV1:2", query(), bilibiliLyrics = null)
 
+        assertEquals("Failed", result::class.simpleName)
+    }
+
+    @Test
+    fun `successful empty provider search remains not found`() = runTest {
+        val provider = FakeLyricsProvider(source = LyricSource.NETEASE)
+        val repository = LyricsRepository(listOf(provider), FakeLyricsCache())
+
+        val result = repository.load("video:BV1:2", query(), bilibiliLyrics = null)
+
         assertIs<LyricsLoadResult.NotFound>(result)
+    }
+
+    @Test
+    fun `automatic matching retries artist title videos with swapped metadata`() = runTest {
+        val expected = candidate(
+            source = LyricSource.KUGOU,
+            id = "sunny-day",
+            artist = "周杰伦"
+        ).copy(title = "晴天")
+        val provider = FakeLyricsProvider(
+            source = LyricSource.KUGOU,
+            queryResults = { lyricQuery ->
+                if (lyricQuery.title == "晴天" && lyricQuery.artist == "周杰伦") {
+                    listOf(expected)
+                } else {
+                    emptyList()
+                }
+            },
+            rawLyrics = RawLyrics("[00:01.00]故事的小黄花")
+        )
+        val repository = LyricsRepository(listOf(provider), FakeLyricsCache())
+
+        val result = repository.load(
+            cacheKey = "video:BV1:2",
+            query = LyricQuery("周杰伦", "晴天", 180_000L),
+            bilibiliLyrics = null
+        )
+
+        assertEquals("故事的小黄花", assertIs<LyricsLoadResult.Found>(result).document.lines.single().text)
+        assertTrue(provider.searchedQueries.any { it.title == "晴天" && it.artist == "周杰伦" })
     }
 
     @Test
@@ -113,15 +154,18 @@ private class FakeLyricsProvider(
     override val source: LyricSource,
     private val candidates: List<LyricCandidate> = emptyList(),
     private val rawLyrics: RawLyrics = RawLyrics(""),
-    private val failure: Throwable? = null
+    private val failure: Throwable? = null,
+    private val queryResults: ((LyricQuery) -> List<LyricCandidate>)? = null
 ) : LyricsProvider {
     var searchCalls = 0
     var fetchCalls = 0
+    val searchedQueries = mutableListOf<LyricQuery>()
 
     override suspend fun search(query: LyricQuery): List<LyricCandidate> {
         searchCalls += 1
+        searchedQueries += query
         failure?.let { throw it }
-        return candidates
+        return queryResults?.invoke(query) ?: candidates
     }
 
     override suspend fun fetch(candidate: LyricCandidate): RawLyrics {

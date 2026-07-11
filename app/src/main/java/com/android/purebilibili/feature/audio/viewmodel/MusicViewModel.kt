@@ -34,6 +34,7 @@ internal data class MusicUiState(
     val songInfo: SongInfoData? = null,
     val lyrics: String? = null,
     val lyricsDocument: LyricDocument? = null,
+    val lyricsError: String? = null,
     val lyricCandidates: List<LyricCandidate> = emptyList(),
     val isLyricsSearching: Boolean = false,
     val error: String? = null,
@@ -195,7 +196,9 @@ internal class MusicViewModel : ViewModel() {
     ) {
         lyricsJob?.cancel()
         lyricsJob = viewModelScope.launch {
-            _uiState.update { it.copy(lyricsDocument = null) }
+            _uiState.update {
+                it.copy(lyricsDocument = null, lyricsError = null, isLyricsSearching = true)
+            }
             loadLyrics(
                 cacheKey = MusicPlaybackSource.VideoAudio(bvid, cid, title).stableId,
                 query = LyricQuery(title, artist, durationMs),
@@ -241,11 +244,15 @@ internal class MusicViewModel : ViewModel() {
                 is LyricsLoadResult.Found -> _uiState.update {
                     it.copy(
                         lyricsDocument = result.document,
+                        lyricsError = null,
                         lyricCandidates = emptyList(),
                         isLyricsSearching = false
                     )
                 }
                 LyricsLoadResult.NotFound -> _uiState.update { it.copy(isLyricsSearching = false) }
+                LyricsLoadResult.Failed -> _uiState.update {
+                    it.copy(isLyricsSearching = false, lyricsError = "歌词加载失败，请检查网络后重试")
+                }
             }
         }
     }
@@ -257,6 +264,7 @@ internal class MusicViewModel : ViewModel() {
         forceRefresh: Boolean = false
     ) {
         val repository = lyricsRepository ?: return
+        _uiState.update { it.copy(isLyricsSearching = true, lyricsError = null) }
         lastLyricsCacheKey = cacheKey
         lastLyricsQuery = query
         lastBilibiliLyrics = bilibiliLyrics
@@ -266,11 +274,18 @@ internal class MusicViewModel : ViewModel() {
                 _uiState.update {
                     it.copy(
                         lyricsDocument = document,
-                        lyrics = document.lines.joinToString("\n") { line -> line.text }
+                        lyrics = document.lines.joinToString("\n") { line -> line.text },
+                        lyricsError = null,
+                        isLyricsSearching = false
                     )
                 }
             }
-            LyricsLoadResult.NotFound -> Unit
+            LyricsLoadResult.NotFound -> _uiState.update {
+                it.copy(isLyricsSearching = false, lyricsError = null)
+            }
+            LyricsLoadResult.Failed -> _uiState.update {
+                it.copy(isLyricsSearching = false, lyricsError = "歌词加载失败，请检查网络后重试")
+            }
         }
     }
 
