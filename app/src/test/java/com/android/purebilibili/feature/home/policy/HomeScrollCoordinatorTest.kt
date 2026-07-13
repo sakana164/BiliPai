@@ -87,6 +87,41 @@ class HomeScrollCoordinatorTest {
     }
 
     @Test
+    fun downwardRelease_snapsPartiallyRevealedHeaderOpen() {
+        assertEquals(
+            0f,
+            resolveHomeHeaderReleaseTarget(
+                currentHeaderOffsetPx = -72f,
+                maxHeaderCollapsePx = 120f,
+                lastScrollDeltaY = 18f,
+                canRevealHeader = false
+            )
+        )
+    }
+
+    @Test
+    fun upwardRelease_snapsHeaderClosedUnlessAlreadyAtTop() {
+        assertEquals(
+            -120f,
+            resolveHomeHeaderReleaseTarget(
+                currentHeaderOffsetPx = -72f,
+                maxHeaderCollapsePx = 120f,
+                lastScrollDeltaY = -18f,
+                canRevealHeader = false
+            )
+        )
+        assertEquals(
+            0f,
+            resolveHomeHeaderReleaseTarget(
+                currentHeaderOffsetPx = -120f,
+                maxHeaderCollapsePx = 120f,
+                lastScrollDeltaY = -18f,
+                canRevealHeader = true
+            )
+        )
+    }
+
+    @Test
     fun unchangedSettledHeaderOffset_skipsAnimation() {
         val result = resolveHomeHeaderSettleTransition(
             currentHeaderOffsetPx = -54f,

@@ -49,6 +49,27 @@ internal fun resolveHomeHeaderSettleTransition(
     )
 }
 
+internal fun resolveHomeHeaderReleaseTarget(
+    currentHeaderOffsetPx: Float,
+    maxHeaderCollapsePx: Float,
+    lastScrollDeltaY: Float,
+    canRevealHeader: Boolean,
+    revealThresholdFraction: Float = 0.35f
+): Float {
+    if (maxHeaderCollapsePx <= 0f || canRevealHeader) return 0f
+
+    val clampedOffset = currentHeaderOffsetPx.coerceIn(-maxHeaderCollapsePx, 0f)
+    val revealedFraction = 1f - (-clampedOffset / maxHeaderCollapsePx)
+    return if (
+        lastScrollDeltaY > 0f &&
+        revealedFraction >= revealThresholdFraction.coerceIn(0f, 1f)
+    ) {
+        0f
+    } else {
+        -maxHeaderCollapsePx
+    }
+}
+
 internal fun resolveHomeHeaderTransitionRunning(
     isFeedScrolling: Boolean,
     isPagerScrolling: Boolean,
