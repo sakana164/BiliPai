@@ -39,7 +39,7 @@ class VideoCardTransitionBackgroundPolicyTest {
         assertTrue(opening.scrimAlpha > 0f)
         assertTrue(opening.contentScale < 1f)
         assertEquals(0f, returning.blurRadiusPx)
-        assertEquals(0f, returning.scrimAlpha)
+        assertTrue(returning.scrimAlpha > 0f)
     }
 
     @Test
@@ -104,7 +104,7 @@ class VideoCardTransitionBackgroundPolicyTest {
     }
 
     @Test
-    fun returningFrameClearsBlurAndScrimWithoutAffectingCardLayer() {
+    fun returningFrameFadesBlurAndScrimWithSharedElementProgress() {
         val start = resolveVideoCardTransitionBackgroundFrame(
             progress = 1f,
             phase = VideoCardTransitionBackgroundPhase.RETURNING,
@@ -121,11 +121,11 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertEquals(0f, start.blurRadiusPx)
-        assertEquals(0f, middle.blurRadiusPx)
+        assertEquals(36f, start.blurRadiusPx)
+        assertTrue(middle.blurRadiusPx in 1f..<start.blurRadiusPx)
         assertEquals(0f, end.blurRadiusPx)
-        assertEquals(0f, start.scrimAlpha)
-        assertEquals(0f, middle.scrimAlpha)
+        assertTrue(start.scrimAlpha > middle.scrimAlpha)
+        assertTrue(middle.scrimAlpha > 0f)
         assertEquals(0f, end.scrimAlpha)
         assertEquals(1f, start.contentScale)
         assertEquals(1f, middle.contentScale)
@@ -133,8 +133,8 @@ class VideoCardTransitionBackgroundPolicyTest {
     }
 
     @Test
-    fun detailToDetailSourceDoesNotBlurThePreviousDetailEntry() {
-        assertFalse(
+    fun detailToDetailSourceBlursOnlyTheExactPreviousDetailEntry() {
+        assertTrue(
             shouldApplyVideoCardTransitionBackgroundToRoute(
                 entryRoute = "video/BV_A",
                 sourceRoute = "video/BV_A",
@@ -202,19 +202,19 @@ class VideoCardTransitionBackgroundPolicyTest {
         assertEquals(0f, opening.blurRadiusPx)
         assertTrue(opening.scrimAlpha > 0f)
         assertEquals(0f, returning.blurRadiusPx)
-        assertEquals(0f, returning.scrimAlpha)
+        assertTrue(returning.scrimAlpha > 0f)
     }
 
     @Test
-    fun lowProgressReturningFrameKeepsCardLayerClear() {
+    fun lowProgressReturningFrameKeepsFadingBackgroundEffect() {
         val frame = resolveVideoCardTransitionBackgroundFrame(
             progress = 0.25f,
             phase = VideoCardTransitionBackgroundPhase.RETURNING,
             sdkInt = 35
         )
 
-        assertEquals(0f, frame.blurRadiusPx)
-        assertEquals(0f, frame.scrimAlpha)
+        assertTrue(frame.blurRadiusPx > 0f)
+        assertTrue(frame.scrimAlpha > 0f)
         assertEquals(1f, frame.contentScale)
     }
 

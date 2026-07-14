@@ -154,33 +154,29 @@ class PredictiveBackBackgroundPolicyTest {
     }
 
     @Test
-    fun routeMatcherAppliesBlurOnlyToTargetBackKey() {
+    fun routeMatcherKeepsDeferredBlurModifierOnlyOnTargetBackKey() {
         assertTrue(
             shouldApplyPredictiveBackBlurToRoute(
                 entryKey = BiliPaiNavKey.MainHost,
                 targetBackKey = BiliPaiNavKey.MainHost,
-                blurProgress = 0.5f,
             )
         )
         assertTrue(
             shouldApplyPredictiveBackBlurToRoute(
                 entryKey = BiliPaiNavKey.Search,
                 targetBackKey = BiliPaiNavKey.Search,
-                blurProgress = 0.25f,
             )
         )
         assertFalse(
             shouldApplyPredictiveBackBlurToRoute(
                 entryKey = BiliPaiNavKey.Search,
                 targetBackKey = BiliPaiNavKey.MainHost,
-                blurProgress = 0.5f,
             )
         )
-        assertFalse(
+        assertTrue(
             shouldApplyPredictiveBackBlurToRoute(
                 entryKey = BiliPaiNavKey.MainHost,
                 targetBackKey = BiliPaiNavKey.MainHost,
-                blurProgress = 0f,
             )
         )
     }

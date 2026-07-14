@@ -75,7 +75,7 @@ class BiliPaiNavDisplayHostStructureTest {
     }
 
     @Test
-    fun navDisplayHostRestoresVideoCardReturnBackgroundBlurFromFullProgress() {
+    fun navDisplayHostSynchronizesVideoCardBlurForNestedDetailTransitions() {
         val source = navDisplayHostSource()
         val openingBranch = source
             .substringAfter("openedVideoDetail -> {")
@@ -89,13 +89,15 @@ class BiliPaiNavDisplayHostStructureTest {
         assertTrue(openingBranch.contains("VideoCardTransitionBackgroundPhase.HELD"))
         assertFalse(openingBranch.substringAfter("targetValue = 1f").contains("videoCardTransitionBackgroundProgress.snapTo(0f)"))
         assertFalse(openingBranch.substringAfter("targetValue = 1f").contains("VideoCardTransitionBackgroundPhase.IDLE"))
-        assertTrue(returnBranch.contains("VideoCardTransitionBackgroundPhase.IDLE"))
-        assertFalse(returnBranch.contains("VideoCardTransitionBackgroundPhase.RETURNING"))
-        assertFalse(returnBranch.contains("videoCardTransitionBackgroundProgress.snapTo(1f)"))
+        assertTrue(returnBranch.contains("VideoCardTransitionBackgroundPhase.RETURNING"))
+        assertTrue(returnBranch.contains("videoCardTransitionBackgroundProgress.snapTo(1f)"))
         assertTrue(returnBranch.contains("resolveVideoCardTransitionBackgroundReturnDurationMs"))
-        // OPENING 快速返回：performBack 通常已 pop 前归零；残留时用短 animateTo 平滑收尾。
         assertTrue(returnBranch.contains("remainingBlur"))
         assertTrue(returnBranch.contains("videoCardTransitionBackgroundProgress.animateTo("))
+        assertTrue(returnBranch.contains("parentSourceRoute"))
+        assertTrue(source.contains("safeBackStack.size > previousStack.size"))
+        assertTrue(source.contains("safeBackStack.size < previousStack.size"))
+        assertFalse(source.contains("mutableStateOf(sourceMetadata.sourceRoute)"))
     }
 
     @Test
@@ -106,6 +108,8 @@ class BiliPaiNavDisplayHostStructureTest {
         assertTrue(source.contains("resolvePredictiveBackGestureBlurProgress"))
         assertTrue(source.contains("shouldApplyPredictiveBackGestureBlur"))
         assertTrue(source.contains("LocalPredictiveBackBackgroundState provides"))
+        assertTrue(source.contains("predictiveBackBackgroundProgressProvider"))
+        assertFalse(source.contains("LaunchedEffect(gesturePredictiveBlurTarget)"))
         assertTrue(source.contains("isLightBackgroundProvider ="))
         assertTrue(source.contains("isLightBackground: Boolean"))
     }
@@ -119,28 +123,27 @@ class BiliPaiNavDisplayHostStructureTest {
 
         assertTrue(source.contains("onBack = { performBack { } }"))
         assertTrue(source.contains("onBackCompleted = performBack"))
-        assertTrue(performBackBlock.contains("finalVideoCardGestureBackProgress"))
-        assertTrue(performBackBlock.contains("resolveVideoCardTransitionBackgroundGestureBlurProgress"))
+        assertTrue(performBackBlock.contains("videoCardBackgroundProgressProvider()"))
+        assertTrue(performBackBlock.contains("videoBlurFadeJob"))
         assertTrue(performBackBlock.contains("predictiveBackHandler.onBackPressed("))
         assertTrue(performBackBlock.contains("commitTransitionCallBack()"))
         assertTrue(performBackBlock.contains("onBack()"))
     }
 
     @Test
-    fun navDisplayHostResetsVideoCardBackgroundBlurBeforePop() {
+    fun navDisplayHostFadesVideoCardBackgroundBlurAlongsidePop() {
         val source = navDisplayHostSource()
         val performBackBlock = source
             .substringAfter("val performBack: (() -> Unit) -> Unit = {")
             .substringBefore("val scopedContent:")
 
-        // pop(onBack) 之前必须先把视频卡片进行中返回(HELD/OPENING)的背景模糊归零，
-        // 避免依赖 pop 后 LaunchedEffect 才 snapTo(0)，从而消除落位首帧残留模糊。
         val preOnBack = performBackBlock.substringBefore("onBack()")
         assertTrue(preOnBack.contains("isVideoCardActiveReturn"))
         assertTrue(preOnBack.contains("VideoCardTransitionBackgroundPhase.HELD"))
-        // OPENING 快速返回也需在 pop 前归零，落位即清晰。
         assertTrue(preOnBack.contains("VideoCardTransitionBackgroundPhase.OPENING"))
-        assertTrue(preOnBack.contains("videoCardTransitionBackgroundProgress.snapTo(0f)"))
+        assertTrue(preOnBack.contains("VideoCardTransitionBackgroundPhase.RETURNING"))
+        assertTrue(preOnBack.contains("emphasizedEnterTween("))
+        assertFalse(preOnBack.contains("videoCardTransitionBackgroundProgress.snapTo(0f)"))
     }
 
     @Test

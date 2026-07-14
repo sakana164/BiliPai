@@ -25,9 +25,7 @@ private const val VIDEO_CARD_TRANSITION_LIGHT_REDUCED_OPENING_SCRIM_ALPHA = 0.06
 private const val VIDEO_CARD_TRANSITION_MAX_CONTENT_SCALE_REDUCTION = 0.045f
 private val VIDEO_CARD_TRANSITION_LIGHT_SCRIM_TINT = Color(0xFF8E8E93)
 
-// 开场背景虚化时长与共享元素 morph(标准 460ms)大致同步，
-// 略短以便卡片落位前背景已完成虚化，避免 160ms 内 blur 一闪就到位的突兀感。
-internal const val VIDEO_CARD_TRANSITION_BACKGROUND_FORWARD_DURATION_MS = 300
+// 开场与返回时长由共享元素速度设置提供；取消仍固定为短恢复动画。
 internal const val VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS = 460
 internal const val VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS = 160
 
@@ -47,6 +45,7 @@ internal data class VideoCardTransitionBackgroundFrame(
 
 internal data class VideoCardTransitionBackgroundState(
     val progressProvider: () -> Float = { 0f },
+    val sourceRouteProvider: () -> String? = { null },
     val phaseProvider: () -> VideoCardTransitionBackgroundPhase = {
         VideoCardTransitionBackgroundPhase.IDLE
     },
@@ -114,8 +113,6 @@ internal fun resolveVideoCardTransitionBackgroundFrame(
     // 低端/省电/无障碍减弱动画(Reduced)时跳过整帧 GPU 实时模糊，仅保留 scrim + 轻微缩放作为回退。
     val rawBlurRadiusPx = if (
         phase != VideoCardTransitionBackgroundPhase.IDLE &&
-        // RETURNING 时首页层已含回收中的共享元素卡片，全屏 blur 会让落位封面发糊。
-        phase != VideoCardTransitionBackgroundPhase.RETURNING &&
         motionTier != MotionTier.Reduced &&
         sdkInt >= Build.VERSION_CODES.S
     ) {
@@ -133,7 +130,11 @@ internal fun resolveVideoCardTransitionBackgroundFrame(
                     isLightBackground = isLightBackground,
                     motionTier = motionTier,
                 )
-            VideoCardTransitionBackgroundPhase.RETURNING -> 0f
+            VideoCardTransitionBackgroundPhase.RETURNING ->
+                resolveVideoCardTransitionReturningScrimAlpha(
+                    blurStrength = blurStrength,
+                    isLightBackground = isLightBackground,
+                )
             VideoCardTransitionBackgroundPhase.IDLE,
             VideoCardTransitionBackgroundPhase.HELD -> 0f
         },
@@ -217,12 +218,6 @@ internal fun shouldApplyVideoCardTransitionBackgroundToRoute(
 ): Boolean {
     val normalizedEntryRoute = normalizeVideoCardTransitionRoute(entryRoute) ?: return false
     val normalizedSourceRoute = normalizeVideoCardTransitionRoute(sourceRoute) ?: return false
-    if (
-        normalizedEntryRoute.startsWith("video/") &&
-        normalizedSourceRoute.startsWith("video/")
-    ) {
-        return false
-    }
     if (!isVideoCardReturnTargetRoute(normalizedSourceRoute)) return false
     if (normalizedEntryRoute == normalizedSourceRoute) return true
     return normalizedEntryRoute == "main_host" &&

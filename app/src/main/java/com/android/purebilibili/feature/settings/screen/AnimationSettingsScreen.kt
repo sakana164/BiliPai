@@ -244,7 +244,7 @@ fun AnimationSettingsContent(
                         IOSDivider()
                         IOSSlidingSegmentedSetting(
                             title = "共享元素速度：${state.videoSharedTransitionSpeed.label}",
-                            subtitle = "先快后慢的统一曲线；自定义只调整时长",
+                            subtitle = "Material 强调曲线；自定义只调整时长",
                             options = sharedTransitionSpeedOptions,
                             selectedValue = state.videoSharedTransitionSpeed,
                             onSelectionChange = viewModel::setVideoSharedTransitionSpeed

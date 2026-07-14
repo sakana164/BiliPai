@@ -1,5 +1,6 @@
 package com.android.purebilibili.core.ui.transition
 
+import com.android.purebilibili.core.ui.motion.AppMotionEasing
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,6 +9,11 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class VideoSharedTransitionPolicyTest {
+
+    @Test
+    fun videoSharedTransitionUsesMaterialEmphasizedEnterEasing() {
+        assertSame(AppMotionEasing.EmphasizedEnter, resolveVideoCardSharedTransitionEasing())
+    }
 
     @Test
     fun coverSharedTransition_enabled_whenTransitionAndScopesAreReady() {

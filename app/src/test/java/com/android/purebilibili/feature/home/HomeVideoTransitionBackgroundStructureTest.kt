@@ -34,6 +34,8 @@ class HomeVideoTransitionBackgroundStructureTest {
         assertTrue(source.contains("videoCardTransitionBackgroundEffect("))
         assertTrue(source.contains("shouldApplyVideoCardTransitionBackgroundToRoute("))
         assertTrue(source.contains("RenderNavigationContent(key)"))
+        assertTrue(source.contains("sourceRoute = backgroundState.sourceRouteProvider()"))
+        assertFalse(source.contains("val predictiveBlurProgress = predictiveBackState.progressProvider()"))
     }
 
     private fun homeScreenSource(): String {

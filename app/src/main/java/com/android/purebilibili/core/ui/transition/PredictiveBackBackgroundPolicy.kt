@@ -122,9 +122,7 @@ internal fun shouldApplyPredictiveBackGestureBlur(
 internal fun shouldApplyPredictiveBackBlurToRoute(
     entryKey: BiliPaiNavKey,
     targetBackKey: BiliPaiNavKey?,
-    blurProgress: Float,
 ): Boolean {
-    if (blurProgress <= 0.001f) return false
     return targetBackKey != null && entryKey == targetBackKey
 }
 

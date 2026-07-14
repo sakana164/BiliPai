@@ -99,6 +99,7 @@ import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSo
 import com.android.purebilibili.core.ui.transition.LocalVideoCardTransitionBackgroundState
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionSpeedSettings
+import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionDurationMillis
 import com.android.purebilibili.core.ui.transition.predictiveBackBackgroundEffect
 import com.android.purebilibili.core.ui.transition.shouldApplyPredictiveBackBlurToRoute
 import com.android.purebilibili.core.ui.transition.shouldApplyVideoCardTransitionBackgroundToRoute
@@ -394,12 +395,21 @@ fun AppNavigation(
         SettingsManager.isLaunchToPortraitFeedOnStartupSync(context)
     }
 
+    val videoSharedTransitionSpeedSettings = remember(
+        homeSettings.videoSharedTransitionSpeed,
+        homeSettings.videoSharedTransitionCustomDurationMillis,
+    ) {
+        VideoSharedTransitionSpeedSettings(
+            speed = homeSettings.videoSharedTransitionSpeed,
+            customDurationMillis = homeSettings.videoSharedTransitionCustomDurationMillis,
+        )
+    }
+    val videoSharedTransitionDurationMillis = remember(videoSharedTransitionSpeedSettings) {
+        resolveVideoSharedTransitionDurationMillis(videoSharedTransitionSpeedSettings)
+    }
     SharedTransitionProvider(enabled = cardTransitionEnabled) {
         CompositionLocalProvider(
-            LocalVideoSharedTransitionSpeedSettings provides VideoSharedTransitionSpeedSettings(
-                speed = homeSettings.videoSharedTransitionSpeed,
-                customDurationMillis = homeSettings.videoSharedTransitionCustomDurationMillis
-            )
+            LocalVideoSharedTransitionSpeedSettings provides videoSharedTransitionSpeedSettings
         ) {
         // [新增] 全局底栏状态管理
         var navigation3BackStack by remember(startDestination, launchToPortraitFeedOnStartupAtInit) {
@@ -1337,17 +1347,15 @@ fun AppNavigation(
                     val entryRoute = key.toLegacyRoute()
                     val backgroundState = LocalVideoCardTransitionBackgroundState.current
                     val predictiveBackState = LocalPredictiveBackBackgroundState.current
-                    val predictiveBlurProgress = predictiveBackState.progressProvider()
                     val shouldApplyBackground = cardTransitionEnabled &&
                         shouldApplyVideoCardTransitionBackgroundToRoute(
                             entryRoute = entryRoute,
-                            sourceRoute = navigation3SourceMetadata.sourceRoute,
+                            sourceRoute = backgroundState.sourceRouteProvider(),
                             activeMainHostRoute = activeBottomTabRoute
                         )
                     val shouldApplyPredictiveBlur = shouldApplyPredictiveBackBlurToRoute(
                         entryKey = key,
                         targetBackKey = predictiveBackState.targetKeyProvider(),
-                        blurProgress = predictiveBlurProgress,
                     )
                     val routeModifier = Modifier
                         .fillMaxSize()
@@ -2767,6 +2775,7 @@ fun AppNavigation(
                 BiliPaiNavDisplayHost(
                     backStack = navigation3BackStack,
                     cardTransitionEnabled = cardTransitionEnabled,
+                    videoSharedTransitionDurationMillis = videoSharedTransitionDurationMillis,
                     predictiveBackEnabled = predictiveBackEnabled,
                     predictiveBackAnimationStyle = predictiveBackAnimationStyle,
                     predictiveBackExitDirectionOverride = predictiveBackExitDirection,
