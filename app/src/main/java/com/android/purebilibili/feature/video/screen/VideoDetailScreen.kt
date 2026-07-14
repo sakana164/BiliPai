@@ -290,8 +290,8 @@ internal fun resolveForceCoverOnlyForReturn(
     transitionEnabled: Boolean = true,
     isCardReturnExitInProgress: Boolean = false
 ): Boolean {
-    if (!transitionEnabled) return false
-    return forceCoverOnlyOnReturn || isCardReturnExitInProgress
+    if (!transitionEnabled || isCardReturnExitInProgress) return false
+    return forceCoverOnlyOnReturn
 }
 
 internal fun shouldUseReturningVideoDetailVisualState(
@@ -1008,6 +1008,7 @@ private fun PortraitInlineVideoPlayerHost(
     onNavigateToAudioMode: () -> Unit,
     forceCoverOnly: Boolean,
     liveBackPreview: Boolean,
+    useTextureSurfaceForNavigation: Boolean,
     allowLivePlayerSharedElement: Boolean,
     sourceRouteForSharedElement: String?,
     suppressSubtitleOverlay: Boolean,
@@ -1079,6 +1080,7 @@ private fun PortraitInlineVideoPlayerHost(
             onDownloadAudio = { viewModel.downloadAudio(context) },
             forceCoverOnly = forceCoverOnly,
             liveBackPreview = liveBackPreview,
+            useTextureSurfaceForNavigation = useTextureSurfaceForNavigation,
             allowLivePlayerSharedElement = allowLivePlayerSharedElement,
             sourceRouteForSharedElement = sourceRouteForSharedElement,
             suppressSubtitleOverlay = suppressSubtitleOverlay,
@@ -1823,8 +1825,6 @@ fun VideoDetailScreen(
             if (isActuallyLeaving) return@action
             isActuallyLeaving = true // 标记确实是用户通过点击或返回键离开
             isScreenActive = false  // 标记页面正在退出
-            forceCoverOnlyOnReturn = true
-            // 进入返回流程时立即标记，确保封面优先接管。
             latestOnMarkReturningFromDetail()
             // 🎯 通知小窗管理器这是用户主动导航离开（用于控制后台音频）
             miniPlayerManager?.markLeavingByNavigation(expectedBvid = currentBvid)
@@ -3197,6 +3197,7 @@ fun VideoDetailScreen(
                         showExternalPlaylistQueueSheet = true
                     },
                     forceCoverOnly = forceCoverOnlyForReturn,
+                    useTextureSurfaceForNavigation = transitionEnabled,
                     allowLivePlayerSharedElement = true,
                     sourceRouteForSharedElement = sourceRouteForSharedElement,
                     suppressSubtitleOverlay = shouldSuppressSubtitleOverlay,
@@ -3693,6 +3694,7 @@ fun VideoDetailScreen(
                                 },
                                 forceCoverOnly = forceCoverOnlyForReturn,
                                 liveBackPreview = keepLoadedContentForBackPreview,
+                                useTextureSurfaceForNavigation = transitionEnabled,
                                 allowLivePlayerSharedElement = true,
                                 sourceRouteForSharedElement = sourceRouteForSharedElement,
                                 suppressSubtitleOverlay = shouldSuppressSubtitleOverlay,

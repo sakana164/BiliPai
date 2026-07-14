@@ -450,6 +450,7 @@ fun VideoPlayerSection(
     onFavoritePlaylistClick: () -> Unit = {},
     forceCoverOnly: Boolean = false,
     liveBackPreview: Boolean = false,
+    useTextureSurfaceForNavigation: Boolean = false,
     allowLivePlayerSharedElement: Boolean = true,
     sourceRouteForSharedElement: String? = null,
     suppressSubtitleOverlay: Boolean = false,
@@ -2462,7 +2463,8 @@ fun VideoPlayerSection(
                         val useTextureSurface = shouldUseTextureSurfaceForFlip(
                             isFlippedHorizontal = isFlippedHorizontal,
                             isFlippedVertical = isFlippedVertical,
-                            liveBackPreview = liveBackPreview
+                            liveBackPreview = liveBackPreview,
+                            navigationTransformEnabled = useTextureSurfaceForNavigation
                         )
                         val basePlayerView = if (useTextureSurface) {
                             LayoutInflater.from(ctx)

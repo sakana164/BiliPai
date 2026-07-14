@@ -740,9 +740,13 @@ internal fun resolveGesturePercentDigitChangeMask(
 internal fun shouldUseTextureSurfaceForFlip(
     isFlippedHorizontal: Boolean,
     isFlippedVertical: Boolean,
-    liveBackPreview: Boolean = false
+    liveBackPreview: Boolean = false,
+    navigationTransformEnabled: Boolean = false
 ): Boolean {
-    return isFlippedHorizontal || isFlippedVertical || liveBackPreview
+    return isFlippedHorizontal ||
+        isFlippedVertical ||
+        liveBackPreview ||
+        navigationTransformEnabled
 }
 
 internal fun shouldEnableLivePlayerSharedElement(

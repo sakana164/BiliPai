@@ -448,6 +448,7 @@ private fun CinemaStagePlayer(
                 uiState = uiState,
                 isFullscreen = false,
                 isInPipMode = isInPipMode,
+                useTextureSurfaceForNavigation = transitionEnabled,
                 onToggleFullscreen = onToggleFullscreen,
                 onQualityChange = { qid -> viewModel.changeQuality(qid) },
                 onBack = onBack,
