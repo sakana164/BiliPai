@@ -91,11 +91,15 @@ import com.android.purebilibili.core.ui.animation.DampedDragAnimationState
 import com.android.purebilibili.core.ui.animation.rememberDampedDragAnimationState
 import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.android.purebilibili.feature.home.components.liquid.lens
+import com.android.purebilibili.feature.home.components.liquid.rememberCombinedBackdrop
+import com.android.purebilibili.feature.home.components.liquid.vibrancy
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.blur
+import top.yukonga.miuix.kmp.blur.drawBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -659,7 +663,7 @@ internal fun Modifier.homeTopBottomBarMatchedSurface(
         blurEnabled = isBlurEnabled || isGlassEnabled,
         darkTheme = isDarkTheme
     )
-    // Match floating bottom-bar shell tint exactly (same preset + glass material policy).
+    // v9.9.7 / floating-dock shell recipe (do not over-thin — reuse lighten made chips look solid gray).
     val containerColor = resolveAndroidNativeFloatingBottomBarContainerColor(
         surfaceColor = MaterialTheme.colorScheme.surfaceContainer,
         tuning = tuning,
@@ -668,7 +672,7 @@ internal fun Modifier.homeTopBottomBarMatchedSurface(
         blurIntensity = blurIntensity,
         liquidGlassPreset = liquidGlassPreset
     )
-    this.kernelSuFloatingDockSurface(
+    this.kernelSuMiuixFloatingDockSurface(
         shape = shape,
         backdrop = backdrop,
         containerColor = containerColor,
@@ -1000,13 +1004,7 @@ private fun LightweightHomeTopTabs(
             pressProgress = topTabPressProgress
         )
         // Swipe/press lens progress so theme-tinted glass follows the capsule.
-        val topTabIndicatorLensSpec = resolveBottomBarBackdropPresetIndicatorLens(
-            progress = resolveSharedLiquidIndicatorLensProgress(
-                pressProgress = topTabPressProgress,
-                motionProgress = topTabMotionProgress,
-                isDragging = topTabDragActive
-            )
-        )
+        // Height-scaled later once dockIndicatorHeight is known (same as segmented reuse).
         val topTabIndicatorHighlightAlpha = resolveBottomBarLiquidGlassHighlightAlpha(
             motionProgress = topTabBackdropPresetProgress.indicatorProgress
         )
@@ -1040,6 +1038,25 @@ private fun LightweightHomeTopTabs(
             minHeightDp = resolveTopTabVisualTuning().floatingIndicatorHeightDp,
             indicatorWidthDp = md3LiquidCapsuleWidth.value
         ).dp
+        val topTabLensProgress = resolveSharedLiquidIndicatorLensProgress(
+            pressProgress = topTabPressProgress,
+            motionProgress = topTabMotionProgress,
+            isDragging = topTabDragActive
+        )
+        val topTabIndicatorLensSpec = resolveLiquidReuseIndicatorLensSpec(
+            progress = topTabLensProgress,
+            indicatorHeightDp = dockIndicatorHeight.value,
+            chromeContext = LiquidReuseChromeContext.TOP_TAB,
+        )
+        val topTabCaptureLensProgress = resolveSharedLiquidIndicatorCaptureLensProgress(
+            lensProgress = topTabLensProgress,
+            isDragging = topTabDragActive
+        )
+        val topTabCaptureLensSpec = resolveLiquidReuseCaptureLensSpec(
+            progress = topTabCaptureLensProgress,
+            indicatorHeightDp = dockIndicatorHeight.value,
+            chromeContext = LiquidReuseChromeContext.TOP_TAB,
+        )
         val md3LiquidCapsuleTranslationXPx by remember(
             topTabIndicatorPosition,
             itemWidth,
@@ -1102,7 +1119,13 @@ private fun LightweightHomeTopTabs(
             hasBackdrop = backdrop != null,
             indicatorVisualPolicy = topTabIndicatorVisualPolicy
         )
-        val topTabContentBackdrop = rememberLayerBackdrop()
+        // v9.9.7: indicator contentBackdrop = export capture only (BILIPAI samples contentBackdrop).
+        // Miuix OOB-blacks empty LayerBackdrop — paint stable chrome surface under export glyphs.
+        val topTabExportSurfaceColor = AppSurfaceTokens.chromeBackground()
+        val topTabContentBackdrop = rememberLayerBackdrop(onDraw = {
+            drawRect(topTabExportSurfaceColor)
+            drawContent()
+        })
         val effectiveTopTabIndicatorContentBackdrop: Backdrop? = when {
             !shouldRenderTopTabIndicatorBackdrop ||
                 !topTabIndicatorBackdropPolicy.useIndicatorBackdrop -> null
@@ -1110,15 +1133,15 @@ private fun LightweightHomeTopTabs(
                 rememberCombinedBackdrop(backdrop, topTabContentBackdrop)
             else -> topTabContentBackdrop
         }
-        val topTabLensProgress = resolveSharedLiquidIndicatorLensProgress(
-            pressProgress = topTabPressProgress,
-            motionProgress = topTabMotionProgress,
-            isDragging = topTabDragActive
-        )
-        val useTopTabGlassColorPath = resolveSharedLiquidIndicatorUseGlassColorPath(
-            liquidGlassEnabled = shouldUseLiquidGlassIndicator,
-            lensProgress = topTabLensProgress
-        )
+        // Actual sample source for BILIPAI_TUNED (matches v9.9.7 Kyant path).
+        val topTabIndicatorContentBackdrop: Backdrop? =
+            if (!shouldRenderTopTabIndicatorBackdrop ||
+                !topTabIndicatorBackdropPolicy.useIndicatorBackdrop
+            ) {
+                null
+            } else {
+                topTabContentBackdrop
+            }
         val topTabThemeColor = MaterialTheme.colorScheme.primary
         val topTabExportTintColor = resolveAndroidNativeExportTintColor(
             themeColor = topTabThemeColor,
@@ -1235,6 +1258,27 @@ private fun LightweightHomeTopTabs(
                             .graphicsLayer {
                                 // Only mirror LazyRow content origin (padding - scroll). No extra panel offset.
                                 translationX = topTabHorizontalPaddingPx - topTabListScrollOffsetPx
+                            }
+                            .run {
+                                if (backdrop != null && shouldUseLiquidGlassIndicator) {
+                                    drawBackdrop(
+                                        backdrop = backdrop,
+                                        shape = { resolveSharedBottomBarCapsuleShape() },
+                                        effects = {
+                                            // Dock export capture: edge lens only (no depth/dispersion).
+                                            vibrancy()
+                                            blur(4.dp.toPx(), 4.dp.toPx())
+                                            if (topTabCaptureLensProgress > 0.001f) {
+                                                lens(
+                                                    refractionHeight = topTabCaptureLensSpec.refractionHeightDp.dp.toPx(),
+                                                    refractionAmount = topTabCaptureLensSpec.refractionAmountDp.dp.toPx(),
+                                                )
+                                            }
+                                        }
+                                    )
+                                } else {
+                                    this
+                                }
                             },
                         contentAlignment = Alignment.CenterStart
                     ) {
@@ -1274,7 +1318,7 @@ private fun LightweightHomeTopTabs(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .zIndex(0f),
+                        .zIndex(LIQUID_REUSE_FOREGROUND_Z_INDEX),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start,
                     contentPadding = topTabContentPadding
@@ -1331,11 +1375,9 @@ private fun LightweightHomeTopTabs(
                                     shouldUseMd3LiquidCapsule ||
                                     shouldUseMd3DockBackedCapsule
                             ),
-                            colorMode = if (useTopTabGlassColorPath) {
-                                TopTabLiquidColorMode.GLASS_VISIBLE
-                            } else {
-                                TopTabLiquidColorMode.NORMAL
-                            },
+                            // Keep selected-color interpolation visible above the glass. The hidden
+                            // export remains an enhancement, never the only readable content path.
+                            colorMode = TopTabLiquidColorMode.NORMAL,
                             modifier = gestureItemModifier,
                             onClick = {
                                 performHomeTopBarTap(haptic = haptic, onClick = {
@@ -1362,7 +1404,7 @@ private fun LightweightHomeTopTabs(
                             itemWidthDp = itemWidth.value,
                             horizontalGapDp = dockIndicatorHorizontalGap.value
                         ).dp
-                        KernelSuBottomBarIndicatorLayer(
+                        KernelSuMiuixBottomBarIndicatorLayer(
                             visible = true,
                             dockContentAlpha = 1f,
                             indicatorTranslationXPx = resolveTopTabDockIndicatorOffsetPx(
@@ -1372,19 +1414,18 @@ private fun LightweightHomeTopTabs(
                                 }
                             ),
                             indicatorPanelOffsetPx = 0f,
-                            indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
                             indicatorWidth = indicatorWidth,
                             indicatorHeight = dockIndicatorHeight,
                             shellShape = capsuleShape,
                             liquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
-                            // Prefer export capture so capsule shows theme-tinted glyphs.
-                            contentBackdrop = topTabContentBackdrop,
+                            // v9.9.7: BILIPAI samples contentBackdrop = export capture (glyphs).
+                            contentBackdrop = topTabIndicatorContentBackdrop,
                             backdrop = effectiveTopTabIndicatorContentBackdrop ?: backdrop,
                             indicatorLensSpec = topTabIndicatorLensSpec,
                             effectivePressProgress = topTabLensProgress,
                             indicatorIdleSurfaceColor = resolveIosTopTabCapsuleContainerColor(
                                 isDarkTheme = isDarkTheme,
-                                selectionFraction = 1f
+                                selectionFraction = 1f,
                             ),
                             glassEnabled = shouldUseLiquidGlassIndicator,
                             indicatorEffectsEnabled = shouldUseLiquidGlassIndicator,
@@ -1394,27 +1435,25 @@ private fun LightweightHomeTopTabs(
                             indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                             indicatorLayerScaleTransform = null,
                             bottomBarMotionSpec = topTabDragMotionSpec,
-                            isDarkTheme = isDarkTheme
+                            isDarkTheme = isDarkTheme,
                         )
                     }
                     if (shouldUseMd3DockBackedCapsule) {
-                        KernelSuBottomBarIndicatorLayer(
+                        KernelSuMiuixBottomBarIndicatorLayer(
                             visible = true,
                             dockContentAlpha = 1f,
                             indicatorTranslationXPx = md3LiquidCapsuleTranslationXPx,
                             indicatorPanelOffsetPx = 0f,
-                            indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
                             indicatorWidth = md3LiquidCapsuleWidth,
                             indicatorHeight = dockIndicatorHeight,
                             shellShape = resolveSharedBottomBarCapsuleShape(),
                             liquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
-                            // Prefer export capture so capsule shows theme-tinted glyphs.
-                            contentBackdrop = topTabContentBackdrop,
+                            contentBackdrop = topTabIndicatorContentBackdrop,
                             backdrop = effectiveTopTabIndicatorContentBackdrop ?: backdrop,
                             indicatorLensSpec = topTabIndicatorLensSpec,
                             effectivePressProgress = topTabLensProgress,
                             indicatorIdleSurfaceColor = resolveAndroidNativeIdleIndicatorSurfaceColor(
-                                darkTheme = isDarkTheme
+                                darkTheme = isDarkTheme,
                             ),
                             glassEnabled = true,
                             motionProgress = topTabMotionProgress,
@@ -1423,23 +1462,21 @@ private fun LightweightHomeTopTabs(
                             indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                             indicatorLayerScaleTransform = null,
                             bottomBarMotionSpec = topTabDragMotionSpec,
-                            isDarkTheme = isDarkTheme
+                            isDarkTheme = isDarkTheme,
                         )
                     }
                     if (shouldUseMd3LiquidCapsule) {
                         val capsuleShape = resolveSharedBottomBarCapsuleShape()
-                        KernelSuBottomBarIndicatorLayer(
+                        KernelSuMiuixBottomBarIndicatorLayer(
                             visible = true,
                             dockContentAlpha = 1f,
                             indicatorTranslationXPx = md3LiquidCapsuleTranslationXPx,
                             indicatorPanelOffsetPx = 0f,
-                            indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
                             indicatorWidth = md3LiquidCapsuleWidth,
                             indicatorHeight = dockIndicatorHeight,
                             shellShape = capsuleShape,
                             liquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
-                            // Prefer export capture so capsule shows theme-tinted glyphs.
-                            contentBackdrop = topTabContentBackdrop,
+                            contentBackdrop = topTabIndicatorContentBackdrop,
                             backdrop = effectiveTopTabIndicatorContentBackdrop ?: backdrop,
                             indicatorLensSpec = topTabIndicatorLensSpec,
                             effectivePressProgress = topTabLensProgress,
@@ -1455,7 +1492,7 @@ private fun LightweightHomeTopTabs(
                             indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                             indicatorLayerScaleTransform = null,
                             bottomBarMotionSpec = topTabDragMotionSpec,
-                            isDarkTheme = isDarkTheme
+                            isDarkTheme = isDarkTheme,
                         )
                     }
                 }
@@ -1538,8 +1575,6 @@ private fun LightweightHomeTopTabs(
 internal enum class TopTabLiquidColorMode {
     /** Normal selected/unselected lerp. */
     NORMAL,
-    /** Visible layer while glass is sliding — neutral so theme color lives under glass. */
-    GLASS_VISIBLE,
     /** Hidden export layer monochrome glyphs before theme ColorFilter.tint. */
     GLASS_EXPORT
 }
@@ -1596,7 +1631,6 @@ private fun LightweightTopTabItem(
     }
     val contentColor = when (colorMode) {
         TopTabLiquidColorMode.GLASS_EXPORT -> exportMonochromeColor
-        TopTabLiquidColorMode.GLASS_VISIBLE -> unselectedColor
         TopTabLiquidColorMode.NORMAL -> androidx.compose.ui.graphics.lerp(
             unselectedColor,
             selectedColor,
@@ -1612,7 +1646,6 @@ private fun LightweightTopTabItem(
                 selectionFraction = selectionFraction
             )
         renderer == HomeTopTabRenderer.MD3 -> Color.Transparent
-        colorMode == TopTabLiquidColorMode.GLASS_VISIBLE -> Color.Transparent
         else -> colorScheme.secondaryContainer.copy(alpha = 0.70f * selectionFraction)
     }
     val itemShape = when {

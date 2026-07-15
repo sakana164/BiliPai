@@ -23,7 +23,9 @@ class BottomBarMiuixStructureTest {
         assertTrue(source.contains("private fun rememberKernelSuBottomBarSearchLayoutState("))
         assertTrue(source.contains("private fun KernelSuBottomBarShell("))
         assertTrue(source.contains("KernelSuMiuixBottomBarIndicatorLayer("))
-        assertTrue(source.contains("internal fun BoxScope.KernelSuBottomBarIndicatorLayer("))
+        assertTrue(source.contains("internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer("))
+        assertFalse(source.contains("internal fun BoxScope.KernelSuBottomBarIndicatorLayer("))
+        assertFalse(source.contains("com.kyant.backdrop"))
         assertTrue(source.contains("private fun KernelSuBottomBarSearchSlot("))
         assertTrue(source.contains("KernelSuBottomBarInputLayer("))
         assertTrue(source.contains("uiSkinDecoration: BottomBarUiSkinDecoration? = null"))
@@ -57,9 +59,7 @@ class BottomBarMiuixStructureTest {
         assertTrue(kernelSuRendererSource.contains("resolveSharedBottomBarCapsuleShape("))
         assertTrue(kernelSuRendererSource.contains(".kernelSuMiuixFloatingDockSurface("))
         assertTrue(kernelSuRendererSource.contains("blurRadius = tuning.shellBlurRadiusDp.dp"))
-        assertTrue(source.contains("BottomBarGlassMaterialSpec"))
-        assertTrue(source.contains("resolveBottomBarGlassMaterialSpec("))
-        assertTrue(source.contains("resolveBottomBarGlassMaterialContainerColor("))
+        // Glass material policy lives in BottomBarGlassMaterialPolicy.kt; Miuix dock no longer embeds Kyant material specs.
         assertTrue(kernelSuRendererSource.contains("resolveKernelSuBottomBarShellColor("))
         assertTrue(kernelSuRendererSource.contains("containerColor = containerColor"))
         assertTrue(kernelSuRendererSource.contains("blurEnabled = shellBlurEnabled"))
@@ -174,7 +174,9 @@ class BottomBarMiuixStructureTest {
             )
         )
         assertTrue(kernelSuRendererSource.contains("scaleX = edgeCompressionScaleX"))
-        assertTrue(kernelSuRendererSource.contains("chromaticAberration = 0.5f"))
+        // Default dock indicator chroma is 0.5f; in-content reuse can pass 0f to avoid OOB black.
+        assertTrue(kernelSuRendererSource.contains("lensChromaticAberration: Float = 0.5f"))
+        assertTrue(kernelSuRendererSource.contains("chromaticAberration = chromatic"))
         assertTrue(
             kernelSuRendererSource.contains(
                 "val backdropPresetProgress = resolveBottomBarEffectiveBackdropPresetProgress("

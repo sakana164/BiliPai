@@ -381,19 +381,25 @@ class TopTabStylePolicyTest {
         )
         val bottomBarIndicatorBlock = sourceText(
             "app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt"
-        ).substringAfter("internal fun BoxScope.KernelSuBottomBarIndicatorLayer(")
+        ).substringAfter("internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(")
             .substringBefore("@Composable\nprivate fun BoxScope.KernelSuBottomBarInputLayer(")
 
         assertTrue(gestureBlock.contains("awaitHorizontalTouchSlopOrCancellation"))
         assertFalse(gestureBlock.contains("awaitLongPressOrCancellation"))
-        assertTrue(iosIndicatorBlock.contains("KernelSuBottomBarIndicatorLayer("))
-        assertEquals(1, iosIndicatorBlock.split("KernelSuBottomBarIndicatorLayer(").size - 1)
+        assertTrue(iosIndicatorBlock.contains("KernelSuMiuixBottomBarIndicatorLayer("))
+        assertEquals(1, iosIndicatorBlock.split("KernelSuMiuixBottomBarIndicatorLayer(").size - 1)
         assertTrue(iosIndicatorBlock.contains("glassEnabled = shouldUseLiquidGlassIndicator"))
         assertTrue(iosIndicatorBlock.contains("indicatorEffectsEnabled = shouldUseLiquidGlassIndicator"))
         assertFalse(iosIndicatorBlock.contains(".fillMaxHeight()"))
         assertFalse(source.contains("shouldForceDragLiquidGlassIndicator"))
         assertFalse(chromeSource.contains("Modifier.clip(tabShape)"))
-        assertTrue(bottomBarIndicatorBlock.contains("background(\n                        indicatorIdleSurfaceColor,"))
+        assertTrue(
+            bottomBarIndicatorBlock.contains("background(") &&
+                (
+                    bottomBarIndicatorBlock.contains("indicatorIdleSurfaceColor") ||
+                        bottomBarIndicatorBlock.contains("resolveAndroidNativeIdleIndicatorSurfaceColor(")
+                    )
+        )
     }
 
     @Test
