@@ -36,6 +36,7 @@ class VideoDetailMiniPlayerSyncStructureTest {
             .substringAfter("LaunchedEffect(uiState, isVisible)")
             .substringBefore("//  弹幕加载逻辑已移至 VideoPlayerState")
 
+        assertTrue(playerStateBlock.contains("cid = playbackTargetCid"))
         assertTrue(playerStateBlock.contains("playbackSessionActive = isVisible"))
         assertTrue(syncEffect.contains("miniPlayerManager != null && shouldCacheMiniPlayer && isVisible"))
     }

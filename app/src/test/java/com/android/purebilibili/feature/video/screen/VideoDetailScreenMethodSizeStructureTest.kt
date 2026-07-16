@@ -49,7 +49,7 @@ class VideoDetailScreenMethodSizeStructureTest {
             .substringAfter("fun VideoDetailScreen(")
             .substringBefore("@OptIn(ExperimentalHazeMaterialsApi::class)")
 
-        assertTrue(videoDetailBody.contains("rememberInlinePortraitPlayerCollapseState()"))
+        assertTrue(videoDetailBody.contains("rememberInlinePortraitPlayerCollapseState(currentBvid)"))
         assertFalse(videoDetailBody.contains("keepPlayerExpandedUntilNextScroll"))
         assertFalse(videoDetailBody.contains("commentFirstVisibleItemIndex"))
         assertFalse(videoDetailBody.contains("commentFirstVisibleItemScrollOffset"))

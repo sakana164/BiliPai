@@ -1027,6 +1027,18 @@ internal fun shouldSyncMainPlayerToInternalBvid(
     return resolvedLoadedCid != targetCid
 }
 
+internal fun resolveVideoDetailPlaybackTargetCid(
+    routeBvid: String,
+    routeCid: Long,
+    currentBvid: String,
+    currentBvidCid: Long
+): Long {
+    currentBvidCid.takeIf { it > 0L }?.let { return it }
+    return routeCid.takeIf {
+        it > 0L && currentBvid.trim() == routeBvid.trim()
+    } ?: 0L
+}
+
 internal fun resolveAutoPlayOverrideForInternalBvidSync(
     forceAutoPlay: Boolean
 ): Boolean? {
@@ -1337,6 +1349,12 @@ fun VideoDetailScreen(
     // 🔄 [Seamless Playback] Internal BVID state to support seamless switching in portrait mode
     var currentBvid by rememberSaveable(bvid) { mutableStateOf(bvid) }
     var currentBvidCid by rememberSaveable { mutableLongStateOf(0L) }
+    val playbackTargetCid = resolveVideoDetailPlaybackTargetCid(
+        routeBvid = bvid,
+        routeCid = cid,
+        currentBvid = currentBvid,
+        currentBvidCid = currentBvidCid
+    )
     val introListState = rememberSaveable(currentBvid, saver = LazyListState.Saver) {
         LazyListState()
     }
@@ -1355,7 +1373,7 @@ fun VideoDetailScreen(
         hasSharedTransitionScope = entryRootSharedTransitionScope != null,
         hasAnimatedVisibilityScope = entryRootAnimatedVisibilityScope != null
     )
-    val reuseFromMiniPlayerAtEntry = remember(currentBvid, cid, miniPlayerManager) {
+    val reuseFromMiniPlayerAtEntry = remember(currentBvid, playbackTargetCid, miniPlayerManager) {
         val manager = miniPlayerManager
         if (manager == null) {
             false
@@ -1366,7 +1384,7 @@ fun VideoDetailScreen(
                 miniPlayerCid = manager.currentCid,
                 hasMiniPlayerInstance = manager.player != null,
                 requestBvid = currentBvid,
-                requestCid = cid
+                requestCid = playbackTargetCid
             )
         }
     }
@@ -2408,7 +2426,7 @@ fun VideoDetailScreen(
         context = context,
         viewModel = viewModel,
         bvid = currentBvid,
-        cid = cid,
+        cid = playbackTargetCid,
         fallbackResumePositionMs = resumePositionMsFromRoute,
         startPaused = isPortraitFullscreen && !useSharedPortraitPlayer,
         entryTransitionFinished = entryTransitionFinished,
