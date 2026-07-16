@@ -3830,6 +3830,7 @@ fun VideoDetailScreen(
                             } else {
                                 coil.request.ImageRequest.Builder(context)
                                     .data(crossfadeCoverUrl)
+                                    .placeholderMemoryCacheKey(sharedCoverCacheKey)
                                     .crossfade(false)
                                     .memoryCacheKey(sharedCoverCacheKey)
                                     .diskCacheKey(sharedCoverCacheKey)

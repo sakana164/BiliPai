@@ -166,6 +166,7 @@ class VideoCardScrollLiteVisualPolicyTest {
             .readText()
         assertTrue(source.contains("val coverImageRequest = remember("))
         assertTrue(source.contains("coverCrossfadeEnabled"))
+        assertTrue(source.contains(".placeholderMemoryCacheKey(coverCacheKey)"))
         assertTrue(source.contains("model = coverImageRequest"))
     }
 

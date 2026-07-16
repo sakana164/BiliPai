@@ -297,6 +297,7 @@ class VideoDetailReturnCoverPolicyTest {
             .substringBefore("//  播放器容器按当前顶部避让高度计算")
 
         assertTrue(requestBlock.contains(".crossfade(false)"))
+        assertTrue(requestBlock.contains(".placeholderMemoryCacheKey(sharedCoverCacheKey)"))
         assertTrue(requestBlock.contains(".memoryCacheKey(sharedCoverCacheKey)"))
         assertTrue(requestBlock.contains(".diskCacheKey(sharedCoverCacheKey)"))
     }

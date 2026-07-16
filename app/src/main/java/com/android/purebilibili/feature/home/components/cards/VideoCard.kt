@@ -708,6 +708,7 @@ fun ElegantVideoCard(
             ) {
                 ImageRequest.Builder(context)
                     .data(coverUrl)
+                    .placeholderMemoryCacheKey(coverCacheKey)
                     .crossfade(coverCrossfadeEnabled)
                     .memoryCacheKey(coverCacheKey)
                     .diskCacheKey(coverCacheKey)
