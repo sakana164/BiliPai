@@ -210,13 +210,35 @@ class VideoDetailReturnCoverPolicyTest {
     }
 
     @Test
+    fun `committed return immediately hands visual ownership to resident cover`() {
+        assertEquals(1f, resolveVideoDetailReturnCoverAlpha(0.8f, true, true), 0.0001f)
+        assertEquals(0f, resolveVideoDetailReturnPlayerAlpha(0.8f, true, true), 0.0001f)
+        assertEquals(0f, resolveVideoDetailReturnContentAlpha(0.8f, true), 0.0001f)
+    }
+
+    @Test
+    fun `uncommitted predictive return keeps following transition progress`() {
+        assertEquals(0.2f, resolveVideoDetailReturnCoverAlpha(0.8f, false, true), 0.0001f)
+        assertEquals(0.8f, resolveVideoDetailReturnPlayerAlpha(0.8f, false, true), 0.0001f)
+        assertEquals(0.8f, resolveVideoDetailReturnContentAlpha(0.8f, false), 0.0001f)
+    }
+
+    @Test
+    fun `missing return cover keeps player visible instead of revealing black`() {
+        assertEquals(0f, resolveVideoDetailReturnCoverAlpha(0.2f, true, false), 0.0001f)
+        assertEquals(1f, resolveVideoDetailReturnPlayerAlpha(0.2f, true, false), 0.0001f)
+        assertEquals(0f, resolveVideoDetailReturnContentAlpha(0.2f, true), 0.0001f)
+    }
+
+    @Test
     fun `return cover player and content read one shared transition progress`() {
         val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
             .readText()
 
         assertTrue(source.contains("val detailTransitionProgress ="))
-        assertTrue(source.contains("alpha = 1f - detailTransitionProgress.value"))
-        assertTrue(source.contains("alpha = detailTransitionProgress.value"))
+        assertTrue(source.contains("alpha = resolveVideoDetailReturnCoverAlpha("))
+        assertTrue(source.contains("alpha = resolveVideoDetailReturnPlayerAlpha("))
+        assertTrue(source.contains("alpha = resolveVideoDetailReturnContentAlpha("))
         assertFalse(source.contains("val coverCrossfadeAlpha ="))
         assertFalse(source.contains("val playerFadeAlpha ="))
     }

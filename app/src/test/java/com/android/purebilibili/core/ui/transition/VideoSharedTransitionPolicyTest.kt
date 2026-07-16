@@ -1,5 +1,6 @@
 package com.android.purebilibili.core.ui.transition
 
+import androidx.compose.animation.core.SpringSpec
 import androidx.compose.ui.geometry.Rect
 import java.io.File
 import kotlin.test.Test
@@ -11,14 +12,47 @@ import kotlin.test.assertTrue
 class VideoSharedTransitionPolicyTest {
 
     @Test
-    fun videoSharedTransitionUsesOneContinuousCurveForEnterAndReturn() {
-        val enter = resolveVideoCardSharedTransitionEnterEasing()
-        val returning = resolveVideoCardSharedTransitionReturnEasing()
+    fun videoSharedTransitionUsesHeroFadeCurveForEnterAndReturn() {
+        val motion = resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = "home",
+            transitionEnabled = true
+        )
+        val enter = motion.enterAlphaEasing
+        val returning = motion.returnAlphaEasing
 
         assertSame(enter, returning)
-        assertTrue(enter.transform(0.1f) in 0.14f..0.19f)
-        assertTrue(enter.transform(0.35f) in 0.60f..0.68f)
-        assertTrue(enter.transform(0.75f) in 0.95f..0.99f)
+        assertTrue(enter.transform(0.1f) in 0.02f..0.04f)
+        assertTrue(enter.transform(0.35f) in 0.49f..0.51f)
+        assertTrue(enter.transform(0.75f) in 0.95f..0.97f)
+    }
+
+    @Test
+    fun videoSharedTransitionMapsDurationToBoundedHeroSpring() {
+        assertEquals(500f, resolveVideoSharedTransitionSpatialStiffness(280), 0.001f)
+        assertEquals(390.625f, resolveVideoSharedTransitionSpatialStiffness(320), 0.001f)
+        assertEquals(250f, resolveVideoSharedTransitionSpatialStiffness(400), 0.001f)
+        assertEquals(147.929f, resolveVideoSharedTransitionSpatialStiffness(520), 0.001f)
+        assertEquals(50f, resolveVideoSharedTransitionSpatialStiffness(900), 0.001f)
+    }
+
+    @Test
+    fun videoSharedBoundsUseHeroSpringInBothDirections() {
+        val motion = resolveVideoCardSharedTransitionMotionSpec(
+            sourceRoute = "home",
+            transitionEnabled = true
+        )
+        val cardBounds = Rect(0f, 0f, 160f, 100f)
+        val detailBounds = Rect(0f, 0f, 360f, 800f)
+
+        val enter = videoSharedElementBoundsTransformSpec(motion, cardBounds, detailBounds)
+        val returning = videoSharedElementBoundsTransformSpec(motion, detailBounds, cardBounds)
+
+        assertTrue(enter is SpringSpec<*>)
+        assertTrue(returning is SpringSpec<*>)
+        assertEquals(0.79f, (enter as SpringSpec<*>).dampingRatio, 0.001f)
+        assertEquals(250f, enter.stiffness, 0.001f)
+        assertEquals(enter.dampingRatio, (returning as SpringSpec<*>).dampingRatio, 0.001f)
+        assertEquals(enter.stiffness, returning.stiffness, 0.001f)
     }
 
     @Test
@@ -270,8 +304,10 @@ class VideoSharedTransitionPolicyTest {
         assertEquals(240, motion.contentDurationMillis)
         assertEquals(14, motion.contentSlideOffsetDp)
         assertEquals(0.985f, motion.contentInitialScale, 0.0001f)
-        assertSame(motion.enterEasing, motion.returnEasing)
-        assertTrue(motion.enterEasing.transform(0.35f) in 0.60f..0.68f)
+        assertEquals(0.79f, motion.spatialDampingRatio, 0.001f)
+        assertEquals(250f, motion.spatialStiffness, 0.001f)
+        assertSame(motion.enterAlphaEasing, motion.returnAlphaEasing)
+        assertTrue(motion.enterAlphaEasing.transform(0.35f) in 0.49f..0.51f)
     }
 
     @Test
@@ -362,8 +398,8 @@ class VideoSharedTransitionPolicyTest {
         assertEquals(coverMotion.durationMillis, metadataMotion.durationMillis)
         assertEquals(coverMotion.fullscreenDurationMillis, metadataMotion.fullscreenDurationMillis)
         assertEquals(0, metadataMotion.contentDelayMillis)
-        assertSame(coverMotion.enterEasing, metadataMotion.enterEasing)
-        assertSame(coverMotion.returnEasing, metadataMotion.returnEasing)
+        assertSame(coverMotion.enterAlphaEasing, metadataMotion.enterAlphaEasing)
+        assertSame(coverMotion.returnAlphaEasing, metadataMotion.returnAlphaEasing)
         assertEquals(288, resolveVideoMetadataSharedBoundsDurationMillis(metadataMotion))
         assertTrue(resolveVideoMetadataSharedBoundsDurationMillis(metadataMotion) < metadataMotion.durationMillis)
     }

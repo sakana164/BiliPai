@@ -340,6 +340,34 @@ internal fun shouldUseReturningVideoDetailVisualState(
         isSessionReturningToCard
 }
 
+internal fun resolveVideoDetailReturnCoverAlpha(
+    transitionProgress: Float,
+    isCommittedCardReturn: Boolean,
+    hasResidentCover: Boolean,
+): Float {
+    val progress = transitionProgress.coerceIn(0f, 1f)
+    return if (hasResidentCover && isCommittedCardReturn) 1f
+    else if (hasResidentCover) 1f - progress
+    else 0f
+}
+
+internal fun resolveVideoDetailReturnPlayerAlpha(
+    transitionProgress: Float,
+    isCommittedCardReturn: Boolean,
+    hasResidentCover: Boolean,
+): Float {
+    if (isCommittedCardReturn) return if (hasResidentCover) 0f else 1f
+    return transitionProgress.coerceIn(0f, 1f)
+}
+
+internal fun resolveVideoDetailReturnContentAlpha(
+    transitionProgress: Float,
+    isCommittedCardReturn: Boolean,
+): Float {
+    if (isCommittedCardReturn) return 0f
+    return transitionProgress.coerceIn(0f, 1f)
+}
+
 internal fun shouldTreatVideoDetailCardExitAsReturning(
     isExitTransitionInProgress: Boolean,
     sharedBoundsActive: Boolean,
@@ -1964,13 +1992,13 @@ fun VideoDetailScreen(
                     tween(
                         durationMillis = secondaryContentTiming.returnDurationMillis,
                         delayMillis = secondaryContentTiming.returnDelayMillis,
-                        easing = homeSharedTransitionMotionSpec.returnEasing
+                        easing = homeSharedTransitionMotionSpec.returnAlphaEasing
                     )
                 } else {
                     tween(
                         durationMillis = secondaryContentTiming.enterDurationMillis,
                         delayMillis = secondaryContentTiming.enterDelayMillis,
-                        easing = homeSharedTransitionMotionSpec.enterEasing
+                        easing = homeSharedTransitionMotionSpec.enterAlphaEasing
                     )
                 }
             },
@@ -2030,6 +2058,9 @@ fun VideoDetailScreen(
             sharedBoundsActive &&
             !keepLoadedContentForBackPreview,
     )
+    val hasResidentReturnCover = coverUrl.isNotBlank()
+    val useResidentCoverForCommittedReturn =
+        useReturningVideoDetailVisualState && hasResidentReturnCover
 
     val handleTopBarAction = remember(
         miniPlayerManager,
@@ -3416,7 +3447,7 @@ fun VideoDetailScreen(
                     onFavoritePlaylistClick = {
                         showExternalPlaylistQueueSheet = true
                     },
-                    forceCoverOnly = forceCoverOnlyForReturn,
+                    forceCoverOnly = forceCoverOnlyForReturn || useResidentCoverForCommittedReturn,
                     useTextureSurfaceForNavigation = transitionEnabled,
                     predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration,
                     allowLivePlayerSharedElement = true,
@@ -3484,7 +3515,8 @@ fun VideoDetailScreen(
                             // 🔁 [新增] 播放模式
                             currentPlayMode = currentPlayMode,
                             onPlayModeClick = { com.android.purebilibili.feature.video.player.PlaylistManager.togglePlayMode() },
-                            forceCoverOnlyOnReturn = forceCoverOnlyForReturn,
+                            forceCoverOnlyOnReturn =
+                                forceCoverOnlyForReturn || useResidentCoverForCommittedReturn,
                             predictiveBackCancelRecoveryGeneration = predictiveBackCancelRecoveryGeneration
                         )
                     } else {
@@ -3828,7 +3860,11 @@ fun VideoDetailScreen(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .graphicsLayer {
-                                            alpha = 1f - detailTransitionProgress.value
+                                            alpha = resolveVideoDetailReturnCoverAlpha(
+                                                transitionProgress = detailTransitionProgress.value,
+                                                isCommittedCardReturn = isLeaving,
+                                                hasResidentCover = hasResidentReturnCover,
+                                            )
                                         },
                                     contentScale = ContentScale.Crop
                                 )
@@ -3837,7 +3873,13 @@ fun VideoDetailScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(top = playerTopInset)
-                                    .graphicsLayer { alpha = detailTransitionProgress.value }
+                                    .graphicsLayer {
+                                        alpha = resolveVideoDetailReturnPlayerAlpha(
+                                            transitionProgress = detailTransitionProgress.value,
+                                            isCommittedCardReturn = isLeaving,
+                                            hasResidentCover = hasResidentReturnCover,
+                                        )
+                                    }
                             ) {
                             PortraitInlineVideoPlayerHost(
                                 modifier = Modifier.align(Alignment.TopCenter),
@@ -3887,6 +3929,7 @@ fun VideoDetailScreen(
                                     onNavigateToAudioMode()
                                 },
                                 forceCoverOnly = forceCoverOnlyForReturn ||
+                                    useResidentCoverForCommittedReturn ||
                                     shouldForceBackPreviewPlayerCover(
                                         keepLoadedContentForBackPreview = keepLoadedContentForBackPreview,
                                         bindLivePlayerForBackPreview = bindLivePlayerForBackPreview
@@ -3907,7 +3950,12 @@ fun VideoDetailScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(MaterialTheme.colorScheme.background)
-                                .graphicsLayer { alpha = detailTransitionProgress.value }
+                                .graphicsLayer {
+                                    alpha = resolveVideoDetailReturnContentAlpha(
+                                        transitionProgress = detailTransitionProgress.value,
+                                        isCommittedCardReturn = isLeaving,
+                                    )
+                                }
                                 // .nestedScroll(nestedScrollConnection) // [Remove] 移除嵌套滚动，确保 Tabs 正常滑动
                         ) {
                             when (uiState) {
