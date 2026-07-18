@@ -166,8 +166,15 @@ class VideoCardScrollLiteVisualPolicyTest {
             .readText()
         assertTrue(source.contains("val coverImageRequest = remember("))
         assertTrue(source.contains("coverCrossfadeEnabled"))
-        assertTrue(source.contains(".placeholderMemoryCacheKey(coverCacheKey)"))
+        assertTrue(source.contains("pinnedSharedReturnCover"))
+        assertTrue(source.contains(".placeholderMemoryCacheKey(requestCoverCacheKey)"))
         assertTrue(source.contains("model = coverImageRequest"))
+    }
+
+    @Test
+    fun `shared return target pins cover source to avoid mid-return swap flash`() {
+        assertTrue(shouldPinVideoCardCoverForSharedReturn(isSharedReturnTarget = true))
+        assertFalse(shouldPinVideoCardCoverForSharedReturn(isSharedReturnTarget = false))
     }
 
     @Test

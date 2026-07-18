@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -113,6 +114,9 @@ fun StoryVideoCard(
     val smallCornerRadius = iOSCornerRadius.Small * cornerRadiusScale - 2.dp  // 8.dp * scale
     val durationText = remember(video.duration) { FormatUtils.formatDuration(video.duration) }
     val showDurationOnCover = homeDurationStyle == HomeDurationStyle.OVERLAY_TEXT_ONLY
+    val coverOverlayTextStyle = remember {
+        TextStyle(shadow = resolveVideoCardCoverOverlayTextShadow())
+    }
     val showDurationOutside = homeDurationStyle == HomeDurationStyle.OUTSIDE_COVER
     val scrollLitePolicy = remember(scrollLiteModeEnabled) {
         resolveStoryVideoCardScrollLiteVisualPolicy(
@@ -325,6 +329,7 @@ fun StoryVideoCard(
                     color = Color.White,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
+                    style = coverOverlayTextStyle,
                     maxLines = 1,
                     softWrap = false,
                     textAlign = TextAlign.Center,

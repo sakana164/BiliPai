@@ -54,6 +54,66 @@ class VideoPlayerCoverPolicyTest {
     }
 
     @Test
+    fun immediatePlayback_holdsOpaqueCoverUnderlayUntilFirstFrameReveal() {
+        assertTrue(
+            shouldHoldEntryCoverUnderlay(
+                isFirstFrameRendered = false,
+                forceCoverDuringReturnAnimation = false,
+                shouldKeepCoverForManualStart = false,
+                hasStartedSmoothReveal = false,
+            )
+        )
+        assertTrue(
+            shouldHoldEntryCoverUnderlay(
+                isFirstFrameRendered = true,
+                forceCoverDuringReturnAnimation = false,
+                shouldKeepCoverForManualStart = false,
+                hasStartedSmoothReveal = false,
+            )
+        )
+        assertFalse(
+            shouldHoldEntryCoverUnderlay(
+                isFirstFrameRendered = true,
+                forceCoverDuringReturnAnimation = false,
+                shouldKeepCoverForManualStart = false,
+                hasStartedSmoothReveal = true,
+            )
+        )
+        assertFalse(
+            shouldEnableCoverImageCrossfade(
+                forceCoverDuringReturnAnimation = false,
+                holdEntryCoverUnderlay = true,
+            )
+        )
+        assertFalse(
+            resolveVideoPlayerCoverMotionSpec(
+                forceCoverDuringReturnAnimation = false,
+                holdEntryCoverUnderlay = true,
+            ).shouldAnimateFade
+        )
+    }
+
+    @Test
+    fun coverFirst_andReturn_keepUnderlayWithoutCrossfade() {
+        assertTrue(
+            shouldHoldEntryCoverUnderlay(
+                isFirstFrameRendered = true,
+                forceCoverDuringReturnAnimation = false,
+                shouldKeepCoverForManualStart = true,
+                hasStartedSmoothReveal = true,
+            )
+        )
+        assertTrue(
+            shouldHoldEntryCoverUnderlay(
+                isFirstFrameRendered = true,
+                forceCoverDuringReturnAnimation = true,
+                shouldKeepCoverForManualStart = false,
+                hasStartedSmoothReveal = true,
+            )
+        )
+    }
+
+    @Test
     fun manualStartCover_staysVisibleForSavedProgressBeforeUserPlay() {
         assertTrue(
             shouldKeepCoverForManualStart(
@@ -251,17 +311,13 @@ class VideoPlayerCoverPolicyTest {
     fun detailReturnCoverUsesSingleAlphaTimelineWithoutCoilCrossfade() {
         val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
             .readText()
-        val playerContentBlock = source
-            .substringAfter(".clipToBounds()")
+        val residentCoverBlock = source
+            .substringAfter("val residentCoverImageRequest =")
             .substringBefore("PortraitInlineVideoPlayerHost(")
-        val returnCoverBlock = source
-            .substringAfter("if (crossfadeCoverUrl.isNotBlank()) {")
-            .substringBefore("contentScale = ContentScale.Crop")
 
-        assertTrue(playerContentBlock.contains("if (crossfadeCoverUrl.isNotBlank())"))
-        assertFalse(playerContentBlock.contains("if (isLeaving"))
-        assertTrue(returnCoverBlock.contains(".crossfade(false)"))
-        assertTrue(returnCoverBlock.contains("alpha = 1f - detailTransitionProgress.value"))
-        assertFalse(returnCoverBlock.contains("coverCrossfadeAlpha"))
+        assertTrue(residentCoverBlock.contains(".crossfade(false)"))
+        assertTrue(residentCoverBlock.contains("resolveVideoDetailReturnCoverAlpha("))
+        assertTrue(residentCoverBlock.contains("transitionProgress = detailTransitionProgress.value"))
+        assertFalse(residentCoverBlock.contains("coverCrossfadeAlpha"))
     }
 }

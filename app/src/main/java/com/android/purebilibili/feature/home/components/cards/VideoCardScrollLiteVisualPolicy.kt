@@ -56,6 +56,16 @@ internal fun shouldEnableVideoCardCoverCrossfade(
 }
 
 /**
+ * shared 返回目标卡是否应钉住封面 URL/缓存键。
+ *
+ * 进场/快速返回期间若省流开关、插件或数据刷新改了 pic/质量，ImageRequest 重建会在
+ * overlay 卸层后换源解码 → 落位闪。目标卡在 lastClicked 生命周期内保持点击时的源。
+ */
+internal fun shouldPinVideoCardCoverForSharedReturn(
+    isSharedReturnTarget: Boolean,
+): Boolean = isSharedReturnTarget
+
+/**
  * 首页卡片 → 详情页 CARD_SHELL morph 期间，源卡片封面是否让位给 overlay。
  *
  * 始终不藏：列表封面一直在 shared overlay 下方待命。

@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
@@ -380,6 +381,10 @@ fun ElegantVideoCard(
     val secondaryStatText = cardTexts.secondaryStatText
     val durationBadgeMinWidth = cardTexts.durationBadgeMinWidth
     val showDurationOnCover = homeDurationStyle == HomeDurationStyle.OVERLAY_TEXT_ONLY
+    val coverOverlayTextShadow = remember { resolveVideoCardCoverOverlayTextShadow() }
+    val coverOverlayTextStyle = remember(coverOverlayTextShadow) {
+        TextStyle(shadow = coverOverlayTextShadow)
+    }
     val showDurationOutside = homeDurationStyle == HomeDurationStyle.OUTSIDE_COVER
     val inlinePillBaseColor = AppSurfaceTokens.cardContainer()
     val pillColors = remember(glassEnabled, blurEnabled, inlinePillBaseColor) {
@@ -629,6 +634,16 @@ fun ElegantVideoCard(
             useCoverSharedBounds = useCardShellSharedBounds,
             isSharedReturnTarget = isCoverSharedReturnTarget
         )
+        // lastClicked 生命周期内钉住点击时的封面源，避免返回途中换 URL/质量触发重解码闪烁。
+        val pinnedSharedReturnCover = remember(isCoverSharedReturnTarget) {
+            if (shouldPinVideoCardCoverForSharedReturn(isCoverSharedReturnTarget)) {
+                coverUrl to coverCacheKey
+            } else {
+                null
+            }
+        }
+        val requestCoverUrl = pinnedSharedReturnCover?.first ?: coverUrl
+        val requestCoverCacheKey = pinnedSharedReturnCover?.second ?: coverCacheKey
         val cardShellShape = remember(cardCornerRadius) {
             RoundedCornerShape(cardCornerRadius)
         }
@@ -701,16 +716,16 @@ fun ElegantVideoCard(
             // crossfade 必须进 remember key：若 clearReturning 后才打开 crossfade，
             // 会新建 ImageRequest 导致 Coil 再跑一次淡入闪烁（快速返回尤其明显）。
             val coverImageRequest = remember(
-                coverUrl,
-                coverCacheKey,
+                requestCoverUrl,
+                requestCoverCacheKey,
                 coverCrossfadeEnabled,
             ) {
                 ImageRequest.Builder(context)
-                    .data(coverUrl)
-                    .placeholderMemoryCacheKey(coverCacheKey)
+                    .data(requestCoverUrl)
+                    .placeholderMemoryCacheKey(requestCoverCacheKey)
                     .crossfade(coverCrossfadeEnabled)
-                    .memoryCacheKey(coverCacheKey)
-                    .diskCacheKey(coverCacheKey)
+                    .memoryCacheKey(requestCoverCacheKey)
+                    .diskCacheKey(requestCoverCacheKey)
                     .build()
             }
             AsyncImage(
@@ -840,6 +855,7 @@ fun ElegantVideoCard(
                                 color = Color.White.copy(alpha = 0.94f),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
+                                style = coverOverlayTextStyle,
                                 maxLines = 1,
                                 softWrap = false,
                                 overflow = TextOverflow.Ellipsis
@@ -866,6 +882,7 @@ fun ElegantVideoCard(
                                     color = Color.White.copy(alpha = 0.90f),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium,
+                                    style = coverOverlayTextStyle,
                                     maxLines = 1,
                                     softWrap = false,
                                     overflow = TextOverflow.Ellipsis
@@ -892,6 +909,7 @@ fun ElegantVideoCard(
                                     color = Color.White.copy(alpha = 0.90f),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium,
+                                    style = coverOverlayTextStyle,
                                     maxLines = 1,
                                     softWrap = false,
                                     overflow = TextOverflow.Ellipsis
@@ -907,6 +925,7 @@ fun ElegantVideoCard(
                             color = Color.White,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
+                            style = coverOverlayTextStyle,
                             maxLines = 1,
                             softWrap = false,
                             textAlign = TextAlign.Center,
@@ -922,6 +941,7 @@ fun ElegantVideoCard(
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
+                        style = coverOverlayTextStyle,
                         maxLines = 1,
                         softWrap = false,
                         textAlign = TextAlign.Center,

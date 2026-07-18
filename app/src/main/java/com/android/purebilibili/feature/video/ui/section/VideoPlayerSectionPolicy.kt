@@ -788,6 +788,24 @@ internal fun shouldShowCoverImage(
     shouldKeepCoverForManualStart: Boolean,
     hasStartedSmoothReveal: Boolean
 ): Boolean {
+    return shouldHoldEntryCoverUnderlay(
+        isFirstFrameRendered = isFirstFrameRendered,
+        forceCoverDuringReturnAnimation = forceCoverDuringReturnAnimation,
+        shouldKeepCoverForManualStart = shouldKeepCoverForManualStart,
+        hasStartedSmoothReveal = hasStartedSmoothReveal,
+    )
+}
+
+/**
+ * 即播进场 / CoverFirst / 返回：封面作为不透明垫底，直到首帧揭示或手动起播。
+ * 垫底期间禁止淡入淡出与 Coil crossfade，避免 Hero morph 透出黑底。
+ */
+internal fun shouldHoldEntryCoverUnderlay(
+    isFirstFrameRendered: Boolean,
+    forceCoverDuringReturnAnimation: Boolean,
+    shouldKeepCoverForManualStart: Boolean,
+    hasStartedSmoothReveal: Boolean,
+): Boolean {
     return forceCoverDuringReturnAnimation ||
         shouldKeepCoverForManualStart ||
         !isFirstFrameRendered ||
@@ -942,10 +960,11 @@ internal data class VideoPlayerSurfaceRevealSpec(
 )
 
 internal fun resolveVideoPlayerCoverMotionSpec(
-    forceCoverDuringReturnAnimation: Boolean
+    forceCoverDuringReturnAnimation: Boolean,
+    holdEntryCoverUnderlay: Boolean = false,
 ): VideoPlayerCoverMotionSpec {
     return VideoPlayerCoverMotionSpec(
-        shouldAnimateFade = !forceCoverDuringReturnAnimation,
+        shouldAnimateFade = !forceCoverDuringReturnAnimation && !holdEntryCoverUnderlay,
         enterFadeDurationMillis = VIDEO_PLAYER_COVER_FADE_ENTER_DURATION_MILLIS,
         exitFadeDurationMillis = VIDEO_PLAYER_COVER_FADE_EXIT_DURATION_MILLIS
     )
@@ -1004,9 +1023,10 @@ internal fun shouldShowInlinePlayerView(
 }
 
 internal fun shouldEnableCoverImageCrossfade(
-    forceCoverDuringReturnAnimation: Boolean
+    forceCoverDuringReturnAnimation: Boolean,
+    holdEntryCoverUnderlay: Boolean = false,
 ): Boolean {
-    return !forceCoverDuringReturnAnimation
+    return !forceCoverDuringReturnAnimation && !holdEntryCoverUnderlay
 }
 
 internal fun resolvePreferredVideoCoverUrl(

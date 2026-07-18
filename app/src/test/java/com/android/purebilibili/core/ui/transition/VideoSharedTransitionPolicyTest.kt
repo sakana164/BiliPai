@@ -1,5 +1,6 @@
 package com.android.purebilibili.core.ui.transition
 
+import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.ui.geometry.Rect
 import com.android.purebilibili.core.ui.motion.AppMotionEasing
@@ -43,7 +44,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun videoSharedBoundsUseContinuityOnEnterAndLinearOnReturn() {
+    fun videoSharedBoundsUseContinuityEnterAndSoftSpringReturn() {
         val motion = resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = "home",
             transitionEnabled = true
@@ -55,22 +56,22 @@ class VideoSharedTransitionPolicyTest {
         val returning = videoSharedElementBoundsTransformSpec(motion, detailBounds, cardBounds)
 
         assertTrue(enter is TweenSpec<*>)
-        assertTrue(returning is TweenSpec<*>)
+        assertTrue(returning is SpringSpec<*>)
         assertEquals(motion.durationMillis, (enter as TweenSpec<*>).durationMillis)
-        assertEquals(motion.durationMillis, (returning as TweenSpec<*>).durationMillis)
-        // 进场：Continuity 先快后慢
+        // 进场：Continuity 先快后慢、无过冲
         assertEquals(
             AppMotionEasing.Continuity.transform(0.4f),
             enter.easing.transform(0.4f),
             0.001f,
         )
-        // 返回：Linear，预测 seek / 快速打断与手指 1:1
-        assertEquals(0.4f, returning.easing.transform(0.4f), 0.001f)
-        assertEquals(
-            0.4f,
-            resolveVideoSharedElementSpatialEasing(detailBounds, cardBounds).transform(0.4f),
-            0.001f,
-        )
+        // 返回：soft spring，一次轻回弹；可打断续传
+        val returnSpring = returning as SpringSpec<*>
+        assertEquals(motion.returnSpatialDampingRatio, returnSpring.dampingRatio, 0.001f)
+        assertEquals(motion.spatialStiffness, returnSpring.stiffness, 0.001f)
+        assertTrue(returnSpring.dampingRatio in 0.75f..0.85f)
+        assertTrue(returnSpring.dampingRatio < 1f)
+        assertEquals(0.82f, motion.returnSpatialDampingRatio, 0.001f)
+        assertEquals(140L, resolveVideoCardReturnSpringSettleBufferMs())
     }
 
     @Test
