@@ -1427,7 +1427,8 @@ private fun VideoPageItem(
     val portraitViewportVerticalOffsetPx = with(density) {
         resolvePortraitVideoViewportVerticalOffsetDp(
             currentVideoAspect = currentVideoAspect,
-            fillContainer = portraitPagerFillContainer
+            fillContainer = portraitPagerFillContainer,
+            isLandscape = portraitPageWidthPx > portraitPageHeightPx
         ).dp.toPx()
     }
     val commentExpansionTransform = resolvePortraitCommentPlayerTransform(
@@ -2713,9 +2714,10 @@ internal fun shouldAllowPortraitPlayback(
 
 internal fun resolvePortraitVideoViewportVerticalOffsetDp(
     currentVideoAspect: Float,
-    fillContainer: Boolean
+    fillContainer: Boolean,
+    isLandscape: Boolean = false
 ): Int {
-    if (fillContainer) return 0
+    if (fillContainer || isLandscape) return 0
     return if (currentVideoAspect > 1f) -48 else 0
 }
 
@@ -2737,6 +2739,7 @@ internal fun PortraitVideoViewportContainer(
                 fillContainer = fillContainer
             )
         }
+        val isLandscape = maxWidth > maxHeight
 
         Box(
             modifier = viewportModifier
@@ -2748,7 +2751,8 @@ internal fun PortraitVideoViewportContainer(
                 .offset(
                     y = resolvePortraitVideoViewportVerticalOffsetDp(
                         currentVideoAspect = currentVideoAspect,
-                        fillContainer = fillContainer
+                        fillContainer = fillContainer,
+                        isLandscape = isLandscape
                     ).dp
                 )
         ) {

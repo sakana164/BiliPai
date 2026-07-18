@@ -312,6 +312,18 @@ class PortraitVideoPagerPolicyTest {
     }
 
     @Test
+    fun landscapeContainer_doesNotLiftVideoViewport() {
+        assertEquals(
+            0,
+            resolvePortraitVideoViewportVerticalOffsetDp(
+                currentVideoAspect = 16f / 9f,
+                fillContainer = false,
+                isLandscape = true
+            )
+        )
+    }
+
+    @Test
     fun portraitOrFillViewport_keepsCenteredVerticalOffset() {
         assertEquals(
             0,
