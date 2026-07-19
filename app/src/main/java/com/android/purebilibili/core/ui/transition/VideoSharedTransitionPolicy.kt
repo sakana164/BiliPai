@@ -56,9 +56,9 @@ internal enum class VideoSharedTransitionTargetMode {
 
 internal const val VIDEO_SHARED_COVER_ASPECT_RATIO = 16f / 10f
 private const val HOME_SOURCE_ROUTE = "home"
-internal const val VIDEO_SHARED_TRANSITION_FAST_DURATION_MILLIS = 260
-internal const val VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS = 320
-internal const val VIDEO_SHARED_TRANSITION_SLOW_DURATION_MILLIS = 440
+internal const val VIDEO_SHARED_TRANSITION_FAST_DURATION_MILLIS = 280
+internal const val VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS = 360
+internal const val VIDEO_SHARED_TRANSITION_SLOW_DURATION_MILLIS = 480
 internal const val VIDEO_SHARED_TRANSITION_CUSTOM_MIN_MILLIS = 240
 internal const val VIDEO_SHARED_TRANSITION_CUSTOM_MAX_MILLIS = 900
 internal const val VIDEO_SHARED_TRANSITION_CUSTOM_DEFAULT_MILLIS =
@@ -79,14 +79,14 @@ private const val DYNAMIC_VIDEO_CARD_CORNER_DP = 10
 private const val WATCH_LATER_VIDEO_CARD_CORNER_DP = 8
 // 进场仍用 Continuity tween；返回用 soft spring，保留一次轻回弹并天然支持打断续传。
 private const val VIDEO_CARD_HERO_ENTER_SPRING_DAMPING_RATIO = 0.86f
-// 略低于临界阻尼：只保留一次轻微过冲，并在更短的标准时间轴内稳定落位。
-private const val VIDEO_CARD_RETURN_SPRING_DAMPING_RATIO = 0.86f
-private const val VIDEO_CARD_HERO_SPRING_REFERENCE_STIFFNESS = 300f
-private const val VIDEO_CARD_HERO_SPRING_REFERENCE_DURATION_MILLIS = 320f
+// 更接近临界阻尼：过冲更轻、落位更稳，避免标准时长下「弹回卡片」偏急。
+private const val VIDEO_CARD_RETURN_SPRING_DAMPING_RATIO = 0.92f
+private const val VIDEO_CARD_HERO_SPRING_REFERENCE_STIFFNESS = 240f
+private const val VIDEO_CARD_HERO_SPRING_REFERENCE_DURATION_MILLIS = 360f
 private const val VIDEO_CARD_HERO_SPRING_MIN_STIFFNESS = 50f
 private const val VIDEO_CARD_HERO_SPRING_MAX_STIFFNESS = 500f
 // spring 过冲收束余量：suppression / 景深 IDLE 需盖过参考 duration，避免卸层后状态抢跑。
-internal const val VIDEO_CARD_RETURN_SPRING_SETTLE_BUFFER_MS = 140
+internal const val VIDEO_CARD_RETURN_SPRING_SETTLE_BUFFER_MS = 180
 // 约 1px：快速/连续打断后尽快收敛，避免微抖拖尾拖到 overlay 卸层之后。
 private val VIDEO_CARD_HERO_BOUNDS_VISIBILITY_THRESHOLD = Rect(1f, 1f, 1f, 1f)
 // 透明度与进场空间统一 Continuity，避免淡入淡出和位移抢拍。

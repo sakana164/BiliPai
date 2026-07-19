@@ -12,6 +12,11 @@ import kotlinx.coroutines.withContext
  *  动态数据仓库
  * 
  * 负责从 B站 API 获取动态 Feed 数据
+ *
+ * 分页语义对齐 bilibili-API-collect `docs/dynamic/all.md`：
+ * - `offset`：翻页偏移，等于末条动态 id
+ * - `update_baseline`：更新基线，等于首条动态 id；获取新动态时传入
+ * - `update_num`：本次在更新基线以上的新动态条数
  */
 object DynamicRepository {
     private val feedPagination = DynamicFeedPaginationRegistry()
@@ -27,7 +32,7 @@ object DynamicRepository {
         scope: DynamicFeedScope = DynamicFeedScope.DYNAMIC_SCREEN,
         type: String = "all",
         incrementalRefresh: Boolean = false
-    ): Result<List<DynamicItem>> = withContext(Dispatchers.IO) {
+    ): Result<DynamicFeedFetchResult> = withContext(Dispatchers.IO) {
         try {
             val paginationBeforeRefresh = feedPagination.snapshot(scope, type)
             val useIncrementalRefresh = shouldUseDynamicIncrementalRefresh(
@@ -44,23 +49,31 @@ object DynamicRepository {
                 paginationBeforeRefresh
             }
             if (!feedPagination.hasMore(scope, type) && !refresh) {
-                return@withContext Result.success(emptyList())
+                return@withContext Result.success(
+                    DynamicFeedFetchResult(
+                        items = emptyList(),
+                        updateNum = 0,
+                        usedUpdateBaseline = false
+                    )
+                )
             }
 
             val visibleItems = mutableListOf<DynamicItem>()
             var pagesFetched = 0
+            var reportedUpdateNum = 0
             var requestOffset = if (refresh) "" else feedPagination.offset(scope, type)
             while (true) {
                 val previousOffset = requestOffset
+                val requestUpdateBaseline = if (previousOffset.isBlank() && useIncrementalRefresh) {
+                    paginationBeforeRefresh.updateBaseline
+                } else {
+                    ""
+                }
                 val response = fetchDynamicFeedPageWithRetry {
                     NetworkModule.dynamicApi.getDynamicFeed(
                         type = type,
                         offset = previousOffset,
-                        updateBaseline = if (previousOffset.isBlank() && useIncrementalRefresh) {
-                            paginationBeforeRefresh.updateBaseline
-                        } else {
-                            ""
-                        }
+                        updateBaseline = requestUpdateBaseline
                     )
                 }.getOrElse { error ->
                     return@withContext Result.failure(error)
@@ -80,6 +93,11 @@ object DynamicRepository {
                         )
                     )
                     break
+                }
+
+                if (pagesFetched == 0) {
+                    // 首包的 update_num 才是「相对 update_baseline 的新动态数」
+                    reportedUpdateNum = data.update_num.coerceAtLeast(0)
                 }
 
                 // 更新分页状态
@@ -112,12 +130,23 @@ object DynamicRepository {
                 }
             }
 
-            Result.success(visibleItems)
+            Result.success(
+                DynamicFeedFetchResult(
+                    items = visibleItems,
+                    updateNum = reportedUpdateNum,
+                    usedUpdateBaseline = useIncrementalRefresh
+                )
+            )
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(e)
         }
     }
+
+    fun currentUpdateBaseline(
+        scope: DynamicFeedScope = DynamicFeedScope.DYNAMIC_SCREEN,
+        type: String = "all"
+    ): String = feedPagination.updateBaseline(scope, type)
     
     /**
      *  [新增] 获取指定用户的动态列表
@@ -420,6 +449,12 @@ enum class DynamicFeedScope {
     DYNAMIC_SCREEN,
     HOME_FOLLOW
 }
+
+data class DynamicFeedFetchResult(
+    val items: List<DynamicItem>,
+    val updateNum: Int = 0,
+    val usedUpdateBaseline: Boolean = false
+)
 
 internal data class DynamicPaginationState(
     var offset: String = "",

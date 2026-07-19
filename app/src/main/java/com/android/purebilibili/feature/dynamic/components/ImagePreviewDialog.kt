@@ -72,9 +72,9 @@ import com.android.purebilibili.core.ui.LocalPredictiveBackGestureEnabled
 import com.android.purebilibili.core.ui.rememberAppShareIcon
 import com.android.purebilibili.core.ui.rememberAppLikeFilledIcon
 import com.android.purebilibili.core.ui.rememberAppLikeIcon
+import com.android.purebilibili.core.ui.motion.continuityTween
 import com.android.purebilibili.core.ui.motion.emphasizedEnterTween
 import com.android.purebilibili.core.ui.motion.emphasizedExitTween
-import com.android.purebilibili.core.ui.motion.expressiveSnapSpring
 import com.android.purebilibili.core.ui.motion.indicatorSpring
 import com.android.purebilibili.core.ui.motion.interactiveSnapSpring
 import com.android.purebilibili.core.ui.motion.softLandingSpring
@@ -435,19 +435,17 @@ private fun ImagePreviewOverlayContent(
                 scope.launch {
                     verticalDismissOffsetYPx.snapTo(0f)
                     val dismissMotion = imagePreviewDismissMotion()
+                    // Continuity：先快后慢贴近缩略图；再 soft spring 贴回，避免末段冲刺。
+                    animateTrigger.animateTo(
+                        targetValue = dismissMotion.overshootTarget,
+                        animationSpec = continuityTween(
+                            durationMillis = dismissMotion.collapseDurationMillis
+                        )
+                    )
                     if (dismissMotion.overshootTarget != dismissMotion.settleTarget) {
                         animateTrigger.animateTo(
-                            targetValue = dismissMotion.overshootTarget,
-                            animationSpec = emphasizedExitTween(durationMillis = 240)
-                        )
-                        animateTrigger.animateTo(
                             targetValue = dismissMotion.settleTarget,
-                            animationSpec = expressiveSnapSpring()
-                        )
-                    } else {
-                        animateTrigger.animateTo(
-                            targetValue = dismissMotion.settleTarget,
-                            animationSpec = emphasizedExitTween(durationMillis = 220)
+                            animationSpec = softLandingSpring()
                         )
                     }
                     onDismiss()
@@ -476,9 +474,12 @@ private fun ImagePreviewOverlayContent(
                 reportPredictiveProgress = predictiveBackGestureEnabled,
                 onBackCancelled = { commitTransition: () -> Unit ->
                     scope.launch {
+                        val dismissMotion = imagePreviewDismissMotion()
                         animateTrigger.animateTo(
                             targetValue = 1f,
-                            animationSpec = emphasizedEnterTween(durationMillis = 160),
+                            animationSpec = emphasizedEnterTween(
+                                durationMillis = dismissMotion.cancelRecoverDurationMillis
+                            ),
                         )
                         commitTransition()
                     }

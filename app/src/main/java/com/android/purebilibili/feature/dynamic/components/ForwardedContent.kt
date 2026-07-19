@@ -163,11 +163,12 @@ fun ForwardedContent(
             Spacer(modifier = Modifier.height(8.dp))
         }
         
-        // 原图片
+        // 原图片（与主卡一致：列表预览最多 9 张，避免拼大图被裁成 2×2）
         content?.major?.draw?.let { draw ->
             DrawGridV2(
-                items = draw.items.take(4),
+                items = draw.items,
                 gifImageLoader = gifImageLoader,
+                maxDisplayImages = resolveDynamicOpusPreviewImageLimit(isDetail = false),
                 onImageClick = { index, rect ->
                     val state = resolveForwardedDrawPreviewState(draw, index) ?: return@DrawGridV2
                     previewState = state
@@ -193,7 +194,7 @@ fun ForwardedContent(
             }
             // 显示图片
             if (opus.pics.isNotEmpty()) {
-                val drawItems = opus.pics.take(4).map { pic ->
+                val drawItems = opus.pics.map { pic ->
                     com.android.purebilibili.data.model.response.DrawItem(
                         src = pic.url,
                         width = pic.width,
@@ -203,6 +204,7 @@ fun ForwardedContent(
                 DrawGridV2(
                     items = drawItems,
                     gifImageLoader = gifImageLoader,
+                    maxDisplayImages = resolveDynamicOpusPreviewImageLimit(isDetail = false),
                     onImageClick = { index, rect ->
                         val state = resolveForwardedOpusPreviewState(opus, index) ?: return@DrawGridV2
                         previewState = state

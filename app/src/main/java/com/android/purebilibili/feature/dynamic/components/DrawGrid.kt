@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.sp
 fun DrawGridV2(
     items: List<DrawItem>,
     gifImageLoader: ImageLoader,
-    maxDisplayImages: Int? = 9,
+    maxDisplayImages: Int? = DYNAMIC_FEED_PREVIEW_MAX_IMAGES,
     onImageClick: (Int, Rect?) -> Unit = { _, _ -> }  //  [修改] 图片点击回调，新增 Rect 参数
 ) {
     if (items.isEmpty()) return
@@ -54,11 +54,7 @@ fun DrawGridV2(
         maxDisplayImages = maxDisplayImages
     )
     val displayItems = items.take(displayCount)
-    val columns = when {
-        displayItems.size == 1 -> 1
-        displayItems.size <= 4 -> 2
-        else -> 3
-    }
+    val columns = resolveDrawGridColumnCount(displayItems.size)
 
     val isSingleImage = displayItems.size == 1
     val gridSpacing = resolveDrawGridSpacingDp().dp

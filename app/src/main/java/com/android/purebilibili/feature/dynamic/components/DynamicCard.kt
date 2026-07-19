@@ -367,7 +367,7 @@ fun DynamicCardV2(
             DrawGridV2(
                 items = draw.items,
                 gifImageLoader = gifImageLoader,
-                maxDisplayImages = if (isDetail) null else 9,
+                maxDisplayImages = resolveDynamicOpusPreviewImageLimit(isDetail),
                 onImageClick = { index, rect ->
                     val action = resolveDynamicCardMediaAction(item, index)
                     if (action is DynamicCardMediaAction.PreviewImages) {
@@ -574,7 +574,7 @@ fun DynamicCardV2(
                 DrawGridV2(
                     items = drawItems,
                     gifImageLoader = gifImageLoader,
-                    maxDisplayImages = if (isDetail) null else 9,
+                    maxDisplayImages = resolveDynamicOpusPreviewImageLimit(isDetail),
                     onImageClick = { index, rect ->
                         when (val action = resolveDynamicCardMediaAction(item, index, isDetail = isDetail)) {
                             is DynamicCardMediaAction.PreviewImages -> {

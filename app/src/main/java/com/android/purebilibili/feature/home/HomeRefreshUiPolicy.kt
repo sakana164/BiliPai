@@ -48,23 +48,27 @@ internal fun resolvePagedFeedPageIndexAfterFetch(
     else -> 1
 }
 
-internal fun shouldFallbackFollowIncrementalRefreshToFull(
-    isManualRefresh: Boolean,
-    isLoadMore: Boolean,
-    incrementalRefreshEnabled: Boolean,
-    addedCount: Int
-): Boolean = isManualRefresh &&
-    !isLoadMore &&
-    incrementalRefreshEnabled &&
-    addedCount <= 0
-
 /**
- * 关注流整表刷新时，只统计旧列表里没有的条目，避免把整页数量误报成“新增”。
+ * 关注流下拉刷新的「新增」提示数。
+ *
+ * 对齐 bilibili-API-collect：只有带着 `update_baseline` 请求时，
+ * 响应里的 `update_num` 才表示基线以上的新动态条数。
+ * 未走基线的整表重载不应提示「暂无新内容」。
  */
-internal fun resolveFollowRefreshAddedCount(
-    previousKeys: Set<String>,
-    refreshedKeys: List<String>
-): Int = refreshedKeys.count { it !in previousKeys }
+internal fun resolveHomeFollowRefreshNewItemsCount(
+    usedUpdateBaseline: Boolean,
+    apiUpdateNum: Int,
+    insertedVideoCount: Int
+): Int? {
+    if (!usedUpdateBaseline) return null
+    if (apiUpdateNum <= 0) return 0
+    return insertedVideoCount.coerceAtLeast(0)
+}
+
+internal fun shouldFullReplaceFollowFeedAfterBaselineProbe(
+    incrementalRefreshEnabled: Boolean,
+    apiUpdateNum: Int
+): Boolean = !incrementalRefreshEnabled && apiUpdateNum > 0
 
 internal fun shouldShowRecommendOldContentDivider(
     currentCategory: HomeCategory,

@@ -148,7 +148,7 @@ internal fun resolveDynamicOpusPresentationBlocks(
 }
 
 internal fun resolveDynamicOpusPreviewImageLimit(isDetail: Boolean): Int? {
-    return if (isDetail) null else 9
+    return if (isDetail) null else DYNAMIC_FEED_PREVIEW_MAX_IMAGES
 }
 
 internal fun resolveDynamicOpusLinkCardAction(card: OpusLinkCard): DynamicOpusLinkCardAction {

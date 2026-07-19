@@ -197,55 +197,59 @@ class HomeRefreshPolicyTest {
     }
 
     @Test
-    fun shouldFallbackFollowIncrementalRefreshToFull_whenManualRefreshAddsNothing() {
-        assertTrue(
-            shouldFallbackFollowIncrementalRefreshToFull(
-                isManualRefresh = true,
-                isLoadMore = false,
-                incrementalRefreshEnabled = true,
-                addedCount = 0
+    fun resolveHomeFollowRefreshNewItemsCount_usesApiUpdateNumOnlyWithBaseline() {
+        assertEquals(
+            null,
+            resolveHomeFollowRefreshNewItemsCount(
+                usedUpdateBaseline = false,
+                apiUpdateNum = 0,
+                insertedVideoCount = 0
             )
         )
-        assertFalse(
-            shouldFallbackFollowIncrementalRefreshToFull(
-                isManualRefresh = true,
-                isLoadMore = false,
-                incrementalRefreshEnabled = true,
-                addedCount = 3
+        assertEquals(
+            0,
+            resolveHomeFollowRefreshNewItemsCount(
+                usedUpdateBaseline = true,
+                apiUpdateNum = 0,
+                insertedVideoCount = 0
             )
         )
-        assertFalse(
-            shouldFallbackFollowIncrementalRefreshToFull(
-                isManualRefresh = true,
-                isLoadMore = false,
-                incrementalRefreshEnabled = false,
-                addedCount = 0
+        assertEquals(
+            2,
+            resolveHomeFollowRefreshNewItemsCount(
+                usedUpdateBaseline = true,
+                apiUpdateNum = 5,
+                insertedVideoCount = 2
             )
         )
-        assertFalse(
-            shouldFallbackFollowIncrementalRefreshToFull(
-                isManualRefresh = false,
-                isLoadMore = false,
-                incrementalRefreshEnabled = true,
-                addedCount = 0
+        assertEquals(
+            0,
+            resolveHomeFollowRefreshNewItemsCount(
+                usedUpdateBaseline = true,
+                apiUpdateNum = 3,
+                insertedVideoCount = 0
             )
         )
     }
 
     @Test
-    fun resolveFollowRefreshAddedCount_countsOnlyKeysMissingFromPreviousList() {
-        assertEquals(
-            2,
-            resolveFollowRefreshAddedCount(
-                previousKeys = setOf("dyn:1", "dyn:2"),
-                refreshedKeys = listOf("dyn:3", "dyn:1", "dyn:4")
+    fun shouldFullReplaceFollowFeedAfterBaselineProbe_onlyWhenIncrementalDisabledAndHasUpdates() {
+        assertTrue(
+            shouldFullReplaceFollowFeedAfterBaselineProbe(
+                incrementalRefreshEnabled = false,
+                apiUpdateNum = 3
             )
         )
-        assertEquals(
-            0,
-            resolveFollowRefreshAddedCount(
-                previousKeys = setOf("dyn:1", "dyn:2"),
-                refreshedKeys = listOf("dyn:1", "dyn:2")
+        assertFalse(
+            shouldFullReplaceFollowFeedAfterBaselineProbe(
+                incrementalRefreshEnabled = true,
+                apiUpdateNum = 3
+            )
+        )
+        assertFalse(
+            shouldFullReplaceFollowFeedAfterBaselineProbe(
+                incrementalRefreshEnabled = false,
+                apiUpdateNum = 0
             )
         )
     }

@@ -5,6 +5,9 @@ internal enum class DrawGridScaleMode {
     CROP
 }
 
+/** 列表/转发预览与 B 站一致：最多九宫格；详情页传 null 不截断。 */
+internal const val DYNAMIC_FEED_PREVIEW_MAX_IMAGES = 9
+
 private const val PILI_PLUS_DYNAMIC_MAX_IMAGE_RATIO = 22f / 9f
 private const val PILI_PLUS_SINGLE_IMAGE_WIDE_THRESHOLD = 1.5f
 
@@ -45,6 +48,14 @@ internal fun resolveDrawGridDisplayCount(
     if (totalImages <= 0) return 0
     val maxImages = maxDisplayImages ?: return totalImages
     return totalImages.coerceAtMost(maxImages.coerceAtLeast(1))
+}
+
+internal fun resolveDrawGridColumnCount(displayCount: Int): Int {
+    return when {
+        displayCount <= 1 -> 1
+        displayCount <= 4 -> 2
+        else -> 3
+    }
 }
 
 internal fun shouldDrawGridShowMoreBadge(

@@ -43,12 +43,26 @@ class DrawGridLayoutPolicyTest {
 
     @Test
     fun resolveDrawGridDisplayCount_capsFeedPreviewAtNineImages() {
-        assertEquals(9, resolveDrawGridDisplayCount(totalImages = 14, maxDisplayImages = 9))
+        assertEquals(
+            DYNAMIC_FEED_PREVIEW_MAX_IMAGES,
+            resolveDrawGridDisplayCount(
+                totalImages = 14,
+                maxDisplayImages = DYNAMIC_FEED_PREVIEW_MAX_IMAGES
+            )
+        )
     }
 
     @Test
     fun resolveDrawGridDisplayCount_keepsAllImagesInDetail() {
         assertEquals(14, resolveDrawGridDisplayCount(totalImages = 14, maxDisplayImages = null))
+    }
+
+    @Test
+    fun resolveDrawGridColumnCount_usesThreeColumnsForNineImageCollage() {
+        assertEquals(1, resolveDrawGridColumnCount(displayCount = 1))
+        assertEquals(2, resolveDrawGridColumnCount(displayCount = 4))
+        assertEquals(3, resolveDrawGridColumnCount(displayCount = 5))
+        assertEquals(3, resolveDrawGridColumnCount(displayCount = 9))
     }
 
     @Test

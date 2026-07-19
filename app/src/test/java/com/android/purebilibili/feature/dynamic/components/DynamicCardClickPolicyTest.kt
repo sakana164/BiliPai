@@ -345,7 +345,10 @@ class DynamicCardClickPolicyTest {
     @Test
     fun resolveDynamicOpusPreviewImageLimit_removesNineImageLimitOnDetailPage() {
         assertEquals(null, resolveDynamicOpusPreviewImageLimit(isDetail = true))
-        assertEquals(9, resolveDynamicOpusPreviewImageLimit(isDetail = false))
+        assertEquals(
+            DYNAMIC_FEED_PREVIEW_MAX_IMAGES,
+            resolveDynamicOpusPreviewImageLimit(isDetail = false)
+        )
     }
 
     @Test

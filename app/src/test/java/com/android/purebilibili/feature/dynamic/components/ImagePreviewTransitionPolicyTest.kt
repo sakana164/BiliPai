@@ -1,6 +1,7 @@
 package com.android.purebilibili.feature.dynamic.components
 
 import androidx.compose.ui.geometry.Rect
+import kotlin.math.pow
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -80,8 +81,11 @@ class ImagePreviewTransitionPolicyTest {
     fun imagePreviewDismissMotion_returnsOvershootThenSettleTargets() {
         val motion = imagePreviewDismissMotion()
 
-        assertEquals(0f, motion.overshootTarget)
+        assertEquals(-0.06f, motion.overshootTarget)
         assertEquals(0f, motion.settleTarget)
+        assertEquals(300, motion.collapseDurationMillis)
+        assertEquals(180, motion.cancelRecoverDurationMillis)
+        assertTrue(motion.overshootTarget < motion.settleTarget)
     }
 
     @Test
@@ -336,13 +340,14 @@ class ImagePreviewTransitionPolicyTest {
     }
 
     @Test
-    fun resolveImagePreviewDismissBackdropAlpha_keepsBackdropLongerThenFades() {
+    fun resolveImagePreviewDismissBackdropAlpha_fadesNearLinearlyWithMorph() {
         val start = resolveImagePreviewDismissBackdropAlpha(1f)
         val middle = resolveImagePreviewDismissBackdropAlpha(0.5f)
         val end = resolveImagePreviewDismissBackdropAlpha(0f)
 
         assertEquals(1f, start, 0.0001f)
-        assertEquals(0.7320428f, middle, 0.0001f)
+        assertEquals(0.5f.pow(0.9f), middle, 0.0001f)
+        assertTrue(middle < 0.6f)
         assertEquals(0f, end, 0.0001f)
     }
 

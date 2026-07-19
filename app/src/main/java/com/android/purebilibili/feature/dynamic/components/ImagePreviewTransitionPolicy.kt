@@ -26,7 +26,11 @@ internal data class ImagePreviewVisualFrame(
 
 internal data class ImagePreviewDismissMotion(
     val overshootTarget: Float,
-    val settleTarget: Float
+    val settleTarget: Float,
+    /** 主收缩时长：用 Continuity 先快后慢贴近缩略图，避免 EmphasizedExit 末段冲刺。 */
+    val collapseDurationMillis: Int,
+    /** 预测返回取消后的回弹时长。 */
+    val cancelRecoverDurationMillis: Int
 )
 
 internal data class ImagePreviewDismissTransform(
@@ -148,8 +152,11 @@ internal fun resolveImagePreviewVisualFrame(
 
 internal fun imagePreviewDismissMotion(): ImagePreviewDismissMotion {
     return ImagePreviewDismissMotion(
-        overshootTarget = 0f,
-        settleTarget = 0f
+        // 轻微越过缩略图边界后再 spring 贴回，落位更有「放回格子」的触感。
+        overshootTarget = -0.06f,
+        settleTarget = 0f,
+        collapseDurationMillis = 300,
+        cancelRecoverDurationMillis = 180
     )
 }
 
@@ -301,7 +308,8 @@ internal fun resolveImagePreviewVerticalDismissDecision(
 internal fun resolveImagePreviewDismissBackdropAlpha(
     visualProgress: Float
 ): Float {
-    return visualProgress.coerceIn(0f, 1f).pow(0.45f)
+    // 接近线性淡出：返回落位时遮罩跟手消散，避免底层长时间被黑罩压暗。
+    return visualProgress.coerceIn(0f, 1f).pow(0.9f)
 }
 
 internal fun resolveImagePreviewText(

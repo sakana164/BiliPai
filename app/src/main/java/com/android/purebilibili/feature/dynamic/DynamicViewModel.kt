@@ -753,7 +753,7 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
             )
 
             result.fold(
-                onSuccess = { items ->
+                onSuccess = { feedResult ->
                     if (!shouldApplyTimelineFeedResult(
                             activeRequestTokens = activeTimelineRequestTokens,
                             requestType = requestType,
@@ -764,7 +764,7 @@ class DynamicViewModel(application: Application) : AndroidViewModel(application)
                     }
                     val successPage = resolveDynamicTimelinePageAfterSuccess(
                         currentPage = requestPage,
-                        incomingItems = items,
+                        incomingItems = feedResult.items,
                         isRefresh = refresh,
                         incrementalRefreshEnabled = incrementalTimelineRefreshEnabled,
                         hasMore = DynamicRepository.hasMoreData(

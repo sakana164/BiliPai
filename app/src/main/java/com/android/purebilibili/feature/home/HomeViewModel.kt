@@ -1463,36 +1463,95 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         if (!isLoadMore) {
             fetchUserInfo()
         }
-        
-        var result = com.android.purebilibili.data.repository.DynamicRepository.getDynamicFeed(
-            refresh = !isLoadMore,
-            scope = com.android.purebilibili.data.repository.DynamicFeedScope.HOME_FOLLOW,
-            type = "video",
-            incrementalRefresh = incrementalTimelineRefreshEnabled
-        )
-        
+
         if (isLoadMore) delay(100)
-        var addedCount = 0
-        val useIncrementalMerge = !isLoadMore && incrementalTimelineRefreshEnabled
-        result.onSuccess { items ->
-            val videos = mapHomeFollowDynamicItemsToVideos(items)
-            updateCategoryState(HomeCategory.FOLLOW) { oldState ->
-                val oldSize = oldState.videos.size
-                val previousKeys = oldState.videos.map(::videoItemKey).toSet()
-                val mergedVideos = when {
-                    isLoadMore -> appendDistinctByKey(oldState.videos, videos, ::videoItemKey).toImmutableList()
-                    useIncrementalMerge -> prependDistinctByKey(oldState.videos, videos, ::videoItemKey).toImmutableList()
-                    else -> videos.toImmutableList()
-                }
-                if (isManualRefresh && !isLoadMore) {
-                    addedCount = if (useIncrementalMerge) {
-                        (mergedVideos.size - oldSize).coerceAtLeast(0)
-                    } else {
-                        resolveFollowRefreshAddedCount(
-                            previousKeys = previousKeys,
-                            refreshedKeys = videos.map(::videoItemKey)
+
+        val followScope = com.android.purebilibili.data.repository.DynamicFeedScope.HOME_FOLLOW
+        val followType = "video"
+        val establishedBaseline = com.android.purebilibili.data.repository.DynamicRepository
+            .currentUpdateBaseline(scope = followScope, type = followType)
+        // 手动下拉且已有基线：按 API 文档带 update_baseline 探测新动态（update_num）。
+        val probeWithBaseline = isManualRefresh &&
+            !isLoadMore &&
+            establishedBaseline.isNotBlank()
+
+        val result = com.android.purebilibili.data.repository.DynamicRepository.getDynamicFeed(
+            refresh = !isLoadMore,
+            scope = followScope,
+            type = followType,
+            incrementalRefresh = if (probeWithBaseline) {
+                true
+            } else {
+                !isLoadMore && incrementalTimelineRefreshEnabled
+            }
+        )
+
+        var tipCount: Int? = null
+        result.onSuccess { feedResult ->
+            val videos = mapHomeFollowDynamicItemsToVideos(feedResult.items)
+            val apiUpdateNum = feedResult.updateNum
+            val usedBaseline = feedResult.usedUpdateBaseline
+
+            if (
+                probeWithBaseline &&
+                shouldFullReplaceFollowFeedAfterBaselineProbe(
+                    incrementalRefreshEnabled = incrementalTimelineRefreshEnabled,
+                    apiUpdateNum = apiUpdateNum
+                )
+            ) {
+                // 关闭「增量刷新」但探测到新动态：再拉一整页替换列表。
+                val fullResult = com.android.purebilibili.data.repository.DynamicRepository.getDynamicFeed(
+                    refresh = true,
+                    scope = followScope,
+                    type = followType,
+                    incrementalRefresh = false
+                )
+                fullResult.onSuccess { fullFeed ->
+                    val fullVideos = mapHomeFollowDynamicItemsToVideos(fullFeed.items)
+                    tipCount = resolveHomeFollowRefreshNewItemsCount(
+                        usedUpdateBaseline = true,
+                        apiUpdateNum = apiUpdateNum,
+                        insertedVideoCount = apiUpdateNum
+                    )
+                    updateCategoryState(HomeCategory.FOLLOW) { oldState ->
+                        oldState.copy(
+                            videos = fullVideos.toImmutableList(),
+                            liveRooms = emptyList<LiveRoom>().toImmutableList(),
+                            isLoading = false,
+                            error = if (fullVideos.isEmpty()) "暂无关注动态，请先关注一些UP主" else null,
+                            hasMore = com.android.purebilibili.data.repository.DynamicRepository.hasMoreData(
+                                scope = followScope,
+                                type = followType
+                            )
                         )
                     }
+                }.onFailure { error ->
+                    updateCategoryState(HomeCategory.FOLLOW) { oldState ->
+                        oldState.copy(
+                            isLoading = false,
+                            error = if (oldState.videos.isEmpty()) error.message ?: "请先登录" else null
+                        )
+                    }
+                }
+                return tipCount
+            }
+
+            updateCategoryState(HomeCategory.FOLLOW) { oldState ->
+                val oldSize = oldState.videos.size
+                val mergedVideos = when {
+                    isLoadMore -> appendDistinctByKey(oldState.videos, videos, ::videoItemKey).toImmutableList()
+                    usedBaseline || (!isLoadMore && incrementalTimelineRefreshEnabled) -> {
+                        prependDistinctByKey(oldState.videos, videos, ::videoItemKey).toImmutableList()
+                    }
+                    else -> videos.toImmutableList()
+                }
+                val insertedCount = (mergedVideos.size - oldSize).coerceAtLeast(0)
+                if (isManualRefresh && !isLoadMore) {
+                    tipCount = resolveHomeFollowRefreshNewItemsCount(
+                        usedUpdateBaseline = usedBaseline,
+                        apiUpdateNum = apiUpdateNum,
+                        insertedVideoCount = insertedCount
+                    )
                 }
                 oldState.copy(
                     videos = mergedVideos,
@@ -1500,8 +1559,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     isLoading = false,
                     error = if (!isLoadMore && mergedVideos.isEmpty()) "暂无关注动态，请先关注一些UP主" else null,
                     hasMore = com.android.purebilibili.data.repository.DynamicRepository.hasMoreData(
-                        scope = com.android.purebilibili.data.repository.DynamicFeedScope.HOME_FOLLOW,
-                        type = "video"
+                        scope = followScope,
+                        type = followType
                     )
                 )
             }
@@ -1513,43 +1572,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
-
-        if (shouldFallbackFollowIncrementalRefreshToFull(
-                isManualRefresh = isManualRefresh,
-                isLoadMore = isLoadMore,
-                incrementalRefreshEnabled = incrementalTimelineRefreshEnabled,
-                addedCount = addedCount
-            )
-        ) {
-            // 增量无新内容时回退整表刷新，避免下拉后列表看起来完全没变
-            result = com.android.purebilibili.data.repository.DynamicRepository.getDynamicFeed(
-                refresh = true,
-                scope = com.android.purebilibili.data.repository.DynamicFeedScope.HOME_FOLLOW,
-                type = "video",
-                incrementalRefresh = false
-            )
-            result.onSuccess { items ->
-                val videos = mapHomeFollowDynamicItemsToVideos(items)
-                updateCategoryState(HomeCategory.FOLLOW) { oldState ->
-                    val previousKeys = oldState.videos.map(::videoItemKey).toSet()
-                    addedCount = resolveFollowRefreshAddedCount(
-                        previousKeys = previousKeys,
-                        refreshedKeys = videos.map(::videoItemKey)
-                    )
-                    oldState.copy(
-                        videos = videos.toImmutableList(),
-                        liveRooms = emptyList<LiveRoom>().toImmutableList(),
-                        isLoading = false,
-                        error = if (videos.isEmpty()) "暂无关注动态，请先关注一些UP主" else null,
-                        hasMore = com.android.purebilibili.data.repository.DynamicRepository.hasMoreData(
-                            scope = com.android.purebilibili.data.repository.DynamicFeedScope.HOME_FOLLOW,
-                            type = "video"
-                        )
-                    )
-                }
-            }
-        }
-        return addedCount
+        return tipCount
     }
 
     private fun mapHomeFollowDynamicItemsToVideos(

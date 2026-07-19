@@ -37,7 +37,8 @@ private val VIDEO_CARD_TRANSITION_LIGHT_SCRIM_TINT = Color(0xFF8E8E93)
 private val VIDEO_CARD_TRANSITION_DARK_GAP_BASE = Color(0xFF121212)
 
 // 开场与返回时长由共享元素速度设置提供；取消仍固定为短恢复动画。
-internal const val VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS = 400
+// 与共享元素标准时长对齐，避免景深先清完、封面还在赶路。
+internal const val VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS = 420
 internal const val VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS = 160
 
 internal enum class VideoCardTransitionBackgroundPhase {

@@ -105,7 +105,7 @@ class HomeFeedScrollStatePersistenceStructureTest {
     }
 
     @Test
-    fun `home follow manual refresh reports actual inserted video count`() {
+    fun `home follow manual refresh reports api update_num via baseline probe`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/HomeViewModel.kt")
         val fetchDataSource = source
             .substringAfter("if (currentCategory == HomeCategory.FOLLOW)")
@@ -115,8 +115,10 @@ class HomeFeedScrollStatePersistenceStructureTest {
             .substringBefore("private fun videoItemKey")
 
         assertTrue(fetchDataSource.contains("return fetchFollowFeed("))
-        assertTrue(followFeedSource.contains("var addedCount = 0"))
-        assertTrue(followFeedSource.contains("return addedCount"))
+        assertTrue(followFeedSource.contains("probeWithBaseline"))
+        assertTrue(followFeedSource.contains("resolveHomeFollowRefreshNewItemsCount("))
+        assertTrue(followFeedSource.contains("currentUpdateBaseline("))
+        assertTrue(followFeedSource.contains("return tipCount"))
     }
 
     @Test
