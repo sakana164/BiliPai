@@ -4,6 +4,21 @@ import com.android.purebilibili.data.model.response.UgcSeason
 import com.android.purebilibili.feature.video.player.ExternalPlaylistSource
 import kotlin.math.roundToInt
 
+internal fun hasMeaningfulVideoPlayerBoundsChange(
+    oldBounds: android.graphics.Rect?,
+    newBounds: android.graphics.Rect?,
+    tolerancePx: Int = 3,
+): Boolean = when {
+    oldBounds == null && newBounds == null -> false
+    oldBounds == null || newBounds == null -> true
+    else -> {
+        kotlin.math.abs(oldBounds.left - newBounds.left) > tolerancePx ||
+            kotlin.math.abs(oldBounds.top - newBounds.top) > tolerancePx ||
+            kotlin.math.abs(oldBounds.right - newBounds.right) > tolerancePx ||
+            kotlin.math.abs(oldBounds.bottom - newBounds.bottom) > tolerancePx
+    }
+}
+
 internal fun shouldHandleVideoDetailDisposeAsNavigationExit(
     isNavigatingToAudioMode: Boolean,
     isNavigatingToMiniMode: Boolean,

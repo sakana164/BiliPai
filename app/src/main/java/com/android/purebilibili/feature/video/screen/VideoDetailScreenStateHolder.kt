@@ -193,13 +193,11 @@ import com.android.purebilibili.feature.video.player.PlaylistItem
 import com.android.purebilibili.feature.video.player.PlaylistManager
 import com.android.purebilibili.feature.video.player.PlaylistUiState
 import com.android.purebilibili.feature.video.player.ExternalPlaylistSource
-import com.android.purebilibili.feature.video.player.buildPipPlaybackRemoteActions
 import com.android.purebilibili.core.ui.performance.TrackJankStateFlag
 // 📱 [新增] 竖屏全屏
 import com.android.purebilibili.feature.video.ui.overlay.PortraitFullscreenOverlay
 import com.android.purebilibili.feature.video.ui.overlay.PlayerProgress
 import com.android.purebilibili.feature.video.ui.components.VideoAspectRatio
-import com.android.purebilibili.feature.video.danmaku.rememberDanmakuManager
 import com.android.purebilibili.core.ui.blur.shouldAllowRuntimeShaderBackedHazeEffect
 import com.android.purebilibili.core.ui.blur.unifiedBlur
 import com.android.purebilibili.core.ui.IOSModalBottomSheet
@@ -224,7 +222,6 @@ import com.android.purebilibili.feature.video.ui.feedback.resolveVideoFeedbackPl
 import com.android.purebilibili.feature.video.ui.section.resolveForcedReturnCoverSharedElementSourceRoute
 import com.android.purebilibili.feature.video.share.VideoSharePayload
 import com.android.purebilibili.feature.video.share.VideoShareSheet
-import com.android.purebilibili.feature.video.viewmodel.PlayerToastMessage
 import com.android.purebilibili.feature.video.viewmodel.PlayerToastPresentation
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -1203,52 +1200,10 @@ internal fun VideoDetailScreenStateHolder(
             lifecycle = lifecycleOwner.lifecycle
         )
 
-    DisposableEffect(activity, isScreenActive) {
-        if (!isScreenActive || activity == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            onDispose { }
-        } else {
-            val hostWindow = activity.window
-            val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                activity.display
-            } else {
-                @Suppress("DEPRECATION")
-                activity.windowManager.defaultDisplay
-            }
-
-            if (hostWindow == null || display == null) {
-                onDispose { }
-            } else {
-                val originalModeId = hostWindow.attributes.preferredDisplayModeId
-                val currentModeId = display.mode.modeId
-                val preferredModeId = resolvePreferredHighRefreshModeId(
-                    currentModeId = currentModeId,
-                    supportedModes = display.supportedModes.map { mode ->
-                        RefreshModeCandidate(
-                            modeId = mode.modeId,
-                            refreshRate = mode.refreshRate,
-                            width = mode.physicalWidth,
-                            height = mode.physicalHeight
-                        )
-                    }
-                )
-                if (preferredModeId != null && preferredModeId != originalModeId) {
-                    hostWindow.attributes = hostWindow.attributes.apply {
-                        preferredDisplayModeId = preferredModeId
-                    }
-                }
-
-                onDispose {
-                    if (hostWindow.attributes.preferredDisplayModeId != originalModeId) {
-                        hostWindow.attributes = hostWindow.attributes.apply {
-                            preferredDisplayModeId = originalModeId
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 退出重置亮度 +  屏幕常亮管理 + 状态栏恢复（作为安全网）
+    VideoDetailHighRefreshRateEffect(
+        activity = activity,
+        isScreenActive = isScreenActive,
+    )
 
     DisposableEffect(Unit) {
         //  [沉浸式] 启用边到边显示，让内容延伸到状态栏下方
@@ -1328,37 +1283,14 @@ internal fun VideoDetailScreenStateHolder(
         }
     }
 
-    //  新增：监听消息事件（关注/收藏反馈）- 使用居中弹窗
-    var popupMessage by remember { mutableStateOf<PlayerToastMessage?>(null) }
-    LaunchedEffect(Unit) {
-        viewModel.toastEvent.collect { message ->
-            popupMessage = message
-            // 2秒后自动隐藏
-            kotlinx.coroutines.delay(2000)
-            popupMessage = null
-        }
-    }
-
-    //  [新增] 监听弹幕发送事件 - 将发送的弹幕显示在屏幕上
-    val danmakuManager = rememberDanmakuManager()
-    LaunchedEffect(Unit) {
-        viewModel.danmakuSentEvent.collect { danmakuData ->
-            android.util.Log.d("VideoDetailScreen", "📺 Displaying sent danmaku: ${danmakuData.text}")
-            danmakuManager.addLocalDanmaku(
-                text = danmakuData.text,
-                color = danmakuData.color,
-                mode = danmakuData.mode,
-                fontSize = danmakuData.fontSize
-            )
-        }
-    }
-
-    //  初始化进度持久化存储
-    LaunchedEffect(Unit) {
-        viewModel.initWithContext(context)
-        //  [埋点] 页面浏览追踪
-        com.android.purebilibili.core.util.AnalyticsHelper.logScreenView("VideoDetailScreen")
-    }
+    val playbackEventState = rememberVideoDetailPlaybackEventState()
+    VideoDetailPlaybackEventEffects(
+        context = context,
+        viewModel = viewModel,
+        state = playbackEventState,
+    )
+    val popupMessage = playbackEventState.popupMessage
+    val danmakuManager = playbackEventState.danmakuManager
 
     //  [PiP修复] 当视频播放器位置更新时，同步更新PiP参数
     //  [修复] 只有支持系统 PiP 的模式才启用自动进入 PiP
@@ -1383,72 +1315,13 @@ internal fun VideoDetailScreenStateHolder(
     }
     val isReducedActionMotion = !cardAnimationEnabled
 
-    // 🔧 [性能优化] 记录上次设置的 PiP bounds，避免重复设置
-    var lastPipBounds by remember { mutableStateOf<android.graphics.Rect?>(null) }
-    var lastPipModeEnabled by remember { mutableStateOf<Boolean?>(null) }
-    var lastPipUpdateElapsedMs by remember { mutableStateOf(0L) }
-    val hasMeaningfulBoundsChange = remember {
-        { oldBounds: android.graphics.Rect?, newBounds: android.graphics.Rect? ->
-            when {
-                oldBounds == null && newBounds == null -> false
-                oldBounds == null || newBounds == null -> true
-                else -> {
-                    abs(oldBounds.left - newBounds.left) > 3 ||
-                        abs(oldBounds.top - newBounds.top) > 3 ||
-                        abs(oldBounds.right - newBounds.right) > 3 ||
-                        abs(oldBounds.bottom - newBounds.bottom) > 3
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(videoPlayerBounds, pipModeEnabled) {
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return@LaunchedEffect
-
-        val modeChanged = lastPipModeEnabled == null || lastPipModeEnabled != pipModeEnabled
-        val boundsChanged = hasMeaningfulBoundsChange(lastPipBounds, videoPlayerBounds)
-        val now = android.os.SystemClock.elapsedRealtime()
-        val elapsedSinceLastUpdate = now - lastPipUpdateElapsedMs
-        val shouldUpdate = shouldApplyPipParamsUpdate(
-            pipModeEnabled = pipModeEnabled,
-            modeChanged = modeChanged,
-            boundsChanged = boundsChanged,
-            elapsedSinceLastUpdateMs = elapsedSinceLastUpdate
-        )
-        if (!shouldUpdate) return@LaunchedEffect
-
-        lastPipBounds = videoPlayerBounds?.let { android.graphics.Rect(it) }
-        lastPipModeEnabled = pipModeEnabled
-        lastPipUpdateElapsedMs = now
-
-        activity?.let { act ->
-            val pipParamsBuilder = android.app.PictureInPictureParams.Builder()
-                .setAspectRatio(android.util.Rational(16, 9))
-                .setActions(
-                    buildPipPlaybackRemoteActions(
-                        context = context,
-                        player = miniPlayerManager?.player
-                    )
-                )
-
-            //  设置源矩形区域 - PiP只显示视频播放器区域
-            videoPlayerBounds?.let { bounds ->
-                pipParamsBuilder.setSourceRectHint(bounds)
-            }
-
-            // Android 12+ 支持手势自动进入 PiP -  只有 SYSTEM_PIP 模式才启用
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                pipParamsBuilder.setAutoEnterEnabled(pipModeEnabled)  //  受设置控制
-                pipParamsBuilder.setSeamlessResizeEnabled(pipModeEnabled)
-            }
-
-            act.setPictureInPictureParams(pipParamsBuilder.build())
-            com.android.purebilibili.core.util.Logger.d(
-                "VideoDetailScreen",
-                " PiP参数更新: autoEnterEnabled=$pipModeEnabled, modeChanged=$modeChanged, boundsChanged=$boundsChanged"
-            )
-        }
-    }
+    VideoDetailPipParamsEffect(
+        context = context,
+        activity = activity,
+        playerBounds = videoPlayerBounds,
+        pipModeEnabled = pipModeEnabled,
+        player = miniPlayerManager?.player,
+    )
 
     // 📱 [修复] 提升竖屏全屏状态到 Screen 级别，防止 VideoPlayerState 重建时状态丢失
     val useSharedPortraitPlayer = shouldUseSharedPlayerForPortraitFullscreen()
@@ -1504,53 +1377,10 @@ internal fun VideoDetailScreenStateHolder(
         entryTransitionFinished = entryTransitionFinished,
         playbackSessionActive = isVisible,
     )
-    val shouldKeepVideoScreenAwake by produceState(
-        initialValue = shouldKeepVideoPlaybackAwake(
-            playWhenReady = playerState.player.playWhenReady,
-            isPlaying = playerState.player.isPlaying,
-            playbackState = playerState.player.playbackState
-        ),
-        key1 = playerState.player
-    ) {
-        val player = playerState.player
-        fun updateAwakeState() {
-            value = shouldKeepVideoPlaybackAwake(
-                playWhenReady = player.playWhenReady,
-                isPlaying = player.isPlaying,
-                playbackState = player.playbackState
-            )
-        }
-        updateAwakeState()
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                updateAwakeState()
-            }
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                updateAwakeState()
-            }
-
-            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                updateAwakeState()
-            }
-        }
-        player.addListener(listener)
-        awaitDispose {
-            player.removeListener(listener)
-        }
-    }
-    DisposableEffect(window, shouldKeepVideoScreenAwake) {
-        if (shouldKeepVideoScreenAwake) {
-            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-        onDispose {
-            if (shouldKeepVideoScreenAwake) {
-                window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            }
-        }
-    }
+    VideoDetailKeepScreenOnEffect(
+        window = window,
+        player = playerState.player,
+    )
     val isVideoPlaying by produceState(
         initialValue = playerState.player.isPlaying,
         key1 = playerState.player
@@ -2304,18 +2134,13 @@ internal fun VideoDetailScreenStateHolder(
         )
     }
 
-    //  iOS风格：竖屏时状态栏黑色背景（与播放器融为一体）
-    //  只在页面活跃时修改状态栏，避免退出时覆盖恢复操作
-    LaunchedEffect(view, window, insetsController, isScreenActive, systemBarsApplySpec) {
-        if (view.isInEditMode || !isScreenActive || window == null || insetsController == null) {
-            return@LaunchedEffect
-        }
-        applyVideoDetailSystemBarsSpec(
-            window = window,
-            insetsController = insetsController,
-            spec = systemBarsApplySpec
-        )
-    }
+    VideoDetailSystemBarsEffect(
+        view = view,
+        window = window,
+        insetsController = insetsController,
+        isScreenActive = isScreenActive,
+        spec = systemBarsApplySpec,
+    )
 
     val uiSuccessState = uiState as? VideoPlaybackUiState.Success
     val videoPlayerSectionTarget = remember(bvid, coverUrl, currentBvid) {
@@ -2909,7 +2734,7 @@ internal fun VideoDetailScreenStateHolder(
                                     ) {
                                         videoPlayerRootBottomPx = nextRootBottomPx
                                     }
-                                    if (!hasMeaningfulBoundsChange(videoPlayerBounds, nextBounds)) {
+                                    if (!hasMeaningfulVideoPlayerBoundsChange(videoPlayerBounds, nextBounds)) {
                                         return@onGloballyPositioned
                                     }
                                     videoPlayerBounds = nextBounds
