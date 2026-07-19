@@ -392,7 +392,6 @@ private class VideoCardTransitionSnapshotLayerState {
  */
 internal fun shouldLiveRecordVideoCardTransitionSnapshot(
     phase: VideoCardTransitionBackgroundPhase,
-    @Suppress("UNUSED_PARAMETER") progress: Float,
 ): Boolean {
     return false
 }
@@ -455,7 +454,6 @@ internal fun Modifier.videoCardTransitionBackgroundEffect(
     val liveRecordingActive = useSnapshotBlur &&
         shouldLiveRecordVideoCardTransitionSnapshot(
             phase = phase,
-            progress = progressProvider(),
         )
     VideoCardTransitionLiveBlurHitchLogger(
         phaseProvider = phaseProvider,

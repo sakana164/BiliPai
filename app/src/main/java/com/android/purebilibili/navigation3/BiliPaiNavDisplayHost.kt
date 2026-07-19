@@ -73,6 +73,17 @@ import com.android.purebilibili.navigation3.predictiveback.resolveBiliPaiPredict
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+internal fun shouldContinuouslyPublishVideoCardDepthFrames(
+    phase: VideoCardTransitionBackgroundPhase,
+    isReturnGestureInProgress: Boolean,
+    isGestureRestoreInProgress: Boolean,
+): Boolean {
+    return phase == VideoCardTransitionBackgroundPhase.OPENING ||
+        phase == VideoCardTransitionBackgroundPhase.RETURNING ||
+        isReturnGestureInProgress ||
+        isGestureRestoreInProgress
+}
+
 @Composable
 internal fun BiliPaiNavDisplayHost(
     backStack: List<BiliPaiNavKey>,
@@ -152,7 +163,12 @@ internal fun BiliPaiNavDisplayHost(
         }
     }
     val onVideoCardDepthFrameUpdated by rememberUpdatedState(onVideoCardDepthFrame)
-    LaunchedEffect(videoCardTransitionBackgroundPhase, cardTransitionEnabled) {
+    LaunchedEffect(
+        videoCardTransitionBackgroundPhase,
+        cardTransitionEnabled,
+        videoCardReturnGestureInProgress,
+        videoCardBackgroundGestureRestoreInProgress,
+    ) {
         if (!cardTransitionEnabled ||
             videoCardTransitionBackgroundPhase == VideoCardTransitionBackgroundPhase.IDLE
         ) {
@@ -160,6 +176,19 @@ internal fun BiliPaiNavDisplayHost(
                 0f,
                 VideoCardTransitionBackgroundPhase.IDLE,
                 false,
+            )
+            return@LaunchedEffect
+        }
+        if (!shouldContinuouslyPublishVideoCardDepthFrames(
+                phase = videoCardTransitionBackgroundPhase,
+                isReturnGestureInProgress = videoCardReturnGestureInProgress,
+                isGestureRestoreInProgress = videoCardBackgroundGestureRestoreInProgress,
+            )
+        ) {
+            onVideoCardDepthFrameUpdated(
+                videoCardBackgroundProgressProvider(),
+                videoCardTransitionBackgroundPhase,
+                videoCardBackgroundGestureRestoreInProgress,
             )
             return@LaunchedEffect
         }

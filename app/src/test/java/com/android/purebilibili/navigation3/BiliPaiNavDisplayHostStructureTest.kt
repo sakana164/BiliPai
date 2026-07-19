@@ -1,5 +1,6 @@
 package com.android.purebilibili.navigation3
 
+import com.android.purebilibili.core.ui.transition.VideoCardTransitionBackgroundPhase
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -164,6 +165,46 @@ class BiliPaiNavDisplayHostStructureTest {
         assertTrue(source.contains("onVideoCardDepthFrame"))
         assertTrue(source.contains("withFrameNanos"))
         assertTrue(source.contains("onVideoCardDepthFrameUpdated"))
+        assertTrue(source.contains("shouldContinuouslyPublishVideoCardDepthFrames("))
+    }
+
+    @Test
+    fun videoCardDepthFramesRunContinuouslyOnlyWhileVisualStateChanges() {
+        assertTrue(
+            shouldContinuouslyPublishVideoCardDepthFrames(
+                phase = VideoCardTransitionBackgroundPhase.OPENING,
+                isReturnGestureInProgress = false,
+                isGestureRestoreInProgress = false,
+            )
+        )
+        assertTrue(
+            shouldContinuouslyPublishVideoCardDepthFrames(
+                phase = VideoCardTransitionBackgroundPhase.RETURNING,
+                isReturnGestureInProgress = false,
+                isGestureRestoreInProgress = false,
+            )
+        )
+        assertTrue(
+            shouldContinuouslyPublishVideoCardDepthFrames(
+                phase = VideoCardTransitionBackgroundPhase.HELD,
+                isReturnGestureInProgress = true,
+                isGestureRestoreInProgress = false,
+            )
+        )
+        assertTrue(
+            shouldContinuouslyPublishVideoCardDepthFrames(
+                phase = VideoCardTransitionBackgroundPhase.HELD,
+                isReturnGestureInProgress = false,
+                isGestureRestoreInProgress = true,
+            )
+        )
+        assertFalse(
+            shouldContinuouslyPublishVideoCardDepthFrames(
+                phase = VideoCardTransitionBackgroundPhase.HELD,
+                isReturnGestureInProgress = false,
+                isGestureRestoreInProgress = false,
+            )
+        )
     }
 
     @Test

@@ -294,31 +294,26 @@ class VideoCardTransitionBackgroundPolicyTest {
         assertFalse(
             shouldLiveRecordVideoCardTransitionSnapshot(
                 phase = VideoCardTransitionBackgroundPhase.OPENING,
-                progress = 0.5f,
             )
         )
         assertFalse(
             shouldLiveRecordVideoCardTransitionSnapshot(
                 phase = VideoCardTransitionBackgroundPhase.RETURNING,
-                progress = 0.8f,
             )
         )
         assertFalse(
             shouldLiveRecordVideoCardTransitionSnapshot(
                 phase = VideoCardTransitionBackgroundPhase.RETURNING,
-                progress = 0.1f,
             )
         )
         assertFalse(
             shouldLiveRecordVideoCardTransitionSnapshot(
                 phase = VideoCardTransitionBackgroundPhase.HELD,
-                progress = 1f,
             )
         )
         assertFalse(
             shouldLiveRecordVideoCardTransitionSnapshot(
                 phase = VideoCardTransitionBackgroundPhase.IDLE,
-                progress = 0f,
             )
         )
     }
