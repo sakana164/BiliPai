@@ -153,7 +153,7 @@ class VideoDetailReturnCoverPolicyTest {
                 forceCoverOnlyOnReturn = true
             )
         )
-        val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
+        val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailTransitionPolicy.kt")
             .readText()
         val policyBlock = source
             .substringAfter("internal fun resolveForceCoverOnlyForReturn(")
@@ -329,12 +329,15 @@ class VideoDetailReturnCoverPolicyTest {
     fun `returning visual is wired from exit progress and session for handoff`() {
         val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
             .readText()
+        val transitionHostSource = File(
+            "src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailTransitionHost.kt"
+        ).readText()
         val call = source
             .substringAfter("val useReturningVideoDetailVisualState = shouldUseReturningVideoDetailVisualState(")
             .substringBefore("val handleTopBarAction")
         assertTrue(call.contains("isCardReturnExitInProgress = isCardReturnExitInProgress"))
         assertTrue(call.contains("isSessionReturningToCard = isReturningFromDetail"))
-        assertTrue(source.contains("video-detail-shared-transition-progress"))
+        assertTrue(transitionHostSource.contains("video-detail-shared-transition-progress"))
     }
 
     @Test
