@@ -1,0 +1,140 @@
+package com.android.purebilibili.feature.video.screen
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.purebilibili.core.util.FormatUtils
+import com.android.purebilibili.feature.video.ui.components.LikeBurstAnimation
+import com.android.purebilibili.feature.video.ui.components.TripleSuccessAnimation
+import com.android.purebilibili.feature.video.ui.components.VideoActionFeedbackHost
+import com.android.purebilibili.feature.video.ui.feedback.TripleCelebrationPlacement
+import com.android.purebilibili.feature.video.ui.feedback.VideoFeedbackAnchor
+import com.android.purebilibili.feature.video.ui.feedback.resolveQualityReminderPlacement
+import com.android.purebilibili.feature.video.ui.feedback.resolveTripleCelebrationPlacement
+import com.android.purebilibili.feature.video.ui.feedback.resolveVideoFeedbackPlacement
+import com.android.purebilibili.feature.video.viewmodel.PlayerToastPresentation
+import com.android.purebilibili.feature.video.viewmodel.VideoEngagementUiState
+import com.android.purebilibili.feature.video.viewmodel.VideoEngagementViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
+import dev.chrisbanes.haze.HazeState
+import kotlin.math.roundToInt
+
+@Composable
+internal fun BoxScope.VideoDetailFeedbackOverlayAdapter(
+    playbackViewModel: VideoPlaybackViewModel,
+    engagementViewModel: VideoEngagementViewModel,
+    engagementState: VideoEngagementUiState,
+    playbackEventState: VideoDetailPlaybackEventState,
+    hazeState: HazeState,
+    isFullscreenMode: Boolean,
+    isLandscape: Boolean,
+    reducedMotion: Boolean,
+) {
+    val feedbackBottomInsetDp = WindowInsets.navigationBars
+        .asPaddingValues()
+        .calculateBottomPadding()
+        .value
+        .roundToInt() + if (isFullscreenMode) 24 else 20
+    val feedbackPlacement = resolveVideoFeedbackPlacement(
+        isFullscreen = isFullscreenMode,
+        isLandscape = isLandscape,
+        bottomInsetDp = feedbackBottomInsetDp,
+    )
+    val feedbackAnchorAlignment = when (feedbackPlacement.anchor) {
+        VideoFeedbackAnchor.BottomCenter -> Alignment.BottomCenter
+        VideoFeedbackAnchor.BottomTrailing -> Alignment.BottomEnd
+        VideoFeedbackAnchor.CenterOverlay -> Alignment.Center
+    }
+
+    if (engagementState.likeBurstVisible) {
+        Box(
+            modifier = Modifier
+                .align(feedbackAnchorAlignment)
+                .padding(
+                    end = if (feedbackPlacement.anchor == VideoFeedbackAnchor.BottomTrailing) {
+                        feedbackPlacement.sideInsetDp.dp
+                    } else {
+                        0.dp
+                    },
+                    bottom = (feedbackPlacement.bottomInsetDp + 56).dp,
+                ),
+        ) {
+            LikeBurstAnimation(
+                visible = true,
+                reducedMotion = reducedMotion,
+                onAnimationEnd = engagementViewModel::dismissLikeBurst,
+            )
+        }
+    }
+
+    val tripleCelebrationPlacement = resolveTripleCelebrationPlacement(
+        isFullscreen = isFullscreenMode,
+        isLandscape = isLandscape,
+    )
+    if (engagementState.tripleCelebrationVisible) {
+        Box(
+            modifier = Modifier.align(
+                when (tripleCelebrationPlacement) {
+                    TripleCelebrationPlacement.CenterOverlay -> Alignment.Center
+                },
+            ),
+        ) {
+            TripleSuccessAnimation(
+                visible = true,
+                isCompact = false,
+                reducedMotion = reducedMotion,
+                onAnimationEnd = engagementViewModel::dismissTripleCelebration,
+            )
+        }
+    }
+
+    val popupMessage = playbackEventState.popupMessage
+    val activeFeedbackPlacement = if (
+        popupMessage?.presentation == PlayerToastPresentation.CenteredHighlight
+    ) {
+        resolveQualityReminderPlacement()
+    } else {
+        feedbackPlacement
+    }
+    VideoActionFeedbackHost(
+        message = popupMessage?.message,
+        visible = popupMessage != null,
+        placement = activeFeedbackPlacement,
+        hazeState = hazeState,
+    )
+
+    val resumePlaybackSuggestion by playbackViewModel.resumePlaybackSuggestion.collectAsStateWithLifecycle()
+    resumePlaybackSuggestion?.let { suggestion ->
+        AlertDialog(
+            onDismissRequest = playbackViewModel::dismissResumePlaybackSuggestion,
+            title = { Text("继续播放") },
+            text = {
+                Text(
+                    text = "检测到上次播放到 ${suggestion.targetLabel}（${FormatUtils.formatDuration(suggestion.positionMs)}），是否跳转继续播放？",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = playbackViewModel::continueResumePlaybackSuggestion) {
+                    Text("跳转")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = playbackViewModel::dismissResumePlaybackSuggestion) {
+                    Text("稍后")
+                }
+            },
+        )
+    }
+}

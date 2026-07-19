@@ -172,6 +172,22 @@ class VideoDetailScreenMethodSizeStructureTest {
         assertTrue(holder.contains("VideoDetailPlayerSettingsOverlayAdapter("))
     }
 
+    @Test
+    fun feedbackOverlayOwnsTransientAnimationAndResumeStateReads() {
+        val holder = loadSource("VideoDetailScreenStateHolder.kt")
+        val adapter = loadSource("VideoDetailFeedbackOverlayAdapter.kt")
+
+        assertTrue(adapter.lineSequence().count() <= 350)
+        assertTrue(adapter.contains("playbackEventState.popupMessage"))
+        assertTrue(adapter.contains("resumePlaybackSuggestion.collectAsStateWithLifecycle()"))
+        assertTrue(adapter.contains("LikeBurstAnimation("))
+        assertTrue(adapter.contains("TripleSuccessAnimation("))
+        assertFalse(holder.contains("val popupMessage = playbackEventState.popupMessage"))
+        assertFalse(holder.contains("resumePlaybackSuggestion.collectAsStateWithLifecycle()"))
+        assertFalse(holder.contains("LikeBurstAnimation("))
+        assertTrue(holder.contains("VideoDetailFeedbackOverlayAdapter("))
+    }
+
     private fun loadSource(name: String): String {
         val candidates = listOf(
             File("src/main/java/com/android/purebilibili/feature/video/screen/$name"),

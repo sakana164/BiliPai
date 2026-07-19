@@ -319,7 +319,6 @@ internal fun VideoDetailScreenStateHolder(
     val subjectSnapshot by viewModel.subjectSnapshot.collectAsStateWithLifecycle()
     val engagementState by engagementViewModel.uiState.collectAsStateWithLifecycle()
     val favoriteFolderSaveEvent by viewModel.favoriteFolderSaveEvent.collectAsStateWithLifecycle()
-    val resumePlaybackSuggestion by viewModel.resumePlaybackSuggestion.collectAsStateWithLifecycle()
     val playbackActions = remember(viewModel, context) {
         VideoDetailPlaybackActions(
             changeQuality = viewModel::changeQuality,
@@ -1252,7 +1251,6 @@ internal fun VideoDetailScreenStateHolder(
         viewModel = viewModel,
         state = playbackEventState,
     )
-    val popupMessage = playbackEventState.popupMessage
     val danmakuManager = playbackEventState.danmakuManager
 
     //  [PiP修复] 当视频播放器位置更新时，同步更新PiP参数
@@ -1260,21 +1258,6 @@ internal fun VideoDetailScreenStateHolder(
     val pipModeEnabled = remember {
         com.android.purebilibili.core.store.SettingsManager.getMiniPlayerModeSync(context)
             .supportsSystemPip
-    }
-    val feedbackBottomInsetDp = WindowInsets.navigationBars
-        .asPaddingValues()
-        .calculateBottomPadding()
-        .value
-        .roundToInt() + if (isFullscreenMode) 24 else 20
-    val feedbackPlacement = resolveVideoFeedbackPlacement(
-        isFullscreen = isFullscreenMode,
-        isLandscape = isLandscape,
-        bottomInsetDp = feedbackBottomInsetDp
-    )
-    val feedbackAnchorAlignment = when (feedbackPlacement.anchor) {
-        VideoFeedbackAnchor.BottomCenter -> Alignment.BottomCenter
-        VideoFeedbackAnchor.BottomTrailing -> Alignment.BottomEnd
-        VideoFeedbackAnchor.CenterOverlay -> Alignment.Center
     }
     val isReducedActionMotion = !cardAnimationEnabled
 
@@ -3188,82 +3171,16 @@ internal fun VideoDetailScreenStateHolder(
             )
         }
 
-        // 🎉 点赞成功爆裂动画
-        val likeBurstVisible = engagementState.likeBurstVisible
-        if (likeBurstVisible) {
-            Box(
-                modifier = Modifier
-                    .align(feedbackAnchorAlignment)
-                    .padding(
-                        end = if (feedbackPlacement.anchor == VideoFeedbackAnchor.BottomTrailing) feedbackPlacement.sideInsetDp.dp else 0.dp,
-                        bottom = (feedbackPlacement.bottomInsetDp + 56).dp
-                    )
-            ) {
-                LikeBurstAnimation(
-                    visible = true,
-                    reducedMotion = isReducedActionMotion,
-                    onAnimationEnd = { engagementViewModel.dismissLikeBurst() }
-                )
-            }
-        }
-
-        // 🎉 三连成功庆祝动画
-        val tripleCelebrationVisible = engagementState.tripleCelebrationVisible
-        val tripleCelebrationPlacement = resolveTripleCelebrationPlacement(
-            isFullscreen = isFullscreenMode,
-            isLandscape = isLandscape
+        VideoDetailFeedbackOverlayAdapter(
+            playbackViewModel = viewModel,
+            engagementViewModel = engagementViewModel,
+            engagementState = engagementState,
+            playbackEventState = playbackEventState,
+            hazeState = hazeState,
+            isFullscreenMode = isFullscreenMode,
+            isLandscape = isLandscape,
+            reducedMotion = isReducedActionMotion,
         )
-        if (tripleCelebrationVisible) {
-            Box(
-                modifier = Modifier.align(
-                    when (tripleCelebrationPlacement) {
-                        TripleCelebrationPlacement.CenterOverlay -> Alignment.Center
-                    }
-                )
-            ) {
-                TripleSuccessAnimation(
-                    visible = true,
-                    isCompact = false,
-                    reducedMotion = isReducedActionMotion,
-                    onAnimationEnd = { engagementViewModel.dismissTripleCelebration() }
-                )
-            }
-        }
-
-        val activeFeedbackPlacement = if (popupMessage?.presentation == PlayerToastPresentation.CenteredHighlight) {
-            resolveQualityReminderPlacement()
-        } else {
-            feedbackPlacement
-        }
-
-        VideoActionFeedbackHost(
-            message = popupMessage?.message,
-            visible = popupMessage != null,
-            placement = activeFeedbackPlacement,
-            hazeState = hazeState
-        )
-
-        resumePlaybackSuggestion?.let { suggestion ->
-            AlertDialog(
-                onDismissRequest = { viewModel.dismissResumePlaybackSuggestion() },
-                title = { Text("继续播放") },
-                text = {
-                    Text(
-                        text = "检测到上次播放到 ${suggestion.targetLabel}（${FormatUtils.formatDuration(suggestion.positionMs)}），是否跳转继续播放？"
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = { viewModel.continueResumePlaybackSuggestion() }) {
-                        Text("跳转")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.dismissResumePlaybackSuggestion() }) {
-                        Text("稍后")
-                    }
-                }
-            )
-        }
 
         VideoDetailPlayerSettingsOverlayAdapter(
             context = context,
