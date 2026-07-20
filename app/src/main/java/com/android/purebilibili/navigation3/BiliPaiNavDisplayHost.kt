@@ -376,14 +376,12 @@ internal fun BiliPaiNavDisplayHost(
         predictiveBackEnabled,
         predictiveBackAnimationStyle,
         predictiveBackExitDirection,
-        cardTransitionEnabled,
     ) {
         resolveBiliPaiPredictiveBackAnimationHandler(
             routeTransition = popRouteTransition,
             predictiveBackEnabled = predictiveBackEnabled,
             style = predictiveBackAnimationStyle,
             exitDirection = predictiveBackExitDirection,
-            cardTransitionEnabled = cardTransitionEnabled,
         )
     }
     val currentBackKey = safeBackStack.lastOrNull()
@@ -584,22 +582,12 @@ internal fun BiliPaiNavDisplayHost(
             }
         }
     }
-    val entryProvider = remember(
-        sourceMetadata,
-        cardTransitionEnabled,
-        visibleBottomBarRoutes,
-        activeMainHostRoute,
-        predictiveBackEnabled,
-        predictiveBackAnimationStyle,
-        scopedContent,
-    ) {
+    val entryProvider = remember(sourceMetadata, cardTransitionEnabled, visibleBottomBarRoutes, activeMainHostRoute, scopedContent) {
         biliPaiNavEntryProvider(
             sourceMetadata = sourceMetadata,
             cardTransitionEnabled = cardTransitionEnabled,
             visibleBottomBarRoutes = visibleBottomBarRoutes,
             activeMainHostRoute = activeMainHostRoute,
-            predictiveBackEnabled = predictiveBackEnabled,
-            predictiveBackAnimationStyle = predictiveBackAnimationStyle,
             content = scopedContent
         )
     }
@@ -671,8 +659,7 @@ internal fun BiliPaiNavDisplayHost(
         isBackEnabled = scene.previousEntries.isNotEmpty(),
         // 关闭全局预测性返回时不向 NavDisplay 上报 InProgress，避免 seek 跟手预览；
         // 松手后仍走 performBack + 普通 popTransitionSpec。
-        reportPredictiveProgress = predictiveBackEnabled &&
-            predictiveBackAnimationStyle.usesPredictivePreview,
+        reportPredictiveProgress = predictiveBackEnabled,
         onBackCompleted = performBack,
         onBackCancelled = { commitTransition ->
             onNativeVideoBackCancelled(currentBackKey, targetBackKey)

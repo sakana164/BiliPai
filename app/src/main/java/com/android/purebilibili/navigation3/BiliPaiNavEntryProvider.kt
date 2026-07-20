@@ -7,9 +7,6 @@ import androidx.navigation3.ui.NavDisplay
 import com.android.purebilibili.feature.settings.SETTINGS_SUBTREE_ROUTE_BASES
 import com.android.purebilibili.feature.settings.isSettingsNavHierarchyTransition
 import com.android.purebilibili.feature.settings.resolveSettingsNavPopTransition
-import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
-import com.android.purebilibili.navigation3.predictiveback.resolveBiliPaiEntryForwardContentTransformForPredictiveStyle
-import com.android.purebilibili.navigation3.predictiveback.resolveBiliPaiEntryPopContentTransformForPredictiveStyle
 
 private const val BILI_PAI_NAV_ROUTE_BASE_METADATA_KEY = "biliPaiNavRouteBase"
 private const val VIDEO_ROUTE_BASE = "video"
@@ -60,9 +57,6 @@ internal fun biliPaiNavEntryProvider(
     cardTransitionEnabled: Boolean = true,
     visibleBottomBarRoutes: Set<String> = emptySet(),
     activeMainHostRoute: String? = null,
-    predictiveBackEnabled: Boolean = true,
-    predictiveBackAnimationStyle: BiliPaiPredictiveBackAnimationStyle =
-        BiliPaiPredictiveBackAnimationStyle.SCALE,
     content: @Composable (BiliPaiNavKey) -> Unit
 ): (BiliPaiNavKey) -> NavEntry<BiliPaiNavKey> {
     val entryMetadata: (BiliPaiNavKey) -> Map<String, Any> = { key ->
@@ -72,8 +66,6 @@ internal fun biliPaiNavEntryProvider(
             cardTransitionEnabled = cardTransitionEnabled,
             visibleBottomBarRoutes = visibleBottomBarRoutes,
             activeMainHostRoute = activeMainHostRoute,
-            predictiveBackEnabled = predictiveBackEnabled,
-            predictiveBackAnimationStyle = predictiveBackAnimationStyle,
         )
     }
     return entryProvider(
@@ -168,9 +160,6 @@ internal fun biliPaiNavEntryMetadata(
     cardTransitionEnabled: Boolean = true,
     visibleBottomBarRoutes: Set<String> = emptySet(),
     activeMainHostRoute: String? = null,
-    predictiveBackEnabled: Boolean = true,
-    predictiveBackAnimationStyle: BiliPaiPredictiveBackAnimationStyle =
-        BiliPaiPredictiveBackAnimationStyle.SCALE,
 ): Map<String, Any> {
     val transitions = resolveBiliPaiNavEntryRouteTransitions(
         key = key,
@@ -187,11 +176,7 @@ internal fun biliPaiNavEntryMetadata(
             visibleBottomBarRoutes = visibleBottomBarRoutes,
             activeMainHostRoute = activeMainHostRoute
         )
-        resolveBiliPaiEntryForwardContentTransformForPredictiveStyle(
-            routeTransition = transition,
-            style = predictiveBackAnimationStyle,
-            predictiveBackEnabled = predictiveBackEnabled,
-        )
+        resolveBiliPaiNavContentTransform(transition)
     } + NavDisplay.popTransitionSpec {
         val transition = resolveBiliPaiNavEntryPopRouteTransition(
             defaultTransition = transitions.pop,
@@ -205,11 +190,7 @@ internal fun biliPaiNavEntryMetadata(
             sourceMetadata = sourceMetadata,
             activeMainHostRoute = activeMainHostRoute
         )
-        resolveBiliPaiEntryPopContentTransformForPredictiveStyle(
-            routeTransition = transition,
-            style = predictiveBackAnimationStyle,
-            predictiveBackEnabled = predictiveBackEnabled,
-        )
+        resolveBiliPaiNavContentTransform(transition)
     }
 }
 

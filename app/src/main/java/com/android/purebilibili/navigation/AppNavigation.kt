@@ -173,7 +173,6 @@ import com.android.purebilibili.navigation3.shouldActivateVideoDetailPlaybackSes
 import com.android.purebilibili.navigation3.shouldRecoverVideoPlayerAfterBackCancellation
 import com.android.purebilibili.navigation3.resolveBiliPaiVideoSource
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
-import com.android.purebilibili.navigation3.predictiveback.resolveEffectivePredictiveBackAnimationStyle
 import com.android.purebilibili.navigation3.resolveInitialBiliPaiBackStack
 import com.android.purebilibili.navigation3.toLegacyRoute
 import androidx.compose.ui.Alignment
@@ -1004,13 +1003,8 @@ fun AppNavigation(
             )
         }
         val predictiveBackEnabled = appNavigationSettings.predictiveBackEnabled
-        val predictiveBackAnimationStyle = resolveEffectivePredictiveBackAnimationStyle(
-            style = BiliPaiPredictiveBackAnimationStyle.fromStorageValue(
-                appNavigationSettings.predictiveBackAnimationStyle,
-            ),
-            cardTransitionEnabled = cardTransitionEnabled,
-        )
-        val predictiveBackExitDirection = appNavigationSettings.predictiveBackExitDirection
+        val predictiveBackAnimationStyle = BiliPaiPredictiveBackAnimationStyle.DEFAULT
+        val predictiveBackExitDirection = "auto"
         val shouldInterceptTabBack = backGestureDecision.interceptSystemBack
         val isVideoDetailDestination = isVideoDetailRoute(currentRoute)
         val bottomBarMountRoute = if (isVideoDetailDestination) {

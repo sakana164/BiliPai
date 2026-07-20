@@ -62,8 +62,8 @@ class BiliPaiNavDisplayHostStructureTest {
             .substringAfter("NavigationBackHandler(")
             .substringBefore("onBackCancelled")
 
-        assertTrue(backHandlerBlock.contains("reportPredictiveProgress = predictiveBackEnabled &&"))
-        assertTrue(backHandlerBlock.contains("predictiveBackAnimationStyle.usesPredictivePreview"))
+        assertTrue(backHandlerBlock.contains("reportPredictiveProgress = predictiveBackEnabled"))
+        assertFalse(backHandlerBlock.contains("usesPredictivePreview"))
         assertTrue(source.contains("predictiveBackEnabled = predictiveBackEnabled"))
     }
 
