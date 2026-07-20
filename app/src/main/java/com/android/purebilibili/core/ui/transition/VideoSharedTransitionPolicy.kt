@@ -316,10 +316,14 @@ internal fun shouldEnableVideoCoverSharedTransition(
         hasAnimatedVisibilityScope
 }
 
+/**
+ * 封面位进退对称（cover relay）已回退：横条卡只飞封面会导致返回时标题/列表界面缺失。
+ * 相关推荐与分区先回到整卡 shell 一镜到底，再针对横条卡做适配。
+ */
 internal fun shouldUseVideoCoverRelayTransition(sourceRoute: String?): Boolean {
-    val route = sourceRoute?.substringBefore("?")?.takeIf { it.isNotBlank() } ?: return false
-    // 分区列表与相关推荐（详情套详情，sourceRoute=video/{父BV}）只飞封面，不飞整卡壳。
-    return route == "partition" || route.startsWith("video/")
+    @Suppress("UNUSED_PARAMETER")
+    val ignored = sourceRoute
+    return false
 }
 
 internal fun shouldUseVideoCardShellSharedBounds(
@@ -327,7 +331,6 @@ internal fun shouldUseVideoCardShellSharedBounds(
     transitionEnabled: Boolean
 ): Boolean {
     if (!transitionEnabled) return false
-    if (shouldUseVideoCoverRelayTransition(sourceRoute)) return false
     return !sourceRoute?.substringBefore("?").isNullOrBlank()
 }
 
@@ -352,7 +355,6 @@ internal fun shouldUseVideoCardShellContainerTransform(
     hasAnimatedVisibilityScope: Boolean
 ): Boolean {
     if (!transitionEnabled || !hasSharedTransitionScope || !hasAnimatedVisibilityScope) return false
-    if (shouldUseVideoCoverRelayTransition(sourceRoute)) return false
     val normalizedSourceRoute = sourceRoute?.substringBefore("?")
     return isVideoCardReturnTargetRoute(normalizedSourceRoute)
 }
@@ -390,16 +392,14 @@ internal fun resolveVideoSharedTransitionOwnership(
         sourceRoute = sourceRoute,
         transitionEnabled = transitionEnabled
     )
-    val coverRelay = shouldUseVideoCoverRelayTransition(sourceRoute)
     return VideoSharedTransitionOwnership(
         useCoverSharedBounds = true,
-        useMetadataSharedBounds = !coverRelay &&
-            shouldEnableVideoMetadataSharedTransition(
-                coverSharedEnabled = true,
-                isQuickReturnLimited = isQuickReturnLimited,
-                useCardContainerSharedBounds = useCardContainerSharedBounds,
-                profile = resolveVideoSharedTransitionProfile(sourceRoute)
-            ),
+        useMetadataSharedBounds = shouldEnableVideoMetadataSharedTransition(
+            coverSharedEnabled = true,
+            isQuickReturnLimited = isQuickReturnLimited,
+            useCardContainerSharedBounds = useCardContainerSharedBounds,
+            profile = resolveVideoSharedTransitionProfile(sourceRoute)
+        ),
         useCardContainerSharedBounds = useCardContainerSharedBounds
     )
 }

@@ -18,7 +18,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.SharedTransitionScope.OverlayClip
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.clip
@@ -83,8 +82,6 @@ import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedT
 import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
 import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.feature.home.components.cards.videoCardShellReturnChromeAlpha
-import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoSharedElementBoundsTransformSpec
 import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.BangumiType
 import com.android.purebilibili.data.model.response.VideoItem
@@ -975,29 +972,6 @@ private fun PartitionVideoRow(
     val cardShellShape = remember(sharedTransitionVisualSpec) {
         RoundedCornerShape(12.dp)
     }
-    val partitionCoverSharedBoundsModifier = if (coverSharedEnabled && !useCardShellSharedBounds) {
-        with(requireNotNull(sharedTransitionScope)) {
-            Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = videoCoverSharedElementKey(
-                        bvid = video.bvid,
-                        sourceRoute = sharedElementSourceRoute
-                    )
-                ),
-                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                boundsTransform = { initialBounds, targetBounds ->
-                    videoSharedElementBoundsTransformSpec(
-                        motion = sharedTransitionMotionSpec,
-                        initialBounds = initialBounds,
-                        targetBounds = targetBounds
-                    )
-                },
-                clipInOverlayDuringTransition = OverlayClip(coverShape)
-            )
-        }
-    } else {
-        Modifier
-    }
     val triggerClick = {
         cardBoundsRef.value?.let { bounds ->
             CardPositionManager.recordVideoCardPosition(
@@ -1035,7 +1009,6 @@ private fun PartitionVideoRow(
             modifier = Modifier
                 .width(146.dp)
                 .aspectRatio(16f / 9f)
-                .then(partitionCoverSharedBoundsModifier)
                 .clip(coverShape)
                 .background(AppSurfaceTokens.cardContainer())
         ) {
