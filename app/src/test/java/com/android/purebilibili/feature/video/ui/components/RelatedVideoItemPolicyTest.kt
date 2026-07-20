@@ -58,14 +58,16 @@ class RelatedVideoItemPolicyTest {
     }
 
     @Test
-    fun `related detail transition shares the whole card shell`() {
+    fun `related detail transition shares cover not card shell`() {
         val source = File("src/main/java/com/android/purebilibili/feature/video/ui/components/RelatedVideoItem.kt")
             .readText()
         val surfaceBlock = source
             .substringAfter("Surface(")
             .substringBefore("val relatedCoverWidth")
 
-        assertTrue(source.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertTrue(source.contains("videoCoverSharedElementKey("))
+        assertTrue(source.contains("relatedCoverSharedBoundsModifier"))
+        // shell helper 可保留接线，但 relay 源下 policy 会关掉 enabled。
         assertTrue(surfaceBlock.contains("videoCardShellSharedBoundsOrEmpty("))
         assertTrue(source.contains("!useCardShellSharedBounds"))
     }

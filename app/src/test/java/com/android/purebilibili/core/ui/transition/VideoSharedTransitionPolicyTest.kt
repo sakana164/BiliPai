@@ -163,6 +163,27 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
+    fun coverRelayTransition_usesCoverWithoutCardShell() {
+        val related = resolveVideoSharedTransitionOwnership(
+            sourceRoute = "video/BV_A",
+            coverSharedEnabled = true,
+            isQuickReturnLimited = false
+        )
+        assertTrue(related.useCoverSharedBounds)
+        assertFalse(related.useCardContainerSharedBounds)
+        assertFalse(related.useMetadataSharedBounds)
+
+        val partition = resolveVideoSharedTransitionOwnership(
+            sourceRoute = "partition",
+            coverSharedEnabled = true,
+            isQuickReturnLimited = false
+        )
+        assertTrue(partition.useCoverSharedBounds)
+        assertFalse(partition.useCardContainerSharedBounds)
+        assertFalse(partition.useMetadataSharedBounds)
+    }
+
+    @Test
     fun videoCardShellKey_keepsSourceRouteDistinctFromCoverKey() {
         val shellKey = videoCardShellSharedElementKey(
             bvid = "BV1",
@@ -206,14 +227,25 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun videoCardShellSharedBounds_includesRelatedDetailSources() {
+    fun videoCoverRelay_usesPartitionAndRelatedDetailSources() {
+        assertTrue(shouldUseVideoCoverRelayTransition("partition"))
+        assertTrue(shouldUseVideoCoverRelayTransition("video/BV_A"))
+        assertTrue(shouldUseVideoCoverRelayTransition("video/BV_A?from=related"))
+        assertFalse(shouldUseVideoCoverRelayTransition("home"))
+        assertFalse(shouldUseVideoCoverRelayTransition("video"))
+        assertFalse(shouldUseVideoCoverRelayTransition(null))
+    }
+
+    @Test
+    fun videoCardShellSharedBounds_excludesCoverRelaySources() {
         assertTrue(shouldUseVideoCardShellSharedBounds("home", transitionEnabled = true))
         assertTrue(shouldUseVideoCardShellSharedBounds("dynamic", transitionEnabled = true))
         assertTrue(shouldUseVideoCardShellSharedBounds("watch_later", transitionEnabled = true))
-        assertTrue(shouldUseVideoCardShellSharedBounds("partition", transitionEnabled = true))
         assertTrue(shouldUseVideoCardShellSharedBounds("space", transitionEnabled = true))
+        // 分区 / 相关推荐走封面位进退，不用整卡 shell。
+        assertFalse(shouldUseVideoCardShellSharedBounds("partition", transitionEnabled = true))
+        assertFalse(shouldUseVideoCardShellSharedBounds("video/BV_A", transitionEnabled = true))
         assertTrue(shouldUseVideoCardShellSharedBounds("video", transitionEnabled = true))
-        assertTrue(shouldUseVideoCardShellSharedBounds("video/BV_A", transitionEnabled = true))
         assertFalse(shouldUseVideoCardShellSharedBounds("home", transitionEnabled = false))
         assertFalse(shouldUseVideoCardShellSharedBounds(null, transitionEnabled = true))
     }
@@ -228,9 +260,17 @@ class VideoSharedTransitionPolicyTest {
                 hasAnimatedVisibilityScope = true
             )
         )
-        assertTrue(
+        assertFalse(
             shouldUseVideoCardShellContainerTransform(
                 sourceRoute = "video/BV_A",
+                transitionEnabled = true,
+                hasSharedTransitionScope = true,
+                hasAnimatedVisibilityScope = true
+            )
+        )
+        assertFalse(
+            shouldUseVideoCardShellContainerTransform(
+                sourceRoute = "partition",
                 transitionEnabled = true,
                 hasSharedTransitionScope = true,
                 hasAnimatedVisibilityScope = true
