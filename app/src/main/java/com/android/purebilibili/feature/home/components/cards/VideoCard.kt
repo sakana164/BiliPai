@@ -333,7 +333,7 @@ fun ElegantVideoCard(
     wallpaperEffectMode: HomeWallpaperEffectMode = HomeWallpaperEffectMode.SOFT_BLUR,
     showUpBadge: Boolean = true,
     homeDurationStyle: HomeDurationStyle = HomeDurationStyle.OUTSIDE_COVER,
-    coverAspectRatio: Float = 4f / 3f,
+    coverAspectRatio: Float = com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO,
     compactMetadata: Boolean = true,
     titleMinLines: Int = 2,
     highlightedTitle: AnnotatedString? = null,
@@ -736,7 +736,9 @@ fun ElegantVideoCard(
                     .graphicsLayer {
                         alpha = if (hideCoverDuringShellMorph) 0f else 1f
                     },
-                contentScale = ContentScale.Crop
+                // 官方粉版：居中 Crop；16:9 框配 16:9 投稿封面时基本不裁
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.Center,
             )
 
             if (premiumBadgeLabel != null) {

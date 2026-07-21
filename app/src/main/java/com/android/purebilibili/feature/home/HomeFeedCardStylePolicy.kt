@@ -1,6 +1,7 @@
 package com.android.purebilibili.feature.home
 
 import com.android.purebilibili.core.store.HomeFeedCardStyle
+import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 
 internal data class HomeFeedCardLayout(
     val coverAspectRatio: Float,
@@ -14,7 +15,8 @@ internal data class HomeFeedCardLayout(
 internal fun resolveHomeFeedCardLayout(style: HomeFeedCardStyle): HomeFeedCardLayout {
     return when (style) {
         HomeFeedCardStyle.CURRENT -> HomeFeedCardLayout(
-            coverAspectRatio = 16f / 9f,
+            // 与官方 CDN 封面 16:9 + Crop 一致，避免 4:3 框大幅左右裁切
+            coverAspectRatio = VIDEO_SHARED_COVER_ASPECT_RATIO,
             outerPaddingDp = 8,
             itemSpacingDp = 8,
             verticalItemSpacingDp = 8,
@@ -23,7 +25,8 @@ internal fun resolveHomeFeedCardLayout(style: HomeFeedCardStyle): HomeFeedCardLa
         )
 
         HomeFeedCardStyle.OFFICIAL -> HomeFeedCardLayout(
-            coverAspectRatio = 4f / 3f,
+            // 官方粉版双列：16:9 框 + 居中 Crop（与投稿封面同比例，标准封面几乎完整显示）
+            coverAspectRatio = VIDEO_SHARED_COVER_ASPECT_RATIO,
             outerPaddingDp = 4,
             itemSpacingDp = 4,
             verticalItemSpacingDp = 6,

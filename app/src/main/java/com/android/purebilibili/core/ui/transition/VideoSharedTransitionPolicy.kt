@@ -57,7 +57,12 @@ internal enum class VideoSharedTransitionTargetMode {
     PortraitFullscreen
 }
 
-internal const val VIDEO_SHARED_COVER_ASPECT_RATIO = 16f / 10f
+/**
+ * 与官方粉版 / CDN 投稿封面一致：16:9。
+ * 列表框用 [ContentScale.Crop] 居中裁切；标准 16:9 封面几乎不裁，
+ * 仅非标准比例（竖图等）会裁边——与官方 App 相同。
+ */
+internal const val VIDEO_SHARED_COVER_ASPECT_RATIO = 16f / 9f
 private const val HOME_SOURCE_ROUTE = "home"
 internal const val VIDEO_SHARED_TRANSITION_FAST_DURATION_MILLIS = 280
 internal const val VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS = 360

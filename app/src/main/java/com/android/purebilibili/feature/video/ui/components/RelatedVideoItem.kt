@@ -61,7 +61,9 @@ import io.github.alexzhirkevich.cupertino.icons.filled.BubbleLeft
 import io.github.alexzhirkevich.cupertino.icons.filled.Play
 
 /** 与首页 ElegantVideoCard 默认封面比例一致，便于复用整卡 shell。 */
-internal const val RELATED_VIDEO_CARD_COVER_ASPECT_RATIO = 4f / 3f
+/** 与官方列表 / CDN 封面一致：16:9 + Crop，避免 4:3 框裁掉左右。 */
+internal const val RELATED_VIDEO_CARD_COVER_ASPECT_RATIO =
+    com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 
 internal const val RELATED_VIDEO_GRID_COLUMNS = 2
 
@@ -224,6 +226,7 @@ fun RelatedVideoItem(
                 model = coverRequest,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                alignment = Alignment.Center,
                 modifier = Modifier.fillMaxSize()
             )
             Text(
