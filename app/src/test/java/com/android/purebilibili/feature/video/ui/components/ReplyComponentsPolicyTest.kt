@@ -328,6 +328,7 @@ class ReplyComponentsPolicyTest {
             listOf(
                 ReplyActionSheetAction.COPY_ALL,
                 ReplyActionSheetAction.FREE_COPY,
+                ReplyActionSheetAction.COPY_USERNAME,
                 ReplyActionSheetAction.SAVE,
                 ReplyActionSheetAction.SHARE,
                 ReplyActionSheetAction.REPLY,
@@ -343,6 +344,19 @@ class ReplyComponentsPolicyTest {
                 canBlockUser = true,
                 topActionLabel = "置顶"
             )
+        )
+    }
+
+    @Test
+    fun `reply action sheet can omit username copy when disabled`() {
+        assertFalse(
+            buildReplyActionSheetActions(
+                canDelete = false,
+                canReport = false,
+                canShare = false,
+                canBlockUser = false,
+                canCopyUsername = false,
+            ).contains(ReplyActionSheetAction.COPY_USERNAME)
         )
     }
 

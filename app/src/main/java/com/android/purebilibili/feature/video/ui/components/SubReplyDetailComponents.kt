@@ -1019,9 +1019,11 @@ private fun SubReplyDetailItem(
             canReport = onReportClick != null,
             canShare = shouldSupportReplyShare(item),
             canBlockUser = replyMemberMid > 0L,
+            canCopyUsername = item.member.uname.isNotBlank(),
             onDismiss = { showActionSheet = false },
             onCopyAll = { copyToClipboard(copyText, "评论内容") },
             onFreeCopy = { showFreeCopyDialog = true },
+            onCopyUsername = { copyToClipboard(item.member.uname, "用户名") },
             onSave = {
                 requestSaveReplyCommentImage()
             },

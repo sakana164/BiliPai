@@ -69,7 +69,6 @@ import com.android.purebilibili.feature.dynamic.components.resolveCommentImageOr
 import com.android.purebilibili.feature.dynamic.components.resolveImageDecodeSize
 import androidx.compose.ui.layout.ContentScale
 import com.android.purebilibili.core.ui.common.CopySelectionDialog
-import com.android.purebilibili.core.ui.common.copyOnLongPress
 import com.android.purebilibili.core.ui.common.rememberClipboardCopyHandler
 import com.android.purebilibili.core.ui.OfficialVerifyBadge
 import com.android.purebilibili.core.ui.OfficialVerifyBadgeSpec
@@ -393,6 +392,7 @@ internal fun shouldSupportReplyShare(item: ReplyItem): Boolean {
 internal enum class ReplyActionSheetAction {
     COPY_ALL,
     FREE_COPY,
+    COPY_USERNAME,
     SAVE,
     SHARE,
     REPLY,
@@ -407,11 +407,15 @@ internal fun buildReplyActionSheetActions(
     canReport: Boolean,
     canShare: Boolean,
     canBlockUser: Boolean,
-    topActionLabel: String? = null
+    topActionLabel: String? = null,
+    canCopyUsername: Boolean = true,
 ): List<ReplyActionSheetAction> {
     return buildList {
         add(ReplyActionSheetAction.COPY_ALL)
         add(ReplyActionSheetAction.FREE_COPY)
+        if (canCopyUsername) {
+            add(ReplyActionSheetAction.COPY_USERNAME)
+        }
         add(ReplyActionSheetAction.SAVE)
         if (canShare) {
             add(ReplyActionSheetAction.SHARE)
@@ -439,6 +443,7 @@ private fun resolveReplyActionSheetLabel(
     return when (action) {
         ReplyActionSheetAction.COPY_ALL -> "复制全部"
         ReplyActionSheetAction.FREE_COPY -> "自由复制"
+        ReplyActionSheetAction.COPY_USERNAME -> "复制用户名"
         ReplyActionSheetAction.SAVE -> "保存评论"
         ReplyActionSheetAction.SHARE -> "分享评论"
         ReplyActionSheetAction.REPLY -> "回复"
@@ -1202,6 +1207,7 @@ fun ReplyItemView(
             canReport = onReportClick != null,
             canShare = shouldSupportReplyShare(item),
             canBlockUser = replyMemberMid > 0L,
+            canCopyUsername = item.member.uname.isNotBlank(),
             topActionLabel = if (canToggleTop) resolveReplyTopActionLabel(showTopBadge) else null,
             onDismiss = { showActionSheet = false },
             onCopyAll = {
@@ -1209,6 +1215,9 @@ fun ReplyItemView(
             },
             onFreeCopy = {
                 showFreeCopyDialog = true
+            },
+            onCopyUsername = {
+                copyToClipboard(item.member.uname, "用户名")
             },
             onSave = {
                 requestSaveReplyCommentImage()
@@ -1317,6 +1326,8 @@ fun ReplyItemView(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            // 用户名不挂长按复制：列表滑动时易误触连复制多个用户名。
+                            // 需要时用评论长按菜单「复制用户名」。
                             Text(
                                 text = item.member.uname,
                                 fontSize = 13.sp,
@@ -1328,9 +1339,7 @@ fun ReplyItemView(
                                 },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .weight(1f, fill = false)
-                                    .copyOnLongPress(item.member.uname, "用户名")
+                                modifier = Modifier.weight(1f, fill = false)
                             )
 
                             if (replyOfficialBadge != null) {
@@ -2408,10 +2417,12 @@ internal fun ReplyActionSheet(
     canReport: Boolean,
     canShare: Boolean = true,
     canBlockUser: Boolean = false,
+    canCopyUsername: Boolean = true,
     topActionLabel: String? = null,
     onDismiss: () -> Unit,
     onCopyAll: () -> Unit,
     onFreeCopy: () -> Unit,
+    onCopyUsername: () -> Unit = {},
     onSave: () -> Unit,
     onShare: () -> Unit = {},
     onReply: () -> Unit,
@@ -2420,13 +2431,21 @@ internal fun ReplyActionSheet(
     onToggleTop: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val actions = remember(canDelete, canReport, canShare, canBlockUser, topActionLabel) {
+    val actions = remember(
+        canDelete,
+        canReport,
+        canShare,
+        canBlockUser,
+        canCopyUsername,
+        topActionLabel,
+    ) {
         buildReplyActionSheetActions(
             canDelete = canDelete,
             canReport = canReport,
             canShare = canShare,
             canBlockUser = canBlockUser,
-            topActionLabel = topActionLabel
+            topActionLabel = topActionLabel,
+            canCopyUsername = canCopyUsername,
         )
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -2444,6 +2463,7 @@ internal fun ReplyActionSheet(
                         when (action) {
                             ReplyActionSheetAction.COPY_ALL -> onCopyAll()
                             ReplyActionSheetAction.FREE_COPY -> onFreeCopy()
+                            ReplyActionSheetAction.COPY_USERNAME -> onCopyUsername()
                             ReplyActionSheetAction.SAVE -> onSave()
                             ReplyActionSheetAction.SHARE -> onShare()
                             ReplyActionSheetAction.REPLY -> onReply()
