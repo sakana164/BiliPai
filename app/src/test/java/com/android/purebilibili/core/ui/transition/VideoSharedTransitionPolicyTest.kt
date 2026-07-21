@@ -2,7 +2,7 @@ package com.android.purebilibili.core.ui.transition
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.ui.geometry.Rect
 import com.android.purebilibili.core.ui.motion.AppMotionEasing
@@ -47,7 +47,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun videoSharedBoundsUseContinuityEnterAndSoftSpringReturn() {
+    fun videoSharedBoundsUseContinuityEnterAndLinearSeekableReturn() {
         val motion = resolveVideoCardSharedTransitionMotionSpec(
             sourceRoute = "home",
             transitionEnabled = true
@@ -59,23 +59,27 @@ class VideoSharedTransitionPolicyTest {
         val returning = videoSharedElementBoundsTransformSpec(motion, detailBounds, cardBounds)
 
         assertTrue(enter is TweenSpec<*>)
-        assertTrue(returning is SpringSpec<*>)
+        assertTrue(returning is TweenSpec<*>)
         assertEquals(motion.durationMillis, (enter as TweenSpec<*>).durationMillis)
+        assertEquals(motion.durationMillis, (returning as TweenSpec<*>).durationMillis)
         // 进场：Continuity 先快后慢、无过冲
         assertEquals(
             AppMotionEasing.Continuity.transform(0.4f),
             enter.easing.transform(0.4f),
             0.001f,
         )
-        // 返回：soft spring，一次轻回弹；可打断续传
-        val returnSpring = returning as SpringSpec<*>
-        assertEquals(motion.returnSpatialDampingRatio, returnSpring.dampingRatio, 0.001f)
-        assertEquals(motion.spatialStiffness, returnSpring.stiffness, 0.001f)
-        assertTrue(returnSpring.dampingRatio in 0.9f..0.95f)
-        assertTrue(returnSpring.dampingRatio < 1f)
-        assertEquals(0.95f, motion.returnSpatialDampingRatio, 0.001f)
-        assertEquals(240f, motion.spatialStiffness, 0.001f)
-        assertEquals(180L, resolveVideoCardReturnSpringSettleBufferMs())
+        // 返回：Linear 固定时长，预测返回 seek/松手 remainingDuration 可算，避免一闪落位
+        assertSame(LinearEasing, returning.easing)
+        assertEquals(
+            LinearEasing,
+            resolveVideoSharedElementSpatialEasing(detailBounds, cardBounds),
+        )
+        assertEquals(
+            AppMotionEasing.Continuity,
+            resolveVideoSharedElementSpatialEasing(cardBounds, detailBounds),
+        )
+        // settle buffer 仅覆盖主时长后的短收尾，不再为 spring 过冲预留长窗口
+        assertEquals(48L, resolveVideoCardReturnSpringSettleBufferMs())
     }
 
     @Test
@@ -375,8 +379,10 @@ class VideoSharedTransitionPolicyTest {
             "src/main/java/com/android/purebilibili/core/ui/transition/VideoCardShellSharedBounds.kt"
         ).readText()
 
+        // 默认详情壳：FillWidth + TopCenter，对齐顶部播放器落点
         assertTrue(helperSource.contains("scaleToBounds(ContentScale.FillWidth, Alignment.TopCenter)"))
-        assertFalse(helperSource.contains("Alignment.Center)"))
+        // 竖屏全屏壳：FillBounds/Crop + Center（整卡展开）
+        assertTrue(helperSource.contains("scaleToBounds(ContentScale.Crop, Alignment.Center)"))
     }
 
     @Test

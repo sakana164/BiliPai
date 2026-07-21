@@ -2372,8 +2372,8 @@ internal fun resolveReturnAnimationSuppressionDurationMs(
         com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS,
 ): Long {
     if (cardTransitionEnabled) {
-        // spring 返回会在参考 duration 之后仍有短暂过冲；保护窗必须盖住收束，
-        // 否则 clearReturning / 列表抢跑会在 overlay 卸层瞬间重建封面请求 → 落位闪。
+        // 固定时长 tween 返回：保护窗 = 主时长 + 短 buffer，避免 clearReturning / 列表
+        // 在 overlay 卸层瞬间抢跑重建封面请求 → 落位闪。
         return sharedTransitionDurationMillis.coerceAtLeast(0).toLong() +
             RETURN_ANIMATION_SUPPRESSION_BUFFER_MS +
             com.android.purebilibili.core.ui.transition.resolveVideoCardReturnSpringSettleBufferMs() +

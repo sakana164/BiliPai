@@ -7,8 +7,9 @@ class HomeReturnAnimationPolicyTest {
 
     @Test
     fun quickReturn_withTransition_usesSharedElementSoftLandingSuppressionOnPhone() {
+        // 360 standard + 40 buffer + 48 settle
         assertEquals(
-            580L,
+            448L,
             resolveReturnAnimationSuppressionDurationMs(
                 isTabletLayout = false,
                 cardAnimationEnabled = true,
@@ -19,8 +20,9 @@ class HomeReturnAnimationPolicyTest {
 
     @Test
     fun quickReturn_withTransition_usesSharedElementSoftLandingSuppressionOnTablet() {
+        // 360 + 40 + 48 + 40 tablet extra
         assertEquals(
-            620L,
+            488L,
             resolveReturnAnimationSuppressionDurationMs(
                 isTabletLayout = true,
                 cardAnimationEnabled = true,
@@ -32,7 +34,7 @@ class HomeReturnAnimationPolicyTest {
     @Test
     fun normalReturn_usesUnifiedSharedTransitionDuration() {
         assertEquals(
-            580L,
+            448L,
             resolveReturnAnimationSuppressionDurationMs(
                 isTabletLayout = false,
                 cardAnimationEnabled = true,
@@ -51,9 +53,9 @@ class HomeReturnAnimationPolicyTest {
 
     @Test
     fun sharedReturnSuppressionUsesTheConfiguredTransitionDuration() {
-        // 520 + 40 buffer + 180 spring settle
+        // 520 + 40 buffer + 48 settle buffer（返回已改固定时长 tween，无需 spring 过冲余量）
         assertEquals(
-            740L,
+            608L,
             resolveReturnAnimationSuppressionDurationMs(
                 isTabletLayout = false,
                 cardAnimationEnabled = true,
